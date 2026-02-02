@@ -12,7 +12,7 @@ import json
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 DATA_PATH = "backend/data/judge_training_data.csv"
-MODEL_PATH = "backend/models/judge.json"
+MODEL_PATH = "backend/models/judge_xgb.pkl"
 METRICS_PATH = "backend/models/judge_metrics.json"
 
 def train_judge():
@@ -25,104 +25,86 @@ def train_judge():
     print(f"Loading data from {DATA_PATH}...")
     df = pd.read_csv(DATA_PATH)
     
-    # Target: 
-    # 'true_label' is 0 (Neutral), 1 (Buy), 2 (Sell).
-    # 'pred_label' is what Chronos predicted.
-    # We want to predict: "Is Chronos Correct?" OR "Is this a Profitable Signal?"
+    # Check basics
+    print(f"Total rows: {len(df)}")
+    print(df.head())
     
-    # Approach A: Binary Classification "Is Correct?"
-    # If Chronos says Buy (1) and True is Buy (1) -> Correct (1)
-    # If Chronos says Buy (1) and True is Not Buy (0 or 2) -> Incorrect (0)
+    # Filter for active predictions if needed?
+    # Our data gen produces rows for every prediction.
+    # Prediction label 0 = Neutral.
+    # Judge usually only evaluates Buy/Sell signals (1, 2) to see if they are correct.
+    # If pred=0, we don't really trade, so Judge is moot?
+    # Usually Judge is "Should execute?" 
     
-    # Approach B: Probability of Profit (Directional)
-    # If signal is Buy, prob that True is Buy.
-    # If signal is Sell, prob that True is Sell.
+    # If data gen didn't predict, pred_label is 0.
+    # But gen script generates predictions for valid indices.
+    # Some might be Neutral.
+    # Let's verify 'pred_label' in df
     
-    # Let's filter for ACTIVE signals (Buy/Sell) from Chronos.
-    # We don't need a Judge for Neutral.
+    if 'pred_label' not in df.columns:
+        # data gen calculates pred_ret (params_q50) and label implicitly?
+        # My new generate_judge_data.py writes 'true_label,true_ret,params_q50,uncertainty_spread,volatility,is_correct'
+        # Wait, I didn't write 'pred_label' explicitly in the header, BUT 'is_correct' is derived from it.
+        # And params_q50 is pred_ret.
+        pass
+        
+    # We train on ALL samples or just active?
+    # 'is_correct' = 1 if pred matches true for Buy/Sell.
+    # If pred was 0, is_correct=0.
+    # But if pred=0, we wouldn't call Judge live.
+    # We should train only on cases where pred != 0?
+    # BUT data gen logic: "if pred_ret > thresh: pred_label = 1".
+    # So we can reconstruct pred_label or filter by params_q50 magnitude.
+    
+    # Let's filter for significant predictions (Buy/Sell intent)
+    df['pred_label'] = 0
+    df.loc[df['params_q50'] > 0.001, 'pred_label'] = 1
+    df.loc[df['params_q50'] < -0.001, 'pred_label'] = 2
     
     active_mask = df['pred_label'].isin([1, 2])
-    print(f"Filtering for active signals... {active_mask.sum()} / {len(df)} rows.")
-    df_active = df[active_mask].copy()
+    print(f"Active Signals: {active_mask.sum()}")
     
-    if len(df_active) < 100:
-        print("Not enough active signals to train Judge.")
-        return
-
-    # Define Target: Success
-    # If Pred=1 (Buy), Success if True=1.
-    # If Pred=2 (Sell), Success if True=2 (Sell).
-    
-    conditions = [
-        (df_active['pred_label'] == 1) & (df_active['true_label'] == 1),
-        (df_active['pred_label'] == 2) & (df_active['true_label'] == 2) 
-    ]
-    # Note: true_label might be 0 (Neutral/TimeOut). considered Failure.
-    # true_label 2 mixed with pred 1 is Failure.
-    
-    df_active['success'] = np.select(conditions, [1, 1], default=0)
-    
-    print(f"Success Rate in Data: {df_active['success'].mean():.2%}")
+    if active_mask.sum() < 50:
+         print("Not enough signals to train.")
+         # Train on all for demo stability?
+         df_train = df
+    else:
+         df_train = df[active_mask]
     
     # Features
-    # Context + Confidence
-    features = [
-        'conf_sell', 'prob_neutral', 'prob_buy', 'prob_sell',
-        'bpi', 'ad_line', 'rs', 'rsi',
-        'volatility_proxy', 
-        # Add spread?
-        # 'spread' = prob_buy - prob_sell?
-    ]
+    # Must match run_live_bolt.py extraction
+    features = ['uncertainty_spread', 'volatility'] # Minimal set
+    # 'params_q50' (pred return) is arguably a feature too (magnitude confidence)
+    # Let's add it.
+    features.append('params_q50')
     
-    # Valid feats check
-    features = [f for f in features if f in df_active.columns]
-    print(f"Features: {features}")
+    X = df_train[features]
+    y = df_train['is_correct']
     
-    X = df_active[features]
-    y = df_active['success']
-    
-    # Train/Test Split (Time Series Split preferred, but KFold ok for now if purged)
-    # XGBoost
+    print(f"Training on {len(X)} samples. features={features}")
     
     model = xgb.XGBClassifier(
         n_estimators=100,
         max_depth=3,
-        learning_rate=0.1,
+        learning_rate=0.05,
         objective='binary:logistic',
         eval_metric='auc',
-        use_label_encoder=False,
-        tree_method="hist", # CPU fast hist
-        device="cpu" 
+        device="cuda" if torch.cuda.is_available() else "cpu"
     )
     
-    print("Training...")
     model.fit(X, y)
     
     # Eval
-    preds = model.predict(X)
     probs = model.predict_proba(X)[:, 1]
+    auc = roc_auc_score(y, probs) if len(np.unique(y)) > 1 else 0.5
+    print(f"In-Sample AUC: {auc:.4f}")
     
-    print("\n--- Judge Performance (In-Sample) ---")
-    print(classification_report(y, preds))
-    print(f"AUC: {roc_auc_score(y, probs):.4f}")
+    # Save Feature Importance
+    print(pd.Series(model.feature_importances_, index=features).sort_values(ascending=False))
     
-    # Feature Importance
-    print("\nFeature Importance:")
-    fi = pd.Series(model.feature_importances_, index=features).sort_values(ascending=False)
-    print(fi)
-    
-    # Save
-    model.save_model(MODEL_PATH)
-    print(f"Judge Model saved to {MODEL_PATH}")
-    
-    # Save Thresholds/Metadata?
-    meta = {
-        "features": features,
-        "auc": roc_auc_score(y, probs),
-        "threshold": 0.5 # Default, can be tuned
-    }
-    with open(METRICS_PATH, 'w') as f:
-        json.dump(meta, f, indent=4)
+    # Save as PKL
+    joblib.dump(model, MODEL_PATH)
+    print(f"Saved to {MODEL_PATH}")
 
 if __name__ == "__main__":
     train_judge()

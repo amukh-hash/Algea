@@ -1,151 +1,174 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchsort
 
-class StudentTradingLoss(nn.Module):
-    def __init__(self, tokenizer_centers, risk_free_rate=0.0, focal_gamma=2.0):
-        """
-        model_logits:
-        tokenizer_centers: Tensor of bin center values (e.g., predicted prices)
-        """
+class TeacherLoss(nn.Module):
+    """
+    Teacher Loss: Cross-Entropy only.
+    We want the Teacher (T5) to learn a calibrated probability distribution
+    over the token bins, without any risk-weighting bias.
+    """
+    def __init__(self):
         super().__init__()
-        self.centers = tokenizer_centers
+        self.ce_loss = nn.CrossEntropyLoss(reduction='mean')
+
+    def forward(self, teacher_logits, target_token_ids):
+        """
+        teacher_logits: (Batch, Time, Vocab)
+        target_token_ids: (Batch, Time)
+        """
+        logits_flat = teacher_logits.view(-1, teacher_logits.size(-1))
+        targets_flat = target_token_ids.view(-1)
+        return self.ce_loss(logits_flat, targets_flat)
+
+
+def distillation_loss(student_logits, teacher_logits, true_labels, T=2.0, alpha=0.5):
+    """
+    Knowledge Distillation loss combining Hard and Soft targets.
+    
+    Args:
+        student_logits: Unnormalized logits from Student
+        teacher_logits: Unnormalized logits from Teacher
+        true_labels: Ground truth labels (0, 1, 2)
+        T: Temperature for softening distributions
+        alpha: Weight for Hard Loss (1.0=pure hard, 0.0=pure soft)
+    
+    Returns:
+        Combined loss scalar
+    """
+    # 1. Hard Loss (Student vs Ground Truth)
+    hard_loss = F.cross_entropy(student_logits, true_labels)
+
+    # 2. Soft Loss (Student vs Teacher)
+    # KLDivLoss requires: Input=LogSoftmax, Target=Softmax
+    kl_criterion = nn.KLDivLoss(reduction='batchmean')
+    
+    student_log_soft = F.log_softmax(student_logits / T, dim=1)
+    teacher_soft = F.softmax(teacher_logits / T, dim=1)
+    
+    # T^2 scaling keeps gradients balanced with hard_loss
+    soft_loss = kl_criterion(student_log_soft, teacher_soft) * (T * T)
+
+    # 3. Combine
+    return (alpha * hard_loss) + ((1 - alpha) * soft_loss)
+
+def teacher_logits_to_quantiles(logits, bin_centers, quantiles=[0.1, 0.5, 0.9]):
+    """
+    Convert T5 logits (probability distribution) to quantile values.
+    Used to generate 'ground truth' quantile targets for the Student (Bolt).
+    
+    logits: (Batch, Time, Vocab)
+    bin_centers: (Vocab,) Tensor of values for each bin
+    quantiles: List of quantiles to extract (must match Student's quantiles)
+    """
+    probs = F.softmax(logits, dim=-1)  # (B, H, Vocab)
+    cdf = torch.cumsum(probs, dim=-1)
+    
+    # Ensure centers are on the same device
+    if bin_centers.device != logits.device:
+        bin_centers = bin_centers.to(logits.device)
+        
+    results = []
+    # Vectorized search would be faster but for now loop is clear
+    # We find the first index where CDF >= q
+    for q in quantiles:
+        # (cdf >= q).long() gives 1s where true. argmax gives first index of max.
+        # But if none are true (e.g. q=1.0 and float errors), it picks 0?
+        # CDF ends at 1.0, so >=q should occur.
+        idx = (cdf >= q).float().argmax(dim=-1)
+        values = bin_centers[idx]
+        results.append(values)
+        
+    return torch.stack(results, dim=1)  # (B, Num_Q, H)
+
+class StudentMultiObjectiveLoss(nn.Module):
+    """
+    Student Loss: Multi-Objective Optimization for Chronos Bolt.
+    1. Distillation: Match Teacher's projected quantiles (Huber Loss)
+    2. Sortino: Maximize risk-adjusted return (on predicted median)
+    3. Direction: Match TBM binary label (Sign alignment)
+    4. Feature: Align hidden states (MSE)
+    
+    Weighted automatically using Homoscedastic Uncertainty.
+    """
+    def __init__(self, risk_free_rate=0.0, quantiles=[0.1, 0.5, 0.9], 
+                 student_dim=512, teacher_dim=768): # Default dimensions, verify actuals
+        super().__init__()
         self.rfr = risk_free_rate
-        self.gamma = focal_gamma
+        # Broadcasting shape: (1, 3, 1) if 3 quantiles
+        self.register_buffer('quantiles_tensor', torch.tensor(quantiles).view(1, -1, 1))
+        
+        # Learnable weights for 4 tasks: [Distill, Sortino, Direction, Feature]
+        self.log_vars = nn.Parameter(torch.zeros(4))
+        
+        # Projector for Feature Alignment (Student -> Teacher dim)
+        self.distill_projector = nn.Linear(student_dim, teacher_dim)
 
-        # Learnable weights for Homoscedastic Uncertainty (3 tasks)
-        # We initialize with 0.0 (which equates to sigma=1.0)
-        self.log_vars = nn.Parameter(torch.zeros(3))
-
-    def forward(self, student_logits, teacher_logits, targets_tbm):
+    def forward(self, student_quantiles, teacher_quantiles, tbm_labels, 
+                student_hidden=None, teacher_hidden=None):
         """
-        student_logits: Output from Chronos Bolt (Student)
-        teacher_logits: Output from Chronos T5 (Teacher)
-        targets_tbm: Triple Barrier Method Labels (1 = Buy, 0 = Neutral/Sell)
+        student_quantiles: (Batch, Num_Quantiles, Horizon) - Raw outputs from Bolt
+        teacher_quantiles: (Batch, Num_Quantiles, Horizon) - Target values from T5
+        tbm_labels: (Batch,) - Triple Barrier labels (1=Buy, 0=Neutral/Sell)
+        student_hidden: (Batch, Time, Dim) - Optional for feature loss
+        teacher_hidden: (Batch, Time, Dim)
         """
-
-        # --- TASK 1: Distillation (KL Divergence) ---
-        # "Learn the Wisdom"
-        # We use log_softmax for student and softmax for teacher (standard KL formulation)
-        # KL(P || Q) = sum P(x) log(P(x)/Q(x)) ?
-        # PyTorch KLDivLoss expects input=log_prob, target=prob (if reduction='batchmean')
-        # But here input is Student (Q?), target is Teacher (P?).
-        # Usually Distillation: Minimize KL(Teacher || Student) or KL(Student || Teacher)?
-        # Hinton: KL(Teacher || Student) -> Student should match Teacher.
-        # Torch `kl_div(input, target)` computes sum(target * (log(target) - input)).
-        # If input is log_softmax(Student), target is softmax(Teacher).
-        # Then it minimizes distance.
-
-        loss_distill = F.kl_div(
-            F.log_softmax(student_logits, dim=-1),
-            F.softmax(teacher_logits, dim=-1),
-            reduction='batchmean'
-        )
-
-        # --- TASK 2: Differentiable Sortino Ratio ---
-        # "Learn to Earn"
-
-        # 1. Convert logits to probabilities
-        probs = F.softmax(student_logits, dim=-1) #
-
-        # 2. Calculate Expected Price (Differentiable)
-        # centers needs shape to broadcast
-        # centers is likely (num_bins) or (1, 1, num_bins)
-        if self.centers.device != probs.device:
-            self.centers = self.centers.to(probs.device)
-
-        centers_broadcast = self.centers.view(1, 1, -1)
-        expected_prices = torch.sum(probs * centers_broadcast, dim=-1) #
-
-        # 3. Calculate Returns from Expected Prices
-        # We assume sequence length > 1
-        returns = torch.diff(expected_prices, dim=1) / expected_prices[:, :-1]
-
-        # 4. Sortino Calculation
-        # We only penalize downside deviation (returns < rfr)
-        downside_returns = torch.clamp(returns - self.rfr, max=0)
-
-        # Use simple squared mean for downside deviation (keeping it stable)
-        downside_std = torch.sqrt(torch.mean(downside_returns**2, dim=1) + 1e-6)
+        
+        # --- 1. Distillation (Quantile Regression) ---
+        # Huber Loss is robust to outliers
+        loss_distill = F.smooth_l1_loss(student_quantiles, teacher_quantiles.detach())
+        
+        # --- 2. Differentiable Sortino ---
+        # Use the Median (index 1 for [0.1, 0.5, 0.9]) as the "Expected Price"
+        # We assume the user config is always [0.1, 0.5, 0.9] or similar where middle is median
+        median_idx = student_quantiles.shape[1] // 2 
+        median_forecast = student_quantiles[:, median_idx, :] 
+        
+        # Calculate Returns: (P_t / P_t-1) - 1
+        returns = torch.diff(median_forecast, dim=1) / (median_forecast[:, :-1] + 1e-8)
+        
+        # Downside Deviation (Risk)
+        downside = torch.clamp(returns - self.rfr, max=0)
+        downside_std = torch.sqrt(torch.mean(downside**2, dim=1) + 1e-6)
         mean_return = torch.mean(returns, dim=1)
-
-        sortino_ratio = mean_return / (downside_std + 1e-6)
-
-        # We want to MAXIMIZE Sortino, so we MINIMIZE negative Sortino
-        loss_sortino = -torch.mean(sortino_ratio)
-
-        # --- TASK 3: Focal Loss on "Implied" Classification ---
-        # "Focus on Opportunities"
-
-        # Instead of a separate head, we calculate the probability mass
-        # in the "upper bins" (e.g., bins representing >0.5% return)
-        # Assume upper_half_indices are indices of bins > threshold
-        # For simplicity here, we sum the top 20% of bins as "Buy Probability"
-        num_bins = student_logits.shape[-1]
-        top_bins = int(num_bins * 0.2)
-
-        # Sum prob of top bins to get p(Buy)
-        buy_prob = torch.sum(probs[:, :, -top_bins:], dim=-1) #
-        buy_prob = torch.mean(buy_prob, dim=1) # Average prob over sequence
-
-        # Standard Focal Loss formula
-        # Loss = - alpha * (1-pt)^gamma * log(pt)
-        # Here we just use the simple binary version without alpha for now
-        # Targets need to be same shape as buy_prob (Batch,)
-        # targets_tbm might be (Batch, Time) or (Batch,).
-        # If (Batch, Time), we need to aggregate or use sequence.
-        # The prompt code assumes `targets_tbm.float()`.
-        # `buy_prob` is (Batch,). So targets_tbm should be (Batch,) or we average?
-        # In distillation loop, targets_tbm is likely passed as (Batch,) representing the label for the window?
-        # Or (Batch, L)?
-        # The code `buy_prob = torch.mean(buy_prob, dim=1)` reduces time dim.
-        # So it classifies the whole window?
-        # If targets_tbm is (Batch, L), we should take mean or last?
-        # For now, let's assume targets_tbm is (Batch,) or we reduce it.
-        # If targets_tbm is (Batch, L):
-        if targets_tbm.ndim > 1:
-            targets = targets_tbm.float().mean(dim=1) # Soft label if multiple?
-            # Or assume targets_tbm is constant for the window?
-            # Usually we predict "Is this window a buy?"
-            # Let's assume (Batch, L) and we check if ANY is 1? Or mean?
-            # Code uses `targets = targets_tbm.float()`.
-            # If shape mismatch, BCE will complain.
-            pass
+        
+        # SortinoRatio = Mean / DownsideDev
+        # Minimize Negative Sortino
+        sortino = mean_return / (downside_std + 1e-6)
+        loss_sortino = -torch.mean(sortino)
+        
+        # --- 3. Directional Alignment (Proxy for Focal) ---
+        # Did we predict the correct direction?
+        # Proxy: Sigmoid of mean return vs TBM Label
+        pred_prob = torch.sigmoid(mean_return) # 0..1 based on return magnitude
+        
+        # Ensure targets match shape (Batch,)
+        if tbm_labels.ndim > 1:
+            targets = tbm_labels.float().mean(dim=1) # Aggregate if needed
         else:
-            targets = targets_tbm.float()
+            targets = tbm_labels.float()
+            
+        # Binary Cross Entropy
+        bce = F.binary_cross_entropy(pred_prob, targets, reduction='none')
+        # Focal Weighting: (1-pt)^2 * BCE
+        loss_direction = ((1 - torch.exp(-bce))**2.0 * bce).mean()
+        
+        # --- 4. Feature Projection (Optional) ---
+        if student_hidden is not None and teacher_hidden is not None:
+            # Project Student -> Teacher space
+            student_proj = self.distill_projector(student_hidden)
+            loss_feature = F.mse_loss(student_proj, teacher_hidden.detach())
+        else:
+            loss_feature = torch.tensor(0.0, device=student_quantiles.device)
 
-        # Check shape
-        if targets.shape != buy_prob.shape:
-             # Try to adapt
-             if targets.numel() == buy_prob.numel():
-                 targets = targets.view_as(buy_prob)
-             else:
-                 # If targets is (B, L) and buy_prob is (B,), maybe we want loss per step?
-                 # But sortino was per sequence.
-                 # Let's keep buy_prob aggregated.
-                 # If targets is (B, L), max?
-                 targets, _ = torch.max(targets, dim=1) # If any 1, target is 1
-
-        bce_loss = F.binary_cross_entropy(buy_prob, targets, reduction='none')
-        pt = torch.exp(-bce_loss)
-        loss_focal = ((1 - pt) ** self.gamma * bce_loss).mean()
-
-        # --- COMBINE WITH HOMOSCEDASTIC WEIGHTING ---
-        # Loss = 1/(2*sigma^2) * Loss_i + log(sigma)
-
-        # Weight 1: Distillation
-        precision1 = torch.exp(-self.log_vars[0])
-        l1 = precision1 * loss_distill + self.log_vars[0]
-
-        # Weight 2: Sortino
-        precision2 = torch.exp(-self.log_vars[1])
-        l2 = precision2 * loss_sortino + self.log_vars[1]
-
-        # Weight 3: Focal
-        precision3 = torch.exp(-self.log_vars[2])
-        l3 = precision3 * loss_focal + self.log_vars[2]
-
-        total_loss = l1 + l2 + l3
-
-        return total_loss, (l1.item(), l2.item(), l3.item())
+        # --- Weighted Sum (Homoscedastic Uncertainty) ---
+        sigma = torch.exp(self.log_vars)
+        
+        l1 = (loss_distill / (2 * sigma[0])) + 0.5 * self.log_vars[0]
+        l2 = (loss_sortino / (2 * sigma[1])) + 0.5 * self.log_vars[1]
+        l3 = (loss_direction / (2 * sigma[2])) + 0.5 * self.log_vars[2]
+        l4 = (loss_feature / (2 * sigma[3])) + 0.5 * self.log_vars[3]
+        
+        total_loss = l1 + l2 + l3 + l4
+        
+        return total_loss, (loss_distill.item(), loss_sortino.item(), loss_direction.item(), loss_feature.item())

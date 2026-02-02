@@ -1,211 +1,257 @@
+"""
+train_nightly_distill.py - Knowledge Distillation (Classification Paradigm)
+
+Trains a lightweight Student model to mimic the Teacher's classification.
+Uses KL-Divergence on softened logits + Cross-Entropy on hard labels.
+
+Run AFTER:
+1. prep_artifacts.py (generates scaler, HMM, processed data)
+2. train_teacher_t5.py (trains and saves Teacher model)
+"""
+
 import os
 import sys
 import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-import pandas as pd
-from torch.utils.data import Dataset, DataLoader
-from chronos import ChronosPipeline
+import logging
+from pathlib import Path
+from tqdm import tqdm
 
 # Add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from app.api.databento_client import DatabentoClient
-from app.features.signal_processing import apply_modwt_uks, triple_barrier_labels
-from app.models.loss import StudentTradingLoss
+from app.models.student import StudentModel
+from app.models.teacher import TeacherTransformer
 
-TEACHER_ID = "amazon/chronos-t5-large"
-STUDENT_ID = "amazon/chronos-bolt-small"
+# Optional MLflow
+try:
+    import mlflow
+    MLFLOW_ENABLED = True
+except ImportError:
+    MLFLOW_ENABLED = False
 
-class DistillationDataset(Dataset):
-    def __init__(self, prices_l1, teacher_logits, tbm_labels, tokenizer, context_length=64, prediction_length=32):
-        self.prices = prices_l1
-        self.teacher_logits = teacher_logits # Precomputed or None
-        self.tbm_labels = tbm_labels
-        self.tokenizer = tokenizer
-        self.context_len = context_length
-        self.pred_len = prediction_length
+# --- CONFIGURATION ---
+CONFIG = {
+    'run_name': 'Bolt_Distill_Nightly_v1',
+    'data_path': 'backend/data/processed/train_sequences.npz',
+    'teacher_path': 'backend/models/teacher_v1.pt',
+    'save_path': 'backend/models/bolt_student_v1.pt',
+    
+    # Model Params
+    'input_dim': 5,       # Features: returns, vol, rsi, spread, regime
+    'num_classes': 3,     # 0: Neutral, 1: Buy, 2: Sell
+    
+    # Distillation Params
+    'temperature': 2.0,   # Softens the teacher's logits
+    'alpha': 0.5,         # Balance between Hard Label and Soft Teacher
+    
+    # Training Params
+    'batch_size': 64,
+    'lr': 1e-3,
+    'epochs': 20,
+    'device': 'cuda' if torch.cuda.is_available() else 'cpu'
+}
 
-    def __len__(self):
-        return len(self.prices) - self.context_len - self.pred_len
+# Setup Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
+logger = logging.getLogger("DISTILL")
 
-    def __getitem__(self, idx):
-        # Window
-        window = self.prices[idx : idx + self.context_len]
 
-        # Prepare inputs for Student
-        window_tensor = torch.tensor(window, dtype=torch.float32).unsqueeze(0)
-        input_ids, attention_mask, scale = self.tokenizer.context_input_transform(window_tensor)
+def distillation_loss(student_logits, teacher_logits, true_labels, T, alpha):
+    """
+    Combines Hard Loss (Truth) and Soft Loss (Teacher Mimicry).
+    
+    Args:
+        student_logits: Unnormalized logits from Student
+        teacher_logits: Unnormalized logits from Teacher
+        true_labels: Ground truth (0, 1, 2)
+        T: Temperature for softening
+        alpha: Weight for hard loss (1.0=pure hard, 0.0=pure soft)
+    
+    Returns:
+        total_loss, hard_loss, soft_loss
+    """
+    # 1. Hard Loss: Student vs Ground Truth
+    hard_loss = F.cross_entropy(student_logits, true_labels)
 
-        # Targets
-        # Teacher Logits: (Pred_Len, Vocab)
-        # TBM Label: Scalar (0 or 1)
-        t_logits = self.teacher_logits[idx] if self.teacher_logits is not None else torch.zeros(self.pred_len, 4096)
-        tbm = self.tbm_labels[idx + self.context_len] # Label at the decision point?
-        # TBM label is usually "Outcome of trade entered at t".
-        # So label at end of context.
+    # 2. Soft Loss: Student vs Teacher
+    # KLDiv expects LogSoftmax inputs and Softmax targets
+    student_log_soft = F.log_softmax(student_logits / T, dim=1)
+    teacher_soft = F.softmax(teacher_logits / T, dim=1)
+    
+    # KLDivLoss with batchmean reduction
+    kl_loss = nn.KLDivLoss(reduction='batchmean')(student_log_soft, teacher_soft)
+    
+    # Scale by T^2 to keep gradient magnitudes consistent
+    soft_loss = kl_loss * (T * T)
 
-        return {
-            "input_ids": input_ids.squeeze(0),
-            "teacher_logits": torch.tensor(t_logits, dtype=torch.float32),
-            "tbm_label": torch.tensor(tbm, dtype=torch.long)
-        }
+    # 3. Weighted Sum
+    total_loss = (alpha * hard_loss) + ((1 - alpha) * soft_loss)
+    
+    return total_loss, hard_loss, soft_loss
 
-def train_nightly():
-    print("--- Starting Nightly Distillation ---")
 
-    # 1. Data Prep
-    client = DatabentoClient(mock_mode=True)
-    df = client.get_historical_range("BTC-USD", "2023-01-01", "2023-01-02", schema='mbp-10')
-
-    if 'price' in df.columns:
-        prices = df['price']
+def load_data(path, batch_size):
+    """Load preprocessed sequence data."""
+    logger.info(f"Loading data from {path}...")
+    
+    if path.endswith('.npz'):
+        data = np.load(path)
+        X = data['X'].astype(np.float32)
+        y = data['y'].astype(np.int64)
     else:
-        prices = (df['bid_px_00'] + df['ask_px_00']) / 2.0
+        raise ValueError(f"Unsupported format: {path}")
+    
+    tensor_X = torch.from_numpy(X)
+    tensor_y = torch.from_numpy(y)
+    
+    dataset = TensorDataset(tensor_X, tensor_y)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    
+    logger.info(f"Data Loaded: {len(X)} samples, shape {X.shape}")
+    return dataloader, X.shape[2]  # num_features
 
-    # Volatility & Labels
-    vol = prices.rolling(20).std().fillna(0)
-    tbm = triple_barrier_labels(prices, vol)
 
-    # 2. Teacher Inference (Precompute)
-    print("Loading Teacher for Inference...")
-    try:
-        teacher_pipe = ChronosPipeline.from_pretrained(TEACHER_ID, device_map="cuda" if torch.cuda.is_available() else "cpu", torch_dtype=torch.float32)
-        teacher_model = teacher_pipe.model
-        if hasattr(teacher_model, "model"): teacher_model = teacher_model.model
-        teacher_tokenizer = teacher_pipe.tokenizer
+def run_distillation():
+    """Main distillation training loop."""
+    
+    if MLFLOW_ENABLED:
+        mlflow.set_experiment("ALGAI_Distillation")
+        mlflow.start_run(run_name=CONFIG['run_name'])
+        mlflow.log_params(CONFIG)
+    
+    logger.info(f"Starting Distillation on {CONFIG['device']}")
+    
+    # 1. Load Data
+    train_loader, num_features = load_data(CONFIG['data_path'], CONFIG['batch_size'])
+    
+    # 2. Initialize TEACHER (Frozen)
+    logger.info("Loading Teacher...")
+    
+    if not os.path.exists(CONFIG['teacher_path']):
+        logger.error(f"Teacher not found at {CONFIG['teacher_path']}")
+        logger.error("Run train_teacher_t5.py first!")
+        return
+    
+    checkpoint = torch.load(CONFIG['teacher_path'], map_location=CONFIG['device'])
+    
+    teacher_model = TeacherTransformer(checkpoint['config']).to(CONFIG['device'])
+    teacher_model.load_state_dict(checkpoint['model_state_dict'])
+    teacher_model.eval()
+    
+    # Freeze Teacher Weights
+    for param in teacher_model.parameters():
+        param.requires_grad = False
+    
+    logger.info(f"Teacher loaded. Config: {checkpoint['config']}")
+    
+    # 3. Initialize STUDENT (Trainable)
+    logger.info("Initializing Student...")
+    
+    student_config = {
+        'input_dim': num_features,
+        'd_model': 128,
+        'nhead': 4,
+        'num_layers': 2,
+        'num_classes': CONFIG['num_classes'],
+        'dropout': 0.1
+    }
+    
+    student_model = StudentModel(student_config).to(CONFIG['device'])
+    optimizer = optim.AdamW(student_model.parameters(), lr=CONFIG['lr'])
+    
+    logger.info(f"Student config: {student_config}")
+    
+    # 4. Training Loop
+    logger.info(f"Starting training: {CONFIG['epochs']} epochs")
+    
+    for epoch in range(CONFIG['epochs']):
+        student_model.train()
+        total_loss = 0
+        total_hard = 0
+        total_soft = 0
+        correct = 0
+        total = 0
+        
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{CONFIG['epochs']}")
+        
+        for X_batch, y_batch in pbar:
+            X_batch = X_batch.to(CONFIG['device'])
+            y_batch = y_batch.to(CONFIG['device'])
+            
+            optimizer.zero_grad()
+            
+            # Teacher Forward (No Grad)
+            with torch.no_grad():
+                teacher_logits = teacher_model(X_batch)
+            
+            # Student Forward
+            student_logits = student_model(X_batch)
+            
+            # Loss
+            loss, hard_l, soft_l = distillation_loss(
+                student_logits,
+                teacher_logits,
+                y_batch,
+                T=CONFIG['temperature'],
+                alpha=CONFIG['alpha']
+            )
+            
+            # Backprop
+            loss.backward()
+            optimizer.step()
+            
+            # Metrics
+            total_loss += loss.item()
+            total_hard += hard_l.item()
+            total_soft += soft_l.item()
+            
+            preds = student_logits.argmax(dim=1)
+            correct += (preds == y_batch).sum().item()
+            total += y_batch.size(0)
+            
+            pbar.set_postfix({'loss': f'{loss.item():.4f}'})
 
-        print("Precomputing Teacher Logits...")
-        teacher_model.eval()
+        # Epoch Summary
+        avg_loss = total_loss / len(train_loader)
+        avg_hard = total_hard / len(train_loader)
+        avg_soft = total_soft / len(train_loader)
+        accuracy = correct / total
+        
+        logger.info(
+            f"Epoch {epoch+1} | Loss: {avg_loss:.4f} "
+            f"(Hard: {avg_hard:.4f}, Soft: {avg_soft:.4f}) | Acc: {accuracy:.2%}"
+        )
+        
+        if MLFLOW_ENABLED:
+            mlflow.log_metrics({
+                "train_loss": avg_loss,
+                "hard_loss": avg_hard,
+                "soft_loss": avg_soft,
+                "train_accuracy": accuracy
+            }, step=epoch)
 
-        teacher_logits_list = []
-        teacher_prices = prices.values # Assuming simplified L2 for demo
+    # 5. Save Student
+    logger.info(f"Saving Student to {CONFIG['save_path']}...")
+    
+    Path(os.path.dirname(CONFIG['save_path'])).mkdir(parents=True, exist_ok=True)
+    
+    torch.save({
+        'model_state_dict': student_model.state_dict(),
+        'config': student_config,
+        'input_dim': num_features
+    }, CONFIG['save_path'])
+    
+    if MLFLOW_ENABLED:
+        mlflow.log_artifact(CONFIG['save_path'])
+        mlflow.end_run()
+    
+    logger.info("✅ Distillation Complete.")
 
-        context_len = 64
-        pred_len = 32
-        indices = list(range(len(teacher_prices) - context_len - pred_len))
-        batch_size = 4 # Small batch for safety
-
-        with torch.no_grad():
-            for i in range(0, len(indices), batch_size):
-                batch_indices = indices[i : i+batch_size]
-
-                input_ids_list = []
-                labels_list = []
-
-                for idx in batch_indices:
-                    window = teacher_prices[idx : idx + context_len + pred_len]
-                    context = window[:context_len]
-                    target = window[context_len:]
-
-                    c_tensor = torch.tensor(context, dtype=torch.float32).unsqueeze(0)
-                    t_tensor = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
-
-                    i_ids, _, scale = teacher_tokenizer.context_input_transform(c_tensor)
-                    # Try to use input_transform with context scale
-                    try:
-                        l_ids, _ = teacher_tokenizer.input_transform(t_tensor, scale)
-                    except:
-                        # Fallback
-                        l_ids, _, _ = teacher_tokenizer.context_input_transform(t_tensor)
-
-                    input_ids_list.append(i_ids.squeeze(0))
-                    labels_list.append(l_ids.squeeze(0))
-
-                if not input_ids_list: continue
-
-                input_ids = torch.stack(input_ids_list).to(teacher_model.device)
-                labels = torch.stack(labels_list).to(teacher_model.device)
-
-                outputs = teacher_model(input_ids=input_ids, labels=labels)
-                teacher_logits_list.append(outputs.logits.cpu())
-
-                if len(teacher_logits_list) * batch_size > 20:
-                    # Limit for demo/testing to avoid hour-long run
-                    break
-
-        if teacher_logits_list:
-            teacher_logits = torch.cat(teacher_logits_list, dim=0)
-        else:
-            teacher_logits = None
-
-        del teacher_pipe, teacher_model
-        torch.cuda.empty_cache()
-    except Exception as e:
-        print(f"Teacher Inference Failed: {e}. Using dummy logits.")
-        teacher_logits = None
-
-    # 3. Student Training
-    print(f"Loading Student: {STUDENT_ID}")
-    student_pipe = ChronosPipeline.from_pretrained(STUDENT_ID, device_map="cuda", torch_dtype=torch.float32)
-    student_model = student_pipe.model
-    tokenizer = student_pipe.tokenizer
-
-    # Get Bin Centers for Loss
-    # Try to find from model config
-    # This is model specific. For Bolt, it might be in `model.config.distribution_output`?
-    # We will fallback to linear space if not found.
-    centers = torch.linspace(-15, 15, 4096).to(student_model.device) # Approx
-
-    criterion = StudentTradingLoss(tokenizer_centers=centers, risk_free_rate=0.0)
-    optimizer = torch.optim.AdamW(student_model.parameters(), lr=1e-4)
-
-    ds = DistillationDataset(prices.values, teacher_logits, tbm.values, tokenizer)
-    dl = DataLoader(ds, batch_size=4, shuffle=True)
-
-    student_model.train()
-    print("Starting Distillation Loop...")
-
-    steps = 0
-    for batch in dl:
-        input_ids = batch["input_ids"].to(student_model.device)
-        t_logits = batch["teacher_logits"].to(student_model.device) # (B, Pred, V)
-        tbm_target = batch["tbm_label"].to(student_model.device)
-
-        # Student Forward
-        # Bolt forward returns different things?
-        # usually: output = model(input_ids)
-        # output.logits is (B, Pred, V) or (B, Context+Pred, V) depending on mode
-        # Chronos Bolt is usually Decoder-only or Encoder-Decoder?
-        # T5 is Enc-Dec. Bolt is usually Enc-Dec or just T5 based.
-        # "amazon/chronos-bolt" implies T5 based or TinyLlama?
-        # Actually Bolt is T5 based usually.
-        # If we pass labels=None, we get logits?
-        # We need logits for the NEXT tokens (Prediction).
-        # But we don't have ground truth labels for 'loss' argument.
-        # We want pure logits.
-
-        # We might need to construct `decoder_input_ids`.
-        # For inference, pipeline handles it.
-        # For training, we usually provide labels.
-        # Here we want to optimize custom loss.
-        # We need the model to output logits for the prediction horizon.
-        # For T5, we need to pass `decoder_input_ids`.
-        # We can use `input_ids` (context) and learn to predict future?
-        # But we need to feed start token?
-
-        # Simplify: assume we can get logits.
-        # For now, let's just run a dummy forward with dummy labels to get logits,
-        # then ignore the internal loss and use ours.
-        dummy_labels = torch.zeros(input_ids.shape[0], 32, dtype=torch.long).to(student_model.device)
-        outputs = student_model(input_ids=input_ids, labels=dummy_labels) # Force generation mode?
-
-        s_logits = outputs.logits # Shape (B, 32, V) hopefully
-
-        # Calculate our loss
-        loss, components = criterion(s_logits, t_logits, tbm_target)
-
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        steps += 1
-        print(f"Step {steps} Loss: {loss.item():.4f} (Dist: {components[0]:.2f}, Sort: {components[1]:.2f}, Focal: {components[2]:.2f})")
-
-        if steps >= 5: break
-
-    print("Saving Distilled Student...")
-    student_model.save_pretrained("backend/models/chronos_bolt_distilled")
-    print("Done.")
 
 if __name__ == "__main__":
-    train_nightly()
+    run_distillation()

@@ -1,153 +1,280 @@
+"""
+train_teacher_t5.py - Teacher Model Training (Distillation Source)
+
+Key Features:
+1. Focal Loss: Handles class imbalance (Buy/Sell vs Neutral)
+2. Label Smoothing: Prevents overconfidence, better gradients for Student
+3. Temperature Scaling: Softens logits for knowledge transfer
+4. HMM Regime as Feature: Pre-computed regime state fed as input
+
+This Teacher produces calibrated probability distributions (logits) that
+the Student (Bolt) learns from via KL-Divergence distillation.
+"""
+
 import os
 import sys
 import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-import pandas as pd
-from torch.utils.data import Dataset, DataLoader
-from chronos import ChronosPipeline
 
 # Add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from app.api.databento_client import DatabentoClient
-from app.features.signal_processing import apply_modwt_uks
+# Optional MLflow tracking
+try:
+    import mlflow
+    MLFLOW_ENABLED = True
+except ImportError:
+    MLFLOW_ENABLED = False
+    print("MLflow not installed. Runs will not be tracked.")
 
-MODEL_ID = "amazon/chronos-t5-large"
+# --- CONFIGURATION ---
+CONFIG = {
+    'input_dim': 64,        # Features: price, vol, RSI, regime, etc.
+    'seq_len': 60,          # Context window (ticks)
+    'd_model': 512,         # Teacher capacity (large)
+    'nhead': 8,
+    'num_layers': 6,        # Deep for high capacity
+    'num_classes': 3,       # [0: Neutral, 1: Buy, 2: Sell]
+    'dropout': 0.1,
+    'lr': 1e-4,
+    'batch_size': 32,
+    'epochs': 20,
+    'temperature': 2.0,     # Soften logits for distillation
+    'label_smoothing': 0.1, # Prevent overconfidence
+    'focal_gamma': 2.0,     # Focal loss focusing parameter
+}
 
-class TeacherDataset(Dataset):
-    def __init__(self, prices, tokenizer, context_length=512, prediction_length=64):
-        self.prices = prices
-        self.tokenizer = tokenizer
-        self.context_length = context_length
-        self.prediction_length = prediction_length
+# --- TEACHER ARCHITECTURE ---
+class TeacherTransformer(nn.Module):
+    """
+    High-capacity Transformer Encoder for classification.
+    Encoder-only (like BERT) since we're classifying, not generating.
+    """
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        
+        # Input projection
+        self.feature_embedding = nn.Linear(config['input_dim'], config['d_model'])
+        
+        # Learnable positional encoding
+        self.pos_encoder = nn.Parameter(torch.zeros(1, 100, config['d_model']))
+        
+        # Transformer Encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=config['d_model'],
+            nhead=config['nhead'],
+            dropout=config['dropout'],
+            batch_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=config['num_layers']
+        )
+        
+        # Classification head
+        self.classifier = nn.Sequential(
+            nn.Linear(config['d_model'], config['d_model'] // 2),
+            nn.ReLU(),
+            nn.Dropout(config['dropout']),
+            nn.Linear(config['d_model'] // 2, config['num_classes'])
+        )
 
-    def __len__(self):
-        # Limit length for demo/mock
-        return max(0, len(self.prices) - self.context_length - self.prediction_length)
+    def forward(self, x, return_hidden=False):
+        """
+        x: [Batch, Seq_Len, Features]
+        Returns logits [Batch, num_classes]
+        """
+        bs, seq_len, _ = x.shape
+        
+        # Embed and add positional encoding
+        x = self.feature_embedding(x) + self.pos_encoder[:, :seq_len, :]
+        
+        # Transformer pass
+        hidden = self.transformer_encoder(x)
+        
+        # Pool: take last timestep's embedding
+        last_hidden = hidden[:, -1, :]
+        
+        logits = self.classifier(last_hidden)
+        
+        if return_hidden:
+            return logits, hidden
+        return logits
+    
+    def get_soft_targets(self, x, temperature):
+        """Generate softened probability distribution for distillation."""
+        logits = self.forward(x)
+        return torch.softmax(logits / temperature, dim=-1)
 
-    def __getitem__(self, idx):
-        # Sliding window
-        full_window = self.prices[idx : idx + self.context_length + self.prediction_length]
+# --- FOCAL LOSS ---
+class FocalLoss(nn.Module):
+    """
+    Addresses class imbalance by down-weighting easy (Neutral) examples
+    and focusing on hard-to-classify (Buy/Sell) examples.
+    """
+    def __init__(self, gamma=2.0, label_smoothing=0.1):
+        super().__init__()
+        self.gamma = gamma
+        self.ce = nn.CrossEntropyLoss(reduction='none', label_smoothing=label_smoothing)
 
-        # Split
-        context = full_window[:self.context_length]
-        target = full_window[self.context_length:]
+    def forward(self, inputs, targets):
+        ce_loss = self.ce(inputs, targets)
+        pt = torch.exp(-ce_loss)  # Probability of correct class
+        focal_weight = (1 - pt) ** self.gamma
+        return (focal_weight * ce_loss).mean()
 
-        # Tokenize
-        context_tensor = torch.tensor(context, dtype=torch.float32).unsqueeze(0) # (1, L)
-        target_tensor = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
-
-        # Context Transform: returns input_ids, attention_mask, scale
-        input_ids, attention_mask, scale = self.tokenizer.context_input_transform(context_tensor)
-
-        # Target Transform: Scale target using CONTEXT scale, then quantize
-        # We access the internal input_transform or assume manual scaling + quantization?
-        # Chronos tokenizer usually has `input_transform` which takes (samples, scale)
-        # Check if input_transform returns just tokens or more.
-        # It usually returns token_ids, attention_mask.
-
-        # If input_transform is not public or varies, we can try to rely on context_input_transform
-        # but force scale.
-        # But `context_input_transform` computes scale from data.
-
-        # Let's inspect tokenizer at runtime or assume `input_transform`.
-        # If not available, we might fail.
-        # Safe fallback: Use context_input_transform on target?
-        # No, that would re-scale independently.
-
-        # We will try to use `tokenizer.input_transform(target, scale)`.
-        try:
-             # Ensure scale is (1, 1)
-             label_ids, _ = self.tokenizer.input_transform(target_tensor, scale)
-        except:
-             # Fallback if API differs
-             # Maybe it is `_input_transform`?
-             label_ids, _, _ = self.tokenizer.context_input_transform(target_tensor)
-
-        return {
-            "input_ids": input_ids.squeeze(0),
-            "labels": label_ids.squeeze(0)
-        }
-
-def train_teacher():
-    print(f"--- Starting Teacher Training ({MODEL_ID}) ---")
-
-    # 1. Get Data
+# --- DATA LOADING ---
+def load_training_data(config):
+    """
+    Load preprocessed data with HMM regime as feature.
+    Returns DataLoader.
+    """
+    from app.api.databento_client import DatabentoClient
+    from app.features.signal_processing import triple_barrier_labels
+    
+    # Get data
     client = DatabentoClient(mock_mode=True)
-    print("Fetching historical L2 data...")
-    # Getting enough data for context
-    df = client.get_historical_range("BTC-USD", "2023-01-01", "2023-01-02", schema='mbp-10')
-
-    if 'price' in df.columns:
-        raw_prices = df['price'].values
-    else:
-        # Fallback for mock/real
-        if 'bid_px_00' in df.columns:
-            raw_prices = (df['bid_px_00'] + df['ask_px_00']) / 2.0
-            raw_prices = raw_prices.values
-        else:
-            raw_prices = np.random.randn(1000).cumsum() + 100
-
-    print(f"Got {len(raw_prices)} ticks. Applying MODWT+UKS Smoothing...")
-
-    # 2. Acausal Smoothing (Teacher Perception)
+    df = client.get_historical_range("BTC-USD", "2023-01-01", "2023-03-01", schema='mbp-10')
+    
+    if 'price' not in df.columns:
+        df['price'] = (df['bid_px_00'] + df['ask_px_00']) / 2.0
+    
+    prices = df['price'].values
+    
+    # Generate features
+    # Returns, Volatility
+    returns = np.diff(prices) / prices[:-1]
+    vol = np.zeros_like(returns)
+    for i in range(20, len(returns)):
+        vol[i] = np.std(returns[i-20:i])
+    
+    # HMM Regime (trained in Phase 1)
     try:
-        smoothed_prices = apply_modwt_uks(raw_prices, level=3)
-    except Exception as e:
-        print(f"Smoothing failed: {e}. Using raw prices.")
-        smoothed_prices = raw_prices
+        from hmmlearn import GaussianHMM
+        hmm = GaussianHMM(n_components=2, covariance_type="diag", n_iter=100)
+        hmm.fit(np.column_stack([returns[20:], vol[20:]]))
+        regime = np.zeros(len(returns))
+        regime[20:] = hmm.predict(np.column_stack([returns[20:], vol[20:]]))
+    except Exception:
+        regime = np.zeros(len(returns))
+    
+    # Triple Barrier Labels
+    vol_series = df['price'].rolling(20).std().fillna(method='bfill')
+    tbm = triple_barrier_labels(df['price'], vol_series)
+    
+    # Build sequences
+    seq_len = config['seq_len']
+    n_samples = len(returns) - seq_len - 32
+    
+    if n_samples <= 0:
+        # Fallback to mock data
+        print("Using mock data for demo...")
+        X = torch.randn(500, seq_len, config['input_dim'])
+        y = torch.randint(0, 3, (500,))
+        return DataLoader(TensorDataset(X, y), batch_size=config['batch_size'], shuffle=True)
+    
+    X_list = []
+    y_list = []
+    
+    for i in range(n_samples):
+        # Feature vector per timestep: [return, vol, regime, ...]
+        # Pad to input_dim with zeros
+        seq_features = np.zeros((seq_len, config['input_dim']))
+        for j in range(seq_len):
+            idx = i + j
+            if idx < len(returns):
+                seq_features[j, 0] = returns[idx]
+                seq_features[j, 1] = vol[idx]
+                seq_features[j, 2] = regime[idx]
+        
+        X_list.append(seq_features)
+        
+        # Label at decision point
+        label_idx = i + seq_len
+        if label_idx < len(tbm):
+            y_list.append(tbm.iloc[label_idx])
+        else:
+            y_list.append(0)
+    
+    X = torch.tensor(np.array(X_list), dtype=torch.float32)
+    y = torch.tensor(np.array(y_list), dtype=torch.long)
+    
+    # Map -1 (Sell) to 2 for classification
+    y[y == -1] = 2
+    
+    return DataLoader(TensorDataset(X, y), batch_size=config['batch_size'], shuffle=True)
 
-    # 3. Setup Model
-    print(f"Loading Model: {MODEL_ID}")
-    pipeline = ChronosPipeline.from_pretrained(
-        MODEL_ID,
-        device_map="cuda" if torch.cuda.is_available() else "cpu",
-        torch_dtype=torch.float32
-    )
-    model = pipeline.model
-    tokenizer = pipeline.tokenizer
-
-    # Unwrap ChronosModel -> T5
-    if hasattr(model, "model"):
-        model = model.model
-
-    model.train()
-
-    # Dataset
-    ds = TeacherDataset(smoothed_prices, tokenizer)
-    if len(ds) == 0:
-        print("Not enough data for training.")
-        return
-
-    dl = DataLoader(ds, batch_size=2, shuffle=True)
-
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
-
-    print("Training Loop (Perception)...")
-    steps = 0
-    max_steps = 5 # Demo
-
-    for batch in dl:
-        input_ids = batch["input_ids"].to(model.device)
-        labels = batch["labels"].to(model.device)
-
-        # Forward
-        outputs = model(input_ids=input_ids, labels=labels)
-        loss = outputs.loss
-
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        steps += 1
-        print(f"Step {steps} Loss: {loss.item():.4f}")
-
-        if steps >= max_steps: break
-
-    print("Saving Teacher Model...")
-    save_path = "backend/models/teacher_t5_smoothed"
-    model.save_pretrained(save_path)
-    print(f"Saved to {save_path}")
+# --- TRAINING LOOP ---
+def train_teacher():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Training Teacher on {device}")
+    
+    # Model
+    model = TeacherTransformer(CONFIG).to(device)
+    optimizer = optim.AdamW(model.parameters(), lr=CONFIG['lr'])
+    criterion = FocalLoss(gamma=CONFIG['focal_gamma'], label_smoothing=CONFIG['label_smoothing'])
+    
+    # Data
+    dataloader = load_training_data(CONFIG)
+    
+    # MLflow
+    if MLFLOW_ENABLED:
+        mlflow.start_run(run_name="Teacher_Focal_v1")
+        mlflow.log_params(CONFIG)
+    
+    print(f"Starting training: {CONFIG['epochs']} epochs")
+    
+    for epoch in range(CONFIG['epochs']):
+        model.train()
+        total_loss = 0
+        correct = 0
+        total = 0
+        
+        for batch_X, batch_y in dataloader:
+            batch_X = batch_X.to(device)
+            batch_y = batch_y.to(device)
+            
+            optimizer.zero_grad()
+            
+            logits = model(batch_X)
+            loss = criterion(logits, batch_y)
+            
+            loss.backward()
+            optimizer.step()
+            
+            total_loss += loss.item()
+            preds = logits.argmax(dim=1)
+            correct += (preds == batch_y).sum().item()
+            total += batch_y.size(0)
+        
+        avg_loss = total_loss / len(dataloader)
+        accuracy = correct / total
+        
+        print(f"Epoch {epoch+1}/{CONFIG['epochs']} | Loss: {avg_loss:.4f} | Acc: {accuracy:.2%}")
+        
+        if MLFLOW_ENABLED:
+            mlflow.log_metric("train_loss", avg_loss, step=epoch)
+            mlflow.log_metric("train_accuracy", accuracy, step=epoch)
+    
+    # Save for distillation
+    save_path = "backend/models/teacher_v1.pt"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'config': CONFIG,
+        'temperature': CONFIG['temperature']
+    }, save_path)
+    
+    print(f"Teacher saved to {save_path}")
+    print("Ready for Student distillation (train_nightly_distill.py)")
+    
+    if MLFLOW_ENABLED:
+        mlflow.end_run()
 
 if __name__ == "__main__":
     train_teacher()

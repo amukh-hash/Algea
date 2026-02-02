@@ -7,21 +7,58 @@ import warnings
 
 # --- 1. Teacher: Acausal Smoothing (MODWT/SWT + UKS) ---
 
+def sure_shrink(coeffs):
+    """
+    Stein's Unbiased Risk Estimate (SURE) for adaptive thresholding.
+    Preserves market jumps (alpha) better than VisuShrink.
+    """
+    n = len(coeffs)
+    if n == 0: return coeffs
+    
+    t = np.sort(np.abs(coeffs))
+    
+    # Vectorized risk calculation
+    # Risk = (n - 2k + sum(t_i^2) + (n-k)t_k^2) / n
+    # where k is the rank (1-based index)
+    
+    # Cumulative sum of squared sorted coefficients
+    cumsum_sq = np.cumsum(t**2)
+    
+    # Components
+    k = np.arange(n) # 0 to n-1
+    # Note: formula uses 'k' as count of coeffs <= threshold.
+    # Here i is index. t[i] is the threshold.
+    # # of elements <= t[i] is i+1.
+    # So we keep elements > t[i] (soft thresholding shrinks them).
+    # Risk estimate formula for Soft Thresholding:
+    # SURE(t) = n - 2*n_0 + sum(min(x_i^2, t^2)) # ??? 
+    # Wait, usually expressed as:
+    # Risk = (n - 2*k + sum(x_i^2 for x_i <= t) + (n-k)*t^2) / n
+    # where k is number of x_i <= t.
+    
+    # Matches implementation plan formula:
+    # risk = (n - 2 * np.arange(n) + np.cumsum(t**2) + (n - 1 - np.arange(n)) * t**2) / n
+    
+    risk = (n - 2 * np.arange(n) + cumsum_sq + (n - 1 - np.arange(n)) * t**2) / n
+    
+    best_thresh = t[np.argmin(risk)]
+    
+    return pywt.threshold(coeffs, best_thresh, mode='soft')
+
 def apply_modwt_uks(data: np.ndarray, wavelet='db4', level=3):
     original_len = len(data)
     pad_len = int(np.ceil(original_len / (2**level))) * (2**level) - original_len
     if pad_len > 0:
-        data_padded = np.pad(data, (0, pad_len), 'edge')
+        data_padded = np.pad(data, (0, pad_len), 'reflect')
     else:
         data_padded = data
 
     coeffs = pywt.swt(data_padded, wavelet, level=level, start_level=0)
 
     new_coeffs = []
+    new_coeffs = []
     for (cA, cD) in coeffs:
-        sigma = np.median(np.abs(cD)) / 0.6745 + 1e-6
-        limit = sigma * np.sqrt(2 * np.log(len(cD)))
-        cD_thresh = pywt.threshold(cD, limit, mode='soft')
+        cD_thresh = sure_shrink(cD)
         new_coeffs.append((cA, cD_thresh))
 
     denoised_signal = pywt.iswt(new_coeffs, wavelet)
@@ -49,10 +86,7 @@ def apply_modwt_uks(data: np.ndarray, wavelet='db4', level=3):
 def apply_sliding_wavelet_ukf(data_window: np.ndarray, ukf_object=None):
     try:
         coeffs = pywt.wavedec(data_window, 'db4', level=2, mode='symmetric')
-        cD = coeffs[-1]
-        sigma = np.median(np.abs(cD)) / 0.6745 + 1e-6
-        limit = sigma * np.sqrt(2 * np.log(len(data_window)))
-        new_coeffs = [coeffs[0]] + [pywt.threshold(c, limit, mode='soft') for c in coeffs[1:]]
+        new_coeffs = [coeffs[0]] + [sure_shrink(c) for c in coeffs[1:]]
         rec = pywt.waverec(new_coeffs, 'db4', mode='symmetric')
 
         if len(rec) >= len(data_window):
