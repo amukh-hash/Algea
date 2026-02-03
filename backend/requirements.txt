@@ -13,6 +13,7 @@ tqdm
 
 # ML & Signal Processing
 scikit-learn>=1.3.0
+scipy
 PyWavelets
 filterpy
 numba
@@ -28,3 +29,7 @@ joblib
 
 # Experiment Tracking (optional)
 mlflow
+
+# Phase 1 Additions
+polars
+exchange_calendars

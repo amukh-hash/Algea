@@ -1,0 +1,1 @@
+class StrikeSelector: pass
