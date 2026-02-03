@@ -1,0 +1,8 @@
+{
+  "ticker": "AAPL",
+  "start_date": "2023-01-01",
+  "end_date": "2023-02-01",
+  "options_data_version": "v1",
+  "options_schema_version": 1,
+  "generated_at": "2026-02-03T01:05:55.788082"
+}

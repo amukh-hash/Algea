@@ -1,0 +1,13 @@
+{
+  "params": {
+    "min_student_p50": 0.01,
+    "min_bpi": 40.0,
+    "score": 0.5993788819875776
+  },
+  "metadata": {
+    "generated_at": "2026-02-03T01:05:56.596972",
+    "options_data_version": "v1",
+    "marketframe_schema_hash": "mock_hash",
+    "options_schema_version": 1
+  }
+}

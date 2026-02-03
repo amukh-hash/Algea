@@ -2,15 +2,22 @@ import polars as pl
 import pandas as pd
 from typing import List, Dict, Optional, Any
 from backend.app.models.student_runner import StudentRunner
+from backend.app.models.mock_student_runner import MockStudentRunner
+from backend.app.models.signal_types import ModelSignal
 from backend.app.risk.risk_manager import RiskManager
 from backend.app.risk.types import RiskDecision, ActionType
 from backend.app.portfolio.state import PortfolioState
 from backend.app.engine.swing_scheduler import SwingScheduler, TradingWindow
 
 class EquityPod:
-    def __init__(self, ticker: str, model_path: str, preproc_path: str, device: str = "cpu"):
+    def __init__(self, ticker: str, model_path: str, preproc_path: str, device: str = "cpu", use_mock_runner: bool = False):
         self.ticker = ticker
-        self.runner = StudentRunner(model_path, preproc_path, device=device)
+
+        if use_mock_runner:
+            self.runner = MockStudentRunner(model_path, preproc_path, device=device)
+        else:
+            self.runner = StudentRunner(model_path, preproc_path, device=device)
+
         self.risk_manager = RiskManager()
         self.portfolio = PortfolioState()
         self.scheduler = SwingScheduler()
@@ -19,8 +26,9 @@ class EquityPod:
         # Schema must match MarketFrame
         self.buffer = pl.DataFrame()
         self.lookback = 128 # Should get from model metadata
+        self.last_signal: Optional[ModelSignal] = None
 
-    def on_tick(self, tick: Dict[str, Any], breadth: Dict[str, float]) -> Optional[RiskDecision]:
+    def on_tick(self, tick: Dict[str, Any], breadth: Dict[str, float], external_signal: Optional[ModelSignal] = None) -> Optional[RiskDecision]:
         """
         tick: {'timestamp': ..., 'open': ..., 'close': ..., 'volume': ...}
         """
@@ -76,11 +84,16 @@ class EquityPod:
 
         # Run model
         # Try/Except for runtime safety
-        try:
-            signal = self.runner.infer(window_df)
-        except Exception as e:
-            print(f"Inference failed: {e}")
-            return None
+        if external_signal:
+            signal = external_signal
+        else:
+            try:
+                signal = self.runner.infer(window_df)
+            except Exception as e:
+                print(f"Inference failed: {e}")
+                return None
+
+        self.last_signal = signal
 
         # 5. Risk Management
         decision = self.risk_manager.evaluate(self.ticker, signal, self.portfolio, breadth)
