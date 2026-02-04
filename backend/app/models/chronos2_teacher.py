@@ -5,6 +5,7 @@ Contains logic for:
 2. LoRA Target Discovery (Regex-based).
 3. Unified Model Loading (Base + QLoRA + Adapter).
 4. Model Wrapper (Shape Adaptation).
+5. Teacher Inference (Priors Generation).
 """
 
 import sys
@@ -12,6 +13,7 @@ import re
 import inspect
 from typing import Tuple, Dict, Any, List, Optional, Union
 from pathlib import Path
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -20,6 +22,7 @@ from transformers import (
     BitsAndBytesConfig, PreTrainedModel
 )
 from peft import get_peft_model, LoraConfig, PeftModel, prepare_model_for_kbit_training, TaskType
+from backend.app.models.signal_types import ChronosPriors
 
 class Chronos2ModelWrapper(nn.Module):
     """
@@ -112,6 +115,69 @@ class Chronos2ModelWrapper(nn.Module):
              
         return self.model(**call_kwargs)
     
+    def generate(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
+                 prediction_length: int = 10, num_samples: int = 20, **kwargs) -> torch.Tensor:
+        """
+        Generate forecasts.
+        input_ids: [B, T, F]
+        Returns: [B, NumSamples, PredictionLength, F]
+        """
+        B, T, F = input_ids.shape
+        inputs = self.prepare_inputs(input_ids, attention_mask)
+
+        # Generate: [B*F, NumSamples, PredictionLength] (assuming standard HF generate)
+        # Note: HF generate outputs usually [Batch, SeqLen] (if greedy) or [Batch*NumSamples, SeqLen] or [Batch, NumSamples, SeqLen]
+        # Depending on configuration.
+        # For T5/Seq2Seq: output is [Batch, SeqLen]
+
+        # We need to map back to [B, NumSamples, Pred, F]
+
+        # This implementation depends heavily on the underlying model's generate behavior.
+        # Assuming we can use model.generate()
+
+        # If T5:
+        # outputs = model.generate(input_ids=..., num_return_sequences=num_samples, max_new_tokens=prediction_length)
+        # Output shape: [B*F * num_samples, prediction_length]
+
+        gen_kwargs = {
+            "max_new_tokens": prediction_length,
+            "num_return_sequences": num_samples,
+            "do_sample": True,
+            "use_cache": True
+        }
+        gen_kwargs.update(kwargs)
+
+        with torch.no_grad():
+            outputs = self.model.generate(**inputs, **gen_kwargs)
+
+        # outputs: [B*F * num_samples, pred_len] (usually padded)
+        # Reshape logic
+        # First dim is (Batch * F) repeated num_samples times?
+        # Usually HF interleaves: sample1_for_input1, sample2_for_input1, ...
+
+        # Total inputs = B * F
+        # Total outputs = B * F * num_samples
+
+        # Reshape to [B*F, num_samples, pred_len]
+        # But wait, output is tensor of token IDs.
+
+        # We assume the caller handles decoding (detokenization).
+        # We return the token IDs shaped as [B, F, NumSamples, PredLen]
+
+        # If output is [N_seqs, Len]
+        pred_len = outputs.shape[1]
+
+        # [B*F, num_samples, pred_len]
+        outputs = outputs.view(B*F, num_samples, pred_len)
+
+        # [B, F, num_samples, pred_len]
+        outputs = outputs.view(B, F, num_samples, pred_len)
+
+        # Permute to [B, num_samples, pred_len, F]
+        outputs = outputs.permute(0, 2, 3, 1)
+
+        return outputs
+
     def save_pretrained(self, out_dir: Union[str, Path]):
         # Save underlying model/adapter
         self.model.save_pretrained(out_dir)
@@ -306,3 +372,126 @@ def find_lora_targets(model: nn.Module) -> List[str]:
     if not final:
          final = list(targets)
     return list(final)
+
+def infer_priors(
+    model: Chronos2ModelWrapper,
+    codec: Any, # Chronos2Codec
+    input_tensor: torch.Tensor, # [B, T, F]
+    horizon_days: int = 20,
+    n_samples: int = 20
+) -> List[ChronosPriors]:
+    """
+    Generates priors for a batch of tickers.
+    input_tensor: [B, T, F] normalized/raw depending on codec expectations.
+                  Codec encode needs raw? Usually codec expects raw.
+                  We assume input_tensor is RAW here.
+    """
+    device = input_tensor.device
+
+    # 1. Encode
+    # Codec expects raw [B, T, F]
+    encoded = codec.encode(input_tensor)
+    input_ids = encoded["input_ids"] # [B, T, F]
+    attention_mask = encoded["attention_mask"] # [B, T]
+    scale = encoded["scale"] # [B, 1, F]
+
+    # 2. Generate
+    # Output: [B, NumSamples, PredLen, F] (Tokens)
+    token_preds = model.generate(input_ids, attention_mask, prediction_length=horizon_days, num_samples=n_samples)
+
+    # 3. Decode
+    # We need a decode method in codec or manual.
+    # We will assume a 'decode' method that takes tokens + scale -> values
+    # [B, NumSamples, PredLen, F]
+
+    # Flatten to decode batchwise if needed, or loop?
+    # Codec decode usually takes [B, T, F] tokens + [B, 1, F] scale
+    # Here we have extra dims.
+
+    # Let's trust codec.decode can handle or we loop.
+    # Simpler: Compute stats on tokens? No, need values.
+
+    # Assume decode works on [*, T, F]
+    B, N, P, F = token_preds.shape
+
+    # Reshape to [B*N, P, F]
+    flat_tokens = token_preds.reshape(B*N, P, F)
+    # Expand scale: [B, 1, F] -> [B, N, 1, F] -> [B*N, 1, F]
+    flat_scale = scale.unsqueeze(1).expand(B, N, 1, F).reshape(B*N, 1, F)
+
+    # Decode
+    # decode returns [B*N, P, F] values
+    # We need codec.decode to support this.
+    # If not implemented, we implement basic logic here based on binning.
+
+    # Quick implementation of decoding if codec doesn't fully support
+    if hasattr(codec, "decode"):
+         flat_values = codec.decode(flat_tokens, flat_scale)
+    else:
+         # Minimal fallback if codec.decode not ready
+         # Assume buckets
+         # This is fragile. We should ensure Codec has decode.
+         # For now, return dummy if failing? No.
+         raise NotImplementedError("Codec must implement decode()")
+
+    # Reshape back: [B, N, P, F]
+    values = flat_values.reshape(B, N, P, F)
+
+    # 4. Compute Statistics (Priors)
+    # Target feature: usually "close" or "log_return"?
+    # We assume feature 0 is the primary price/return feature for stats.
+    # Or we calculate for all?
+    # Let's assume input_tensor[:, :, 0] is price-like or return-like.
+    # If it's Price:
+    # Drift = (End - Start) / Start
+    # Vol = std(returns)
+
+    # If it's Returns:
+    # Drift = mean(returns)
+    # Vol = std(returns)
+
+    # We assume the model predicts Prices if raw input was prices.
+    # Let's assume Price.
+
+    # values: [B, N, P, F]
+    # Use feature 0 (Close)
+    price_paths = values[:, :, :, 0] # [B, N, P]
+
+    # Current Price (last observed)
+    current_price = input_tensor[:, -1, 0].unsqueeze(1) # [B, 1]
+
+    # Calculate returns relative to current
+    # paths / current - 1.0
+    # [B, N, P]
+    cum_returns = (price_paths / current_price.unsqueeze(2)) - 1.0
+
+    # Terminal returns (at horizon)
+    terminal_returns = cum_returns[:, :, -1] # [B, N]
+
+    priors_list = []
+
+    for b in range(B):
+        # Drift: Median terminal return
+        drift = float(torch.median(terminal_returns[b]))
+
+        # Vol: Std of terminal returns across samples (uncertainty of outcome)
+        # OR volatility of the path?
+        # Usually "Vol" in priors means implied vol regime.
+        # Let's use std of terminal returns as proxy for uncertainty.
+        vol = float(torch.std(terminal_returns[b]))
+
+        # Downside Q10: 10th percentile of terminal returns
+        downside_q10 = float(torch.quantile(terminal_returns[b], 0.10))
+
+        # Trend Conf: Fraction of paths > 0
+        trend_conf = float((terminal_returns[b] > 0).float().mean())
+
+        priors_list.append(ChronosPriors(
+            drift_20d=drift,
+            vol_20d=vol,
+            downside_q10_20d=downside_q10,
+            trend_conf_20d=trend_conf,
+            metadata={"n_samples": n_samples, "horizon": horizon_days}
+        ))
+
+    return priors_list

@@ -24,3 +24,16 @@ OPTIONS_DATA_VERSION = get_str("OPTIONS_DATA_VERSION", "v1")
 
 # Equities Simulation
 EQUITIES_MODE = get_str("EQUITIES_MODE", "real", allowed=["real", "mock"])
+
+# Execution Mode
+EXECUTION_MODE = get_str("EXECUTION_MODE", "LEGACY", allowed=["LEGACY", "SHADOW", "RANKING"])
+
+# Rebalancing Parameters
+REBALANCE_CALENDAR = os.getenv("REBALANCE_CALENDAR", "MON,WED,FRI").split(",")
+MIN_HOLD_DAYS = get_int("MIN_HOLD_DAYS", 5)
+MAX_HOLD_DAYS = get_int("MAX_HOLD_DAYS", 10)
+
+# Data Paths
+DATA_DIR = os.getenv("DATA_DIR", "backend/data")
+PRIORS_DIR = os.path.join(DATA_DIR, "priors")
+SIGNALS_DIR = os.path.join(DATA_DIR, "signals")

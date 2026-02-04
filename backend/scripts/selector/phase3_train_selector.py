@@ -1,0 +1,212 @@
+"""
+Script to train the Rank-Transformer Selector.
+This replaces the old student distillation phase for Swing.
+"""
+
+import sys
+import os
+import argparse
+import polars as pl
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+from datetime import datetime, timedelta
+import joblib
+
+# Adjust path
+sys.path.append(os.getcwd())
+
+from backend.app.models.rank_transformer import RankTransformer
+from backend.app.models.rank_losses import listwise_softmax_loss, pairwise_margin_loss
+from backend.app.models.selector_scaler import SelectorFeatureScaler
+from backend.app.models.calibration import ScoreCalibrator
+from backend.app.data.windows import make_cross_sectional_batch
+from backend.app.models import feature_contracts
+
+# Configuration
+VERSION = "v1"
+CHECKPOINT_DIR = f"backend/data/checkpoints/selector/{VERSION}"
+LOG_DIR = f"backend/data/logs/selector/{VERSION}"
+
+class CrossSectionalDataset(Dataset):
+    def __init__(self, dates: List[datetime.date], universe: List[str], data_dir: str, lookback: int, horizon: int, feature_cols: List[str]):
+        self.dates = dates
+        self.universe = universe
+        self.data_dir = data_dir
+        self.lookback = lookback
+        self.horizon = horizon
+        self.feature_cols = feature_cols
+
+    def __len__(self):
+        return len(self.dates)
+
+    def __getitem__(self, idx):
+        date = self.dates[idx]
+        batch = make_cross_sectional_batch(
+            target_date=date,
+            universe=self.universe,
+            data_dir=self.data_dir,
+            breadth_path="backend/data/breadth.parquet",
+            lookback_days=self.lookback,
+            horizon_days=self.horizon,
+            feature_cols=self.feature_cols
+        )
+        if batch is None:
+            # Handle empty batch? Return empty tensors or skip?
+            # Ideally filter dates beforehand.
+            return {
+                "X": torch.empty(0),
+                "y": torch.empty(0),
+                "valid": False
+            }
+
+        return {
+            "X": batch["X"], # [N, T, F]
+            "y": batch["y"], # [N]
+            "y_aux": batch["y_aux"], # [N]
+            "valid": True,
+            "date": str(date)
+        }
+
+def train():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--batch_size", type=int, default=1) # One date per batch step (simpler for variable N)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    args = parser.parse_args()
+
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+    # 1. Setup Data
+    # Assume we have a list of dates
+    # start_date = datetime(2020, 1, 1).date()
+    # end_date = datetime(2023, 12, 31).date()
+    dates = [datetime(2023, 1, 1).date() + timedelta(days=x) for x in range(300)] # Mock dates
+
+    # Filter dates to trading days?
+    # Assume make_cross_sectional_batch handles non-trading days by returning None.
+
+    universe = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "SPY"] # Mock
+    feature_cols = feature_contracts.get_feature_list(VERSION)
+
+    # Fit Scaler First?
+    # Ideally fit on training split only.
+    # Load sample batch to fit scaler.
+    print("Fitting scaler...")
+    scaler = SelectorFeatureScaler(version=VERSION, feature_names=feature_cols)
+
+    # Collect some data for fitting
+    sample_X = []
+    for d in dates[:20]:
+        b = make_cross_sectional_batch(d, universe, "backend/data/features", "backend/data/breadth.parquet", 60, 10, feature_cols)
+        if b:
+            sample_X.append(b["X"].numpy())
+
+    if sample_X:
+        # Stack: [Total, T, F]
+        all_X = np.concatenate(sample_X, axis=0)
+        scaler.fit(all_X)
+        scaler.save(os.path.join(CHECKPOINT_DIR, "scaler.joblib"))
+    else:
+        print("Warning: No data found to fit scaler. Using unfitted (no-op or error).")
+
+    # Dataset
+    train_ds = CrossSectionalDataset(dates[:250], universe, "backend/data/features", 60, 10, feature_cols)
+    val_ds = CrossSectionalDataset(dates[250:], universe, "backend/data/features", 60, 10, feature_cols)
+
+    # DataLoader: batch_size=1 means one date at a time.
+    # Collate fn: just return the single item dict since shapes vary per date.
+    train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, collate_fn=lambda x: x[0])
+    val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, collate_fn=lambda x: x[0])
+
+    # Model
+    model = RankTransformer(d_input=len(feature_cols)).to(args.device)
+    optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+
+    # Loop
+    best_val_loss = float("inf")
+
+    for epoch in range(args.epochs):
+        model.train()
+        train_loss = 0.0
+        steps = 0
+
+        for batch in train_loader:
+            if not batch["valid"]:
+                continue
+
+            X = batch["X"].to(args.device) # [N, T, F]
+            y = batch["y"].to(args.device) # [N]
+
+            # Scale
+            X = scaler.transform(X)
+
+            optimizer.zero_grad()
+
+            out = model(X)
+            scores = out["score"] # [N, 1]
+
+            # Loss: Listwise + Pairwise
+            loss_list = listwise_softmax_loss(scores, y)
+            loss_pair = pairwise_margin_loss(scores, y)
+
+            loss = loss_list + 0.5 * loss_pair
+
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss.item()
+            steps += 1
+
+        avg_train_loss = train_loss / max(steps, 1)
+
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        val_steps = 0
+        all_scores = []
+        all_targets = []
+
+        with torch.no_grad():
+            for batch in val_loader:
+                if not batch["valid"]:
+                    continue
+
+                X = batch["X"].to(args.device)
+                y = batch["y"].to(args.device)
+
+                X = scaler.transform(X)
+                out = model(X)
+                scores = out["score"]
+
+                loss = listwise_softmax_loss(scores, y) + 0.5 * pairwise_margin_loss(scores, y)
+                val_loss += loss.item()
+                val_steps += 1
+
+                all_scores.append(scores.cpu().numpy())
+                all_targets.append(y.cpu().numpy())
+
+        avg_val_loss = val_loss / max(val_steps, 1)
+        print(f"Epoch {epoch+1}: Train Loss {avg_train_loss:.4f}, Val Loss {avg_val_loss:.4f}")
+
+        # Checkpoint
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "best.pt"))
+
+            # Fit Calibrator on Val set
+            if all_scores:
+                calibrator = ScoreCalibrator(version=VERSION)
+                flat_scores = np.concatenate(all_scores).ravel()
+                flat_targets = np.concatenate(all_targets).ravel()
+                calibrator.fit(flat_scores, flat_targets)
+                calibrator.save(os.path.join(CHECKPOINT_DIR, "calibration.joblib"))
+
+    print("Training Complete.")
+
+if __name__ == "__main__":
+    train()
