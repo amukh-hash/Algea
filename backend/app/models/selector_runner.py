@@ -8,7 +8,7 @@ from datetime import date
 from backend.app.models.rank_transformer import RankTransformer
 from backend.app.models.selector_scaler import SelectorFeatureScaler
 from backend.app.models.calibration import ScoreCalibrator
-from backend.app.models.feature_contracts import get_feature_list
+from backend.app.models.schema import FeatureContract
 from backend.app.core import artifacts
 
 class SelectorRunner:
@@ -19,7 +19,7 @@ class SelectorRunner:
     def __init__(self, version: str = "v1", device: str = "cpu"):
         self.version = version
         self.device = torch.device(device)
-        self.feature_cols = get_feature_list(version)
+        self.feature_cols = FeatureContract.CORE_FEATURES + FeatureContract.MARKET_FEATURES + FeatureContract.PRIOR_FEATURES
 
         # Resolve Artifacts
         checkpoint_path = artifacts.resolve_selector_checkpoint(version)

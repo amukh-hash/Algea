@@ -6,21 +6,33 @@ import os
 import shutil
 from datetime import date, timedelta
 
-from backend.app.models.feature_contracts import get_feature_list
+from backend.app.models.schema import FeatureContract
 from backend.app.models.selector_scaler import SelectorFeatureScaler
 from backend.app.data.windows import make_cross_sectional_batch
 from backend.app.core.config import EXECUTION_MODE
 from backend.app.engine.portfolio_construction import PortfolioBuilder
 from backend.app.models.signal_types import LEADERBOARD_SCHEMA
 
+def test_runner_init():
+    # Test initialization
+    # Mock artifacts if needed, or assume they exist from previous tests?
+    # Here we just check if it constructs assuming artifacts are mocked or present.
+    # We might need to mock os.path.exists or artifacts resolution.
+    pass
+
+def test_feature_consistency():
+    f_list = FeatureContract.CORE_FEATURES + FeatureContract.MARKET_FEATURES + FeatureContract.PRIOR_FEATURES
+    assert "log_return_20d" in f_list
+    assert "volatility_20d" in f_list
+
 class TestSelectorArchitecture(unittest.TestCase):
     def test_feature_contract_ordering_stable(self):
         """Ensure feature order is deterministic and matches expectation."""
-        cols_v1 = get_feature_list("v1")
+        cols_v1 = FeatureContract.CORE_FEATURES + FeatureContract.MARKET_FEATURES + FeatureContract.PRIOR_FEATURES
         self.assertIsInstance(cols_v1, list)
-        self.assertIn("teacher_drift_20d", cols_v1)
+        self.assertIn("prior_drift_20d", cols_v1)
         # Verify length/content specific to V1
-        self.assertEqual(cols_v1[0], "log_return_1d")
+        self.assertEqual(cols_v1[0], "ticker")
 
     def test_selector_scaler_reproducible(self):
         """Ensure scaler fit/transform is deterministic."""

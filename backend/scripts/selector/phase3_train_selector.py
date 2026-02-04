@@ -23,7 +23,7 @@ from backend.app.models.rank_losses import listwise_softmax_loss, pairwise_margi
 from backend.app.models.selector_scaler import SelectorFeatureScaler
 from backend.app.models.calibration import ScoreCalibrator
 from backend.app.data.windows import make_cross_sectional_batch
-from backend.app.models import feature_contracts
+from backend.app.models.schema import FeatureContract
 
 # Configuration
 VERSION = "v1"
@@ -91,7 +91,7 @@ def train():
     # Assume make_cross_sectional_batch handles non-trading days by returning None.
 
     universe = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "SPY"] # Mock
-    feature_cols = feature_contracts.get_feature_list(VERSION)
+    feature_cols = FeatureContract.CORE_FEATURES + FeatureContract.MARKET_FEATURES + FeatureContract.PRIOR_FEATURES
 
     # Fit Scaler First?
     # Ideally fit on training split only.
