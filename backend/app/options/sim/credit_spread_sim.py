@@ -9,7 +9,7 @@ class PositionSimulator:
         self.candidate = candidate
         self.policy = policy
         self.entry_time = entry_time
-
+        
         # State
         self.is_open = True
         self.exit_time: Optional[datetime] = None
@@ -17,22 +17,22 @@ class PositionSimulator:
         self.pnl: float = 0.0
         self.max_unrealized_loss: float = 0.0
         self.entry_credit = candidate.net_credit
-
+        
     def update(self, current_time: datetime, underlying_price: float, iv_proxy: float = None):
         if not self.is_open:
             return
-
+            
         # 1. Mark to Market
         # Estimate current spread value.
         # Without full pricing engine (BS), we can approximate or use Payoff if at expiry.
-
+        
         dte = (datetime.strptime(self.candidate.expiry_date, "%Y-%m-%d") - current_time).days
-
+        
         if dte <= self.policy.close_at_dte:
             # Close at Expiry/DTE limit
             closing_cost = calculate_spread_payoff(
-                underlying_price,
-                self.candidate.short_strike,
+                underlying_price, 
+                self.candidate.short_strike, 
                 self.candidate.long_strike,
                 self.candidate.strategy_type
             )
@@ -43,24 +43,24 @@ class PositionSimulator:
         # This is the hardest part without a chain snapshot.
         # Simple Model: Linear decay of time value + Intrinsic.
         # Or just assume price moves.
-
+        
         # For Phase 2A mock/sim:
         # We can implement a very rough "delta-based" price change.
         # Price ~ OriginalCredit * (TimeFactor) + DeltaEffect
-
+        
         # Or better: don't simulate MTM perfectly, just check Stop Loss based on Underlying?
         # A common heuristic: If underlying breaches Short Strike, we are in trouble.
-
+        
         if underlying_price < self.candidate.short_strike:
             # ITM (for put spread)
-            # Estimate Loss.
+            # Estimate Loss. 
             # Max loss is width - credit.
             # Let's say we hit stop if price < short_strike - X%
             pass
-
+            
         # TP Check
         # If we held for 50% of time and price is far OTM?
-
+        
     def close_position(self, timestamp: datetime, closing_cost: float, reason: str):
         self.is_open = False
         self.exit_time = timestamp

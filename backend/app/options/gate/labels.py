@@ -8,7 +8,7 @@ def compute_label(ctx: OptionsContext, future_price: float, expiry_price: float)
     """
     # Synthetic label logic:
     # If price stayed above (Price - 5%) for next 5 days?
-
+    
     # Simple rule: Did price go up or stay flat?
     if future_price >= ctx.underlying_price * 0.98:
         return 1

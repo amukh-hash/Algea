@@ -11,7 +11,7 @@ def save_model(model_state: Any, metadata: ModelMetadata, path: str):
     """
     # Create directory if needed
     os.makedirs(os.path.dirname(path), exist_ok=True)
-
+    
     payload = {
         "state_dict": model_state,
         "metadata": asdict(metadata)
@@ -24,12 +24,12 @@ def load_model(path: str, device: str = "cpu") -> Tuple[Any, ModelMetadata]:
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Model artifact not found: {path}")
-
+        
     payload = torch.load(path, map_location=device)
-
+    
     meta_dict = payload["metadata"]
     metadata = ModelMetadata(**meta_dict)
-
+    
     return payload["state_dict"], metadata
 
 def verify_preproc_compatibility(model_meta: ModelMetadata, active_preproc_id: str):

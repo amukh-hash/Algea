@@ -30,22 +30,22 @@ class SpreadCandidate:
     expiry_date: str # YYYY-MM-DD
     dte: int
     strategy_type: str = "put_credit_spread"
-
+    
     # Legs
     short_strike: float = 0.0
     long_strike: float = 0.0
-
+    
     # Pricing
     short_price: float = 0.0
     long_price: float = 0.0
     net_credit: float = 0.0
-
+    
     # Greeks/Risk
     width: float = 0.0
     max_loss: float = 0.0
     max_profit: float = 0.0
     risk_reward_ratio: float = 0.0
-
+    
     # Model
     prob_profit: float = 0.0
     expected_value: float = 0.0

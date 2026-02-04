@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--teacher_cache_dir", default="backend/models/teacher_cache")
     parser.add_argument("--student_path", default="backend/models/student/student_v1.pt")
     args = parser.parse_args()
-
+    
     print("Distillation script placeholder. Would load cache and update student weights.")
 
 if __name__ == "__main__":

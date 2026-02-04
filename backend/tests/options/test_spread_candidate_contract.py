@@ -13,7 +13,7 @@ def test_spread_candidate_contract():
         max_loss=400.0,
         risk_reward_ratio=400.0/1.0
     )
-
+    
     assert cand.short_strike > cand.long_strike # Put Credit
     assert cand.width == (cand.short_strike - cand.long_strike)
     assert cand.risk_reward_ratio > 0

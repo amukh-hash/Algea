@@ -19,20 +19,20 @@ def main():
     parser.add_argument("--dte", type=int, default=30)
     parser.add_argument("--output_dir", default="backend/data/options/iv")
     args = parser.parse_args()
-
+    
     start_dt = datetime.strptime(args.start_date, "%Y-%m-%d")
     end_dt = datetime.strptime(args.end_date, "%Y-%m-%d")
-
+    
     print(f"Ingesting IV for {args.ticker} from {start_dt} to {end_dt} (DTE: {args.dte})...")
-
+    
     provider = MockIVProvider() # Could add provider selection logic
-
+    
     snapshots = provider.get_iv_history(args.ticker, start_dt, end_dt, args.dte)
-
+    
     if not snapshots:
         print("No data found.")
         return
-
+        
     # Convert to Polars DataFrame
     rows = []
     for s in snapshots:
@@ -44,21 +44,21 @@ def main():
             "iv_rank": s.iv_rank,
             "iv_percentile": s.iv_percentile
         })
-
+        
     df = pl.DataFrame(rows)
-
+    
     os.makedirs(args.output_dir, exist_ok=True)
     out_path = os.path.join(args.output_dir, f"{args.ticker}.parquet")
-
+    
     # If exists, append? For now overwrite or concat.
     if os.path.exists(out_path):
         existing_df = pl.read_parquet(out_path)
         # Filter out overlapping dates? Or just append and unique.
         df = pl.concat([existing_df, df]).unique(subset=["timestamp", "dte"]).sort("timestamp")
-
+        
     df.write_parquet(out_path)
     print(f"Wrote {df.height} rows to {out_path}")
-
+    
     # Write metadata
     meta_path = os.path.join(args.output_dir, f"{args.ticker}_metadata.json")
     metadata = {

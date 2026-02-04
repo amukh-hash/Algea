@@ -9,7 +9,7 @@ class OptionsExecutor(ABC):
         Executes the decision. Returns the resulting position (if open) or None (if close/noop).
         """
         pass
-
+    
     @abstractmethod
     def get_positions(self) -> list[OptionsPosition]:
         pass

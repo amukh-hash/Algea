@@ -28,12 +28,12 @@ def main():
     parser.add_argument("--preproc_path", default="backend/models/preproc/preproc_v1.json")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-
+    
     use_mock = (EQUITIES_MODE == "mock") or args.dry_run
 
     # 1. Load Data (Simulate Feed)
     mf_path = os.path.join(args.data_dir, f"marketframe_{args.ticker}_1m.parquet")
-
+    
     # Mock data creation if not exists (for smoke test)
     if args.dry_run and not os.path.exists(mf_path):
         print("Dry run: Generating dummy data...")
@@ -61,9 +61,9 @@ def main():
     # 2. Init Pods
     try:
         equity_pod = EquityPod(
-            args.ticker,
-            args.model_path,
-            args.preproc_path,
+            args.ticker, 
+            args.model_path, 
+            args.preproc_path, 
             use_mock_runner=use_mock
         )
         options_pod = OptionsPod()
@@ -100,7 +100,7 @@ def main():
         if eq_decision and eq_decision.action not in (ActionType.NO_NEW_RISK, ActionType.HOLD):
             print(f"[EQUITY] {row['timestamp']} DECISION: {eq_decision.action} {eq_decision.quantity} | {eq_decision.reason}")
             equity_pod.execute_decision(eq_decision)
-
+            
         # Run Options Pod (using shared signal)
         signal = equity_pod.last_signal
         if signal:
@@ -112,7 +112,7 @@ def main():
                 breadth=breadth,
                 posture="NORMAL" # Could derive from RiskManager
             )
-
+            
             opt_decision = options_pod.on_signal(ctx)
             if opt_decision:
                 print(f"[OPTIONS] {row['timestamp']} DECISION: {opt_decision.action} {opt_decision.candidate.short_strike}/{opt_decision.candidate.long_strike} | {opt_decision.reason}")

@@ -17,13 +17,13 @@ class SwingScheduler:
 
     def get_window(self, ts: pd.Timestamp) -> TradingWindow:
         cal = calendar.get_calendar()
-
+        
         # Ensure UTC
         if ts.tz is None:
             ts = ts.tz_localize("UTC")
         else:
             ts = ts.tz_convert("UTC")
-
+            
         if not cal.is_open_on_minute(ts):
             # Check if pre-open?
             next_open = cal.next_open(ts)
@@ -31,28 +31,28 @@ class SwingScheduler:
             if timedelta(minutes=0) < diff <= timedelta(minutes=30):
                 return TradingWindow.PRE_OPEN
             return TradingWindow.CLOSED
-
+            
         # It is open. Find session open/close times.
         # session = cal.minute_to_session(ts)
         # open_time = cal.session_open(session)
         # close_time = cal.session_close(session)
-
+        
         # Optimized: get open/close for the *current* open session.
         # But exchange_calendars doesn't have "current_session_open/close" easily for a timestamp inside.
         # We can use `previous_open` (which is this session's open) and `next_close` (this session's close).
-
+        
         open_time = cal.previous_open(ts)
         close_time = cal.next_close(ts)
-
+        
         # Check intervals
         # Early Entry: Open+15m to Open+90m (1.5h)
         if open_time + timedelta(minutes=15) <= ts <= open_time + timedelta(minutes=90):
             return TradingWindow.EARLY_ENTRY
-
+            
         # Late Adjust: Close-30m to Close
         if ts >= close_time - timedelta(minutes=30):
             return TradingWindow.LATE_ADJUST
-
+            
         return TradingWindow.MID_DAY
 
     def get_allowed_actions(self, window: TradingWindow) -> list:

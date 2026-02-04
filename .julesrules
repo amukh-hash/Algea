@@ -1,6 +1,6 @@
 # Jules Rules
 
-This file defines the coding standards and preferences for the Algai project.
+This file defines the coding standards and preferences for the Algaie project.
 
 ## Project Structure
 - `backend/`: Python code (Django/Flask or scripts).

@@ -9,6 +9,6 @@ class NoopExecutor(OptionsExecutor):
     def execute(self, decision: OptionsDecision) -> Optional[OptionsPosition]:
         logger.info(f"[NOOP] Would execute: {decision}")
         return None
-
+        
     def get_positions(self) -> List[OptionsPosition]:
         return []

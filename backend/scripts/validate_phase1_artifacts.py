@@ -26,34 +26,34 @@ def validate_marketframe(path: str) -> bool:
     except Exception as e:
         print(f"FAILED: Could not read {path}: {e}")
         return False
-
+        
     # 1. Monotonic Timestamps
     timestamps = df["timestamp"]
     if not timestamps.is_sorted():
         print("FAILED: Timestamps not monotonic")
         return False
-
+        
     # 2. No Duplicates
     if timestamps.n_unique() != len(timestamps):
         print("FAILED: Duplicate timestamps found")
         return False
-
+        
     # 3. Join Coverage (Breadth columns should not be null after ffill, unless start is missing)
     # Check null count in 'ad_line', 'bpi'
     # If starting rows are null, that's acceptable if breadth starts later, but we expect full coverage for dummy data.
     nulls_ad = df["ad_line"].null_count()
     if nulls_ad > 0:
         print(f"WARNING: {nulls_ad} nulls in ad_line. (Acceptable at start)")
-
+        
     # 4. Session Invariants
     # Check a sample
     sample = df.sample(min(100, len(df)))
     cal = calendar.get_calendar()
-
+    
     # We just check if they are "trading minutes"?
     # Or just check if they are valid timestamps.
     # Checking against calendar is slow for loop.
-
+    
     return True
 
 def validate_reproducibility(file_map: Dict[str, str]) -> bool:
@@ -75,7 +75,7 @@ def main():
     parser.add_argument("--data_dir", default="backend/data/marketframe")
     parser.add_argument("--context_path", default="backend/data/context/breadth_1m.parquet")
     args = parser.parse_args()
-
+    
     # Validate Breadth
     if os.path.exists(args.context_path):
         # Read with pandas to check timestamp index/column
@@ -98,10 +98,10 @@ def main():
         if f.endswith(".parquet"):
             if not validate_marketframe(os.path.join(args.data_dir, f)):
                 success = False
-
+                
     if not success:
         sys.exit(1)
-
+        
     print("Validation Passed.")
 
 if __name__ == "__main__":

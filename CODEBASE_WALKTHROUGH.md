@@ -1,8 +1,8 @@
-# ALGAI Trading Platform - Complete Codebase Walkthrough
+# ALGAIE Trading Platform - Complete Codebase Walkthrough
 
 ## 1. SYSTEM OVERVIEW
 
-**ALGAI** is an institutional-grade algorithmic trading platform featuring:
+**ALGAIE** is an institutional-grade algorithmic trading platform featuring:
 - **Teacher-Student Distillation**: Chronos T5 (Teacher) → Chronos Bolt (Student)
 - **Advanced Signal Processing**: MODWT wavelets + Unscented Kalman Filter/Smoother
 - **Live Trading**: Alpaca API integration with "Overlord" execution loop
@@ -11,7 +11,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                            ALGAI PLATFORM V2.0                              │
+│                            ALGAIE PLATFORM V2.0                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌───────────────────┐     ┌───────────────────┐     ┌──────────────────┐  │
@@ -41,7 +41,7 @@
 ## 2. PROJECT STRUCTURE
 
 ```
-algai/
+algaie/
 ├── backend/
 │   ├── app/                          # Core application (38 Python files)
 │   │   ├── main.py                   # FastAPI entry point

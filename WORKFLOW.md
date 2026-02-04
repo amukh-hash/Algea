@@ -1,4 +1,4 @@
-# Algai Development Workflow
+# Algaie Development Workflow
 
 This project uses a "Central Hub" strategy with GitHub as the source of truth.
 

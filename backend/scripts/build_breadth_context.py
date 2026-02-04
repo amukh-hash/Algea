@@ -29,12 +29,12 @@ def main():
     print(f"Loading data for {len(universe)} tickers...")
 
     dfs = {}
-
+    
     # Check if data dir exists
     if not os.path.exists(args.data_dir):
         print(f"WARNING: Data directory {args.data_dir} does not exist.")
-        # Create dummy data for structure verification if strictly needed,
-        # but better to just exit or warn.
+        # Create dummy data for structure verification if strictly needed, 
+        # but better to just exit or warn. 
         # For the purpose of 'smoke test', we might need to create dummy data externally.
         return
 
@@ -51,18 +51,18 @@ def main():
                 # If we omit columns, we read all.
                 # Let's read all cols, it's safer for 1m data (small enough).
                 df = pd.read_parquet(fpath)
-
+                
                 # If timestamp is a column, set it as index
                 if "timestamp" in df.columns:
                     df = df.set_index("timestamp")
-
+                    
                 # Ensure index is unique
                 if not df.index.is_unique:
                     df = df[~df.index.duplicated(keep='first')]
                 dfs[ticker] = df
             except Exception as e:
                 print(f"Failed to load {ticker}: {e}")
-
+    
     if not dfs:
         print("No data loaded. Exiting.")
         return
@@ -85,7 +85,7 @@ def main():
     closes = pd.DataFrame(index=master_index)
     for t, df in dfs.items():
         closes[t] = df['close'].reindex(master_index).ffill(limit=5)
-
+    
     ad_line = breadth.calculate_ad_line(closes)
 
     # 4. Compute BPI
@@ -97,10 +97,10 @@ def main():
         'ad_line': ad_line,
         'bpi': bpi
     }, index=master_index)
-
+    
     # Save Parquet with explicit timestamp column
     out_df = out_df.reset_index().rename(columns={"index": "timestamp"})
-
+    
     out_path = os.path.join(args.output_dir, OUTPUT_FILE)
     out_df.to_parquet(out_path, index=False)
     print(f"Saved breadth data to {out_path}")

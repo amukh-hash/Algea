@@ -13,7 +13,7 @@ def test_teacher_runner_contract(mock_io, mock_preproc_cls):
     mock_preproc = MagicMock()
     mock_preproc.version_hash = "abc"
     mock_preproc_cls.load.return_value = mock_preproc
-
+    
     # Mock Transform: returns df with required columns
     def mock_transform(df):
         # Return dummy DF with same length but with required feature cols
@@ -26,30 +26,30 @@ def test_teacher_runner_contract(mock_io, mock_preproc_cls):
             "bpi_norm": np.zeros(n)
         })
     mock_preproc.transform.side_effect = mock_transform
-
+    
     # Mock Model IO
     mock_meta = ModelMetadata(
         model_version="v1", preproc_id="abc", training_start="", training_end=""
     )
     # State dict: empty for mock model
     mock_io.load_model.return_value = ({}, mock_meta)
-
+    
     # Mock Model Class
     mock_model = MagicMock(spec=torch.nn.Module)
     # Output: (Batch, Horizons=2, Quantiles=3)
-    mock_model.return_value = torch.tensor([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]])
-
+    mock_model.return_value = torch.tensor([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]]) 
+    
     # Instantiate
     # Pass mock_model as model_class (constructor returns instance)
     mock_model_cls = MagicMock()
     mock_model_cls.return_value = mock_model
-
+    
     runner = TeacherERunner("path", "path", model_class=mock_model_cls)
-
+    
     # Infer
     df_in = pl.DataFrame({"timestamp": [1], "close": [100]}) # Dummy input
     signal = runner.infer(df_in)
-
+    
     # Verify Contract
     assert isinstance(signal, ModelSignal)
     assert signal.horizons == ["1D", "3D"]
@@ -57,5 +57,5 @@ def test_teacher_runner_contract(mock_io, mock_preproc_cls):
     assert signal.quantiles["1D"]["0.05"] == pytest.approx(0.1)
     assert signal.quantiles["1D"]["0.50"] == pytest.approx(0.2)
     assert signal.quantiles["1D"]["0.95"] == pytest.approx(0.3)
-
+    
     assert signal.metadata.model_version == "v1"

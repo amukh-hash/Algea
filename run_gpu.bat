@@ -1,9 +1,9 @@
 @echo off
-REM Algai Training Helper (GPU FORCED)
+REM Algaie Training Helper (GPU FORCED)
 cd /d "%~dp0"
 
 echo ==========================================
-echo      Algai Training (GPU ONLY)
+echo      Algaie Training (GPU ONLY)
 echo ==========================================
 echo.
 echo NOTE: This script forces the use of venv_gpu.

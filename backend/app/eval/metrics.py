@@ -10,7 +10,7 @@ def directional_accuracy(y_true: np.ndarray, y_pred_median: np.ndarray) -> float
     # Use sign.
     s_true = np.sign(y_true)
     s_pred = np.sign(y_pred_median)
-
+    
     # If pred is exactly 0, count as incorrect? Or ignore?
     # Usually swing trades are directional.
     matches = (s_true == s_pred) & (s_pred != 0)
@@ -34,14 +34,14 @@ def compute_metrics(y_true: np.ndarray, quantiles: Dict[str, np.ndarray]) -> Dic
     quantiles: {"0.05": (N,), "0.50": (N,), "0.95": (N,)}
     """
     metrics = {}
-
+    
     # Direction
     if "0.50" in quantiles:
         metrics["accuracy"] = directional_accuracy(y_true, quantiles["0.50"])
-
+        
     # Calibration
     if "0.05" in quantiles and "0.95" in quantiles:
         metrics["coverage_90"] = coverage_probability(y_true, quantiles["0.05"], quantiles["0.95"])
         metrics["width_90"] = interval_width(quantiles["0.05"], quantiles["0.95"])
-
+        
     return metrics

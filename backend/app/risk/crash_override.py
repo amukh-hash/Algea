@@ -12,8 +12,8 @@ class CrashOverride:
         """
         if bpi < self.bpi_defensive and ad_slope < 0:
             return RiskPosture.DEFENSIVE
-
+        
         if bpi < self.bpi_cautious:
             return RiskPosture.CAUTIOUS
-
+            
         return RiskPosture.NORMAL

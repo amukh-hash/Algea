@@ -9,15 +9,15 @@ class OptionsGate:
             "min_bpi": 30.0,
             "min_student_p50": -0.01
         }
-
+        
     def evaluate(self, ctx: OptionsContext) -> GateDecision:
         # 1. Compute Features
         feats = compute_gate_features(ctx)
-
+        
         # 2. Stage 1: Regime / Student
         if feats["bpi"] < self.thresholds["min_bpi"]:
             return GateDecision(False, GateReasonCode.REJECT_REGIME, f"BPI {feats['bpi']} < {self.thresholds['min_bpi']}")
-
+            
         if feats["student_p50_3d"] < self.thresholds["min_student_p50"]:
              return GateDecision(False, GateReasonCode.REJECT_REGIME, f"Student P50 {feats['student_p50_3d']:.4f} too low")
 
@@ -32,5 +32,5 @@ class OptionsGate:
             )
             if not passed:
                 return GateDecision(False, code, "Vibe check failed")
-
+        
         return GateDecision(True, GateReasonCode.PASS, "All checks passed", metadata=feats)

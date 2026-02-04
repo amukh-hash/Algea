@@ -56,33 +56,33 @@ def compute_hrp_weights(returns: pd.DataFrame) -> dict:
     """
     if returns.empty:
         return {}
-
+    
     # 1. Correlation & Covariance
     corr = returns.corr().fillna(0)
     cov = returns.cov().fillna(0)
-
+    
     # 2. Distance Matrix
     dist = np.sqrt((1 - corr) / 2)
     # Handle floating point errors
     dist = np.clip(dist, 0, 1)
-
+    
     # 3. Clustering
     # squareform requires symmetric matrix with 0 diag
     dist_arr = dist.values
     np.fill_diagonal(dist_arr, 0)
     condensed_dist = squareform(dist_arr)
-
+    
     link = sch.linkage(condensed_dist, 'single')
-
+    
     # 4. Sorting
     sort_ix = get_quasi_diag(link)
     sort_ix = corr.index[sort_ix].tolist()
-
+    
     # 5. Allocation
     # Rearrange cov to match sort order
     cov_sorted = cov.loc[sort_ix, sort_ix].values
-
+    
     weights_series = get_rec_bipart(cov_sorted, range(len(sort_ix)))
     weights = pd.Series(weights_series.values, index=sort_ix)
-
+    
     return weights.to_dict()

@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--model_path", required=True)
     parser.add_argument("--output_dir", default="backend/models/teacher_cache")
     args = parser.parse_args()
-
+    
     os.makedirs(args.output_dir, exist_ok=True)
     print("Teacher cache script placeholder. Would run inference and save to parquet.")
 

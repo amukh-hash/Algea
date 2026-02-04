@@ -1,6 +1,6 @@
 @echo off
 echo ===================================================
-echo     ALGAI PHASE 3: THE JUDGE (GPU ACCELERATED)
+echo     ALGAIE PHASE 3: THE JUDGE (GPU ACCELERATED)
 echo ===================================================
 echo.
 echo NOTE: Ensure Phase 2 is finished before running this!

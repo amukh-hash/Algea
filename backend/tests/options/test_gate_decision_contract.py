@@ -15,17 +15,17 @@ def test_gate_decision_contract():
         student_signal=signal,
         breadth={"bpi": 60.0, "ad_line": 1000.0}
     )
-
+    
     gate = OptionsGate()
     decision = gate.evaluate(ctx)
-
+    
     assert isinstance(decision, GateDecision)
     assert isinstance(decision.should_trade, bool)
     assert isinstance(decision.reason_code, GateReasonCode)
-
+    
     # Check default behavior
     assert decision.should_trade is True # With these good inputs
-
+    
     # Check failure
     ctx.breadth["bpi"] = 10.0
     decision_bad = gate.evaluate(ctx)

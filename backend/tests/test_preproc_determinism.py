@@ -16,26 +16,26 @@ def test_preproc_determinism(tmp_path):
         "ad_line": [1.0, 2.0, 3.0],
         "bpi": [10.0, 20.0, 30.0]
     })
-
+    
     # Adjust volume to have variance
     df = df.with_columns(pl.Series("volume", [10, 100, 1000]))
-
+    
     p = preproc.Preprocessor()
     p.fit(df)
-
+    
     # Transform
     res1 = p.transform(df)
-
+    
     # Save/Load
     save_path = tmp_path / "preproc.json"
     p.save(str(save_path))
-
+    
     p2 = preproc.Preprocessor.load(str(save_path))
     res2 = p2.transform(df)
-
+    
     # Check equality
     assert res1.equals(res2)
-
+    
     # Check specific calculation
     # AD Line: 1, 2, 3 -> Mean 2, Std 1 (sample std? polars default is sample - divisor n-1)
     # (1-2)/1 = -1
@@ -52,22 +52,22 @@ def test_preproc_tamper_protection(tmp_path):
         "ad_line": [1.0],
         "bpi": [1.0]
     })
-
+    
     p = preproc.Preprocessor()
     p.fit(df)
     save_path = tmp_path / "preproc_tampered.json"
     p.save(str(save_path))
-
+    
     # Tamper with file
     with open(save_path, 'r') as f:
         data = json.load(f)
-
+    
     # Change a param
     data["params"]["ad_line"]["mean"] += 0.1
-
+    
     with open(save_path, 'w') as f:
         json.dump(data, f)
-
+        
     # Load should fail
     with pytest.raises(ValueError, match="Preprocessor hash mismatch"):
         preproc.Preprocessor.load(str(save_path))

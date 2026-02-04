@@ -10,7 +10,7 @@ def test_marketframe_alignment(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     context_path = tmp_path / "breadth.parquet"
-
+    
     # Create OHLCV for Ticker 'TEST'
     # Timestamps: 10:00, 10:01, 10:03 (gap), 10:04
     dates = pd.to_datetime(["2023-01-01 10:00", "2023-01-01 10:01", "2023-01-01 10:03", "2023-01-01 10:04"])
@@ -25,7 +25,7 @@ def test_marketframe_alignment(tmp_path):
     # Save as parquet
     # We save with index=False usually, relying on column
     ohlcv_df.to_parquet(data_dir / "TEST_1m.parquet", index=False)
-
+    
     # Create Breadth Context
     # Timestamps: 10:00, 10:01, 10:02, 10:03, 10:04 (Complete)
     # 10:02 exists in breadth but not in OHLCV -> Should NOT appear in output (Left Join)
@@ -36,23 +36,23 @@ def test_marketframe_alignment(tmp_path):
         "bpi": [50.0, 51.0, 52.0, 53.0, 54.0]
     })
     breadth_df.to_parquet(context_path, index=False)
-
+    
     # Run Build
     mf, meta = marketframe.build_marketframe("TEST", str(data_dir), str(context_path))
-
+    
     # Verify Metadata
     assert meta["ticker"] == "TEST"
     assert meta["rows"] == 4 # Should match OHLCV count
-
+    
     # Verify Join
     # Row 10:00 -> ad=0.5
     row0 = mf.filter(pl.col("timestamp") == pd.Timestamp("2023-01-01 10:00")).to_dict(as_series=False)
     assert row0["ad_line"][0] == 0.5
-
+    
     # Row 10:03 -> ad=0.8
     row2 = mf.filter(pl.col("timestamp") == pd.Timestamp("2023-01-01 10:03")).to_dict(as_series=False)
     assert row2["ad_line"][0] == 0.8
-
+    
     # Verify no 10:02
     assert mf.filter(pl.col("timestamp") == pd.Timestamp("2023-01-01 10:02")).height == 0
 
@@ -61,7 +61,7 @@ def test_marketframe_missing_ohlcv_handling(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     context_path = tmp_path / "breadth.parquet"
-
+    
     dates = pd.to_datetime(["2023-01-01 10:00", "2023-01-01 10:01"])
     ohlcv_df = pd.DataFrame({
         "timestamp": dates,
@@ -72,7 +72,7 @@ def test_marketframe_missing_ohlcv_handling(tmp_path):
         "volume": [1000, 1100]
     })
     ohlcv_df.to_parquet(data_dir / "BAD_1m.parquet", index=False)
-
+    
     # Breadth
     breadth_df = pd.DataFrame({
         "timestamp": dates,
@@ -80,9 +80,9 @@ def test_marketframe_missing_ohlcv_handling(tmp_path):
         "bpi": [50.0, 51.0]
     })
     breadth_df.to_parquet(context_path, index=False)
-
+    
     mf, meta = marketframe.build_marketframe("BAD", str(data_dir), str(context_path))
-
+    
     # Should have dropped the row with None
     assert meta["rows"] == 1
     assert meta["dropped_missing_ohlcv"] == 1

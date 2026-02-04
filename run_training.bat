@@ -1,5 +1,5 @@
 @echo off
-REM Algai Training Helper
+REM Algaie Training Helper
 
 set "PROJECT_ROOT=%~dp0"
 set "GPU_PYTHON=%PROJECT_ROOT%venv_gpu\Scripts\python.exe"
@@ -39,7 +39,7 @@ if "%1"=="finetune" (
 :menu
 REM cls
 echo ==========================================
-echo           Algai Training Helper
+echo           Algaie Training Helper
 echo ==========================================
 echo.
 echo 1. Train Global Base Model (All Data)

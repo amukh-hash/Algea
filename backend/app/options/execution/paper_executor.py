@@ -6,7 +6,7 @@ from backend.app.options.types import OptionsDecision, OptionsPosition, SpreadCa
 class PaperExecutor(OptionsExecutor):
     def __init__(self):
         self.positions: List[OptionsPosition] = []
-
+        
     def execute(self, decision: OptionsDecision) -> Optional[OptionsPosition]:
         if decision.action == "OPEN" and decision.candidate:
             # Simulate Fill
@@ -23,7 +23,7 @@ class PaperExecutor(OptionsExecutor):
             self.positions.append(pos)
             print(f"[PAPER] Opened position: {pos}")
             return pos
-
+            
         elif decision.action == "CLOSE":
             # Find and remove
             # Simplified logic
@@ -31,7 +31,7 @@ class PaperExecutor(OptionsExecutor):
                 closed = self.positions.pop(0)
                 print(f"[PAPER] Closed position: {closed}")
                 return closed
-
+        
         return None
 
     def get_positions(self) -> List[OptionsPosition]:
