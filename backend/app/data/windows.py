@@ -1,192 +1,149 @@
-import torch
-from torch.utils.data import Dataset
 import polars as pl
-import numpy as np
 import pandas as pd
-from typing import List, Optional
-from backend.app.data import calendar
+import numpy as np
+import torch
+from typing import List, Tuple, Optional, Dict
+from datetime import datetime, timedelta
+import os
 
-class SwingWindowDataset(Dataset):
-    def __init__(self, df: pl.DataFrame, input_cols: List[str], lookback: int, stride: int = 1, horizons: List[str] = ["1D", "3D"]):
-        """
-        df: Polars DataFrame (single ticker, sorted by time).
-        input_cols: List of column names to use as features.
-        lookback: Number of time steps (minutes) for the encoder.
-        stride: Stride for sampling start points.
-        horizons: List of horizons to compute targets for. Supported: "1D", "3D".
-        """
-        self.lookback = lookback
-        self.input_cols = input_cols
-        
-        # Convert to pandas/numpy for easier indexing for now? 
-        # Polars is fast but random access by index is also fast if we extract to numpy.
-        self.timestamps = df["timestamp"].to_numpy() # array of numpy.datetime64
-        self.closes = df["close"].to_numpy().astype(np.float32)
-        
-        # Extract features matrix
-        # Shape: (T, F)
-        self.features = df.select(input_cols).to_numpy().astype(np.float32)
-        
-        self.stride = stride
-        self.horizons = horizons
-        
-        # Valid start indices
-        # We need index i such that:
-        # 1. i >= lookback - 1 (so we have 'lookback' steps ending at i)
-        # 2. Targets exist.
-        
-        # Let's precompute targets mapping.
-        # mapping: index -> { "1D": target_val, "3D": target_val }
-        # Or better: parallel arrays for targets.
-        
-        self.targets = {h: np.full(len(self.timestamps), np.nan, dtype=np.float32) for h in horizons}
-        self.valid_indices = []
-        
-        self._compute_targets()
-        
-    def _compute_targets(self):
-        # We need a map from timestamp to index and price
-        # ts_map = {ts: (idx, price) ...} 
-        # Too slow for millions of rows?
-        # Use searchsorted on timestamps.
-        
-        # Optimize: 
-        # Calculate target timestamps for ALL indices we might use.
-        # But `get_next_session_close` is expensive to call 1M times.
-        # However, for 1m data, many minutes map to the same session close.
-        # We can cache the session close for each unique DAY or SESSION.
-        # Or just iterate.
-        
-        # For simplicity and correctness in Phase 1, we iterate but maybe skip based on stride.
-        # But we need valid_indices for __len__.
-        
-        # Let's try to be efficient.
-        # Convert all timestamps to pandas for calendar util?
-        # calendar util expects pandas Timestamp or datetime.
-        
-        # Create a helper to map "minute" -> "next_session_close_ts"
-        # Since 'next_session_close' is monotonic, maybe we can optimize?
-        # Actually, for 1D, for all minutes in a session, the target is that session's close (or next if after).
-        # We can just identify the session for each timestamp.
-        
-        cal = calendar.get_calendar()
-        
-        # Convert timestamps to UTC pandas index
-        pd_ts = pd.to_datetime(self.timestamps).tz_localize("UTC") # Assuming inputs are UTC naive from Polars/Parquet? 
-        # Wait, Polars read_parquet might preserve TZ.
-        # Check first element.
-        if len(self.timestamps) > 0:
-            # np.datetime64 usually naive unless localized.
-            pass
+def make_cross_sectional_batch(
+    target_date: datetime.date,
+    universe: List[str],
+    data_dir: str,
+    breadth_path: str,
+    lookback_days: int = 60,
+    horizon_days: int = 10,
+    feature_cols: List[str] = None,
+    embargo_days: int = 10,
+    purge_days: int = 5
+) -> Dict[str, torch.Tensor]:
+    """
+    Creates a cross-sectional batch for a single date.
+    X: [NumTickers, Lookback, Features]
+    y: [NumTickers] (Forward 10d return)
 
-        # We need to populate self.targets and self.valid_indices
-        # We'll iterate with stride.
+    Filters:
+    - Tickers must have full history for lookback.
+    - Tickers must have forward label (unless inference mode).
+    - Embargo/Purge logic applied implicitly by ensuring train/test splits don't overlap.
+      (This function just builds the batch for a given date).
+    """
+    if feature_cols is None:
+        raise ValueError("Must provide feature_cols list")
         
-        # Create a lookup for Close prices by Timestamp
-        # Exact match required? 
-        # Yes, target is the Close price at the session close time.
-        # But the session close time (e.g. 16:00:00) might exist in our data.
-        # If it doesn't (e.g. data ends 15:59:00), do we use 15:59?
-        # Standard: use last available bar <= close_time?
-        # Or assume our MarketFrame has the close bar.
-        # We'll use searchsorted to find nearest <=.
+    batch_X = []
+    batch_y = []
+    valid_tickers = []
+
+    # Load breadth once
+    try:
+        breadth_df = pl.read_parquet(breadth_path)
+    except FileNotFoundError:
+        print(f"Breadth file not found: {breadth_path}")
+        return None
         
-        # Pre-calculate session closes for the range
-        # This is optimization. For now, let's just do the loop for stride indices.
-        # It might take a few seconds for a year of data.
-        
-        # We only care about indices where i >= lookback-1
-        start_idx = self.lookback - 1
-        
-        # We'll store valid indices
-        indices = []
-        
-        # To speed up:
-        # We can vector-calculate session closes if we map each TS to session.
-        # But simpler:
-        
-        for i in range(start_idx, len(self.timestamps), self.stride):
-            curr_ts = pd_ts[i]
-            curr_close = self.closes[i]
+    for ticker in universe:
+        try:
+            # Load Ticker Data
+            # Assume we have a helper to load processed features + priors attached
+            # Or we load raw and process on fly?
+            # Ideally: We load precomputed features.
+            # But for training loop efficiency, usually we load a big parquet or database.
+            # Let's assume we load a parquet file per ticker that has features + targets.
             
-            valid = True
-            row_targets = {}
-            
-            for h in self.horizons:
-                n = 1 if h == "1D" else 3
-                try:
-                    target_ts = calendar.get_next_session_close(curr_ts, n_sessions=n)
-                except:
-                    valid = False
-                    break
+            # Path: backend/data/features/{ticker}.parquet
+            fpath = f"{data_dir}/features/{ticker}.parquet"
+            if not os.path.exists(fpath):
+                continue
                 
-                # Find target_ts in self.timestamps
-                # searchsorted returns index where it should be inserted to maintain order.
-                # side='right' -> index after last occurrence.
-                # if exact match, ts[idx-1] == target_ts?
-                
-                # We want exact match or closest previous? 
-                # Target is "Session Close". Ideally exact.
-                # If exact missing, allow small tolerance?
-                
-                # Using searchsorted on numpy array of datetimes
-                # self.timestamps is np.datetime64[ns]
-                # target_ts is pd.Timestamp -> convert to np.datetime64
-                target_ts_np = target_ts.to_datetime64()
-                
-                idx = np.searchsorted(self.timestamps, target_ts_np, side='left')
-                
-                # Check if exact match
-                if idx < len(self.timestamps) and self.timestamps[idx] == target_ts_np:
-                    target_price = self.closes[idx]
-                else:
-                    # Not found exactly.
-                    # Try idx-1 (maybe 15:59?)
-                    # Tolerance: 5 minutes?
-                    # If we accept 15:59 as Close.
-                    if idx > 0:
-                        prev = self.timestamps[idx-1]
-                        diff = target_ts_np - prev
-                        # 5 mins in ns = 5 * 60 * 1e9 = 300e9
-                        if diff <= np.timedelta64(5, 'm'):
-                             target_price = self.closes[idx-1]
-                        else:
-                            valid = False
-                            break
-                    else:
-                        valid = False
-                        break
-                
-                # Calculate Log Return
-                # ln(Pt / P0)
-                if curr_close <= 1e-9 or target_price <= 1e-9:
-                     valid = False
-                     break
-                     
-                ret = np.log(target_price / curr_close)
-                row_targets[h] = ret
-            
-            if valid:
-                for h in self.horizons:
-                    self.targets[h][i] = row_targets[h]
-                indices.append(i)
-                
-        self.valid_indices = indices
+            df = pl.read_parquet(fpath)
 
-    def __len__(self):
-        return len(self.valid_indices)
+            # Filter to relevant window
+            # We need [target_date - lookback, target_date] for X
+            # And [target_date, target_date + horizon] for y
 
-    def __getitem__(self, idx):
-        # idx is map to real index
-        real_idx = self.valid_indices[idx]
+            # Ensure date col
+            if "date" not in df.columns:
+                df = df.with_columns(pl.col("timestamp").cast(pl.Date).alias("date"))
+                
+            # Get index of target date
+            # We need exact row? Or closest?
+            # Strict: Must exist.
+            target_row = df.filter(pl.col("date") == target_date)
+
+            if len(target_row) == 0:
+                continue
+                
+            # We need previous lookback rows
+            # Sort just in case
+            df = df.sort("date")
+
+            # Find row index
+            # Polars doesn't have integer index easily without with_row_count
+            df = df.with_row_count("idx")
+            target_idx = df.filter(pl.col("date") == target_date)["idx"].item()
+
+            start_idx = target_idx - lookback_days + 1
+            if start_idx < 0:
+                continue
+                
+            # Slice X
+            # [start_idx, target_idx] inclusive (length = lookback)
+            # Ensure we take exactly lookback rows
+            slice_x = df.slice(start_idx, lookback_days)
+
+            if len(slice_x) != lookback_days:
+                continue
+                
+            # Extract Features
+            x_vals = slice_x.select(feature_cols).to_numpy() # [L, F]
+
+            # Extract Target
+            # 10-day forward return
+            # We need row at target_idx + horizon
+            target_future_idx = target_idx + horizon_days
+
+            if target_future_idx >= len(df):
+                continue
+                
+            # Return = (Price[t+h] / Price[t]) - 1
+            # Or log return diff?
+            # Let's use simple return for ranking? Or log return?
+            # "log_return_10d_fwd" might be precomputed.
+            
+            # Calculate on fly if needed
+            p_t = df[target_idx, "close"]
+            p_fut = df[target_future_idx, "close"]
+
+            if p_t is None or p_fut is None or p_t == 0:
+                continue
+                
+            ret = (p_fut / p_t) - 1.0
+
+            # Aux target: Direction (1 if ret > 0 else 0)
+            direction = 1.0 if ret > 0 else 0.0
+
+            batch_X.append(x_vals)
+            batch_y.append([ret, direction])
+            valid_tickers.append(ticker)
+
+        except Exception as e:
+            # print(f"Error processing {ticker}: {e}")
+            continue
+
+    if not batch_X:
+        return None
         
-        # Get window
-        # [real_idx - lookback + 1 : real_idx + 1]
-        start = real_idx - self.lookback + 1
-        end = real_idx + 1
-        
-        x = self.features[start:end] # Shape (Lookback, F)
-        
-        y = {h: self.targets[h][real_idx] for h in self.horizons}
-        
-        return torch.from_numpy(x), y
+    # Stack
+    # X: [B, T, F]
+    X_tensor = torch.tensor(np.stack(batch_X), dtype=torch.float32)
+
+    # y: [B, 2] (Return, Direction)
+    y_tensor = torch.tensor(np.stack(batch_y), dtype=torch.float32)
+
+    return {
+        "X": X_tensor,
+        "y": y_tensor[:, 0], # Primary target: return
+        "y_aux": y_tensor[:, 1], # Aux target: direction
+        "tickers": valid_tickers
+    }

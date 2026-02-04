@@ -16,4 +16,5 @@ class RiskDecision:
     action: ActionType
     quantity: float # Signed? Or use Action to determine sign? Usually absolute qty + Action.
     reason: str
+    confidence: float = 1.0
     max_position_size: Optional[float] = None # Cap

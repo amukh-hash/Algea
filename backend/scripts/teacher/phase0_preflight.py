@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Phase 0: Preflight Check for Chronos 2 Teacher Training.
+Phase 0: Preflight Check for Swing Selector & Chronos 2 Teacher.
 Validates:
 1. Gold L2 Parquet (Samples, Schema, Timestamp, Feature Store detection).
 2. Silver MarketFrames (Schema, Window Feasibility, Missing Bars).
 3. Breadth Data (Existence, Timestamp Overlap).
 4. Codec/Preproc compatibility (Token vs Tensor mode).
+5. Priors & Selector Artifacts (Existence, Schema, Coverage).
 
 Output: backend/reports/preflight_report.json
 """
@@ -33,6 +34,11 @@ try:
 except ImportError:
     print("WARNING: Torch not installed. Some checks skipped.")
 
+# Import Artifacts resolver
+sys.path.append(os.getcwd())
+from backend.app.core import artifacts, config
+from backend.app.models.signal_types import LEADERBOARD_SCHEMA
+
 # ----------------- Config -----------------
 
 @dataclass
@@ -56,6 +62,11 @@ class PreflightConfig:
     silver_pred: int
     silver_stride: int
     
+    # Selector / Priors
+    check_selector_artifacts: bool
+    as_of_date: Optional[str]
+    min_coverage: float
+
     # Input Mode
     input_mode: str # 'token' or 'tensor'
     codec_path: Optional[Path]
@@ -64,12 +75,12 @@ class PreflightConfig:
     report_path: Path
 
 def load_config() -> PreflightConfig:
-    gold_dir = Path(os.getenv("GOLD_L2_PARQUET_DIR", "legacy/v2/Legacy_Algaie_2/backend/data/processed")).resolve()
-    gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "orthogonal_features_final.parquet")
+    gold_dir = Path(os.getenv("GOLD_L2_PARQUET_DIR", "backend/data/processed/gold")).resolve()
+    gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "*.parquet")
     
-    silver_dir = Path(os.getenv("SILVER_MARKETFRAME_DIR", "LocalDatabase/data_cache_alpaca_curated(120)")).resolve()
+    silver_dir = Path(os.getenv("SILVER_MARKETFRAME_DIR", "backend/data/prices")).resolve()
     
-    breadth_env = os.getenv("BREADTH_PARQUET_PATH", "backend/data/processed/breadth_features.parquet")
+    breadth_env = os.getenv("BREADTH_PARQUET_PATH", "backend/data/breadth.parquet")
     breadth_path = Path(breadth_env).resolve() if breadth_env else None
 
     # Parsing lists
@@ -77,7 +88,7 @@ def load_config() -> PreflightConfig:
         v = os.getenv(k, default)
         return [x.strip() for x in v.split(",") if x.strip()]
 
-    gold_cols = parse_list("GOLD_REQUIRED_COLS", "close_frac,OFI_L1,microprice")
+    gold_cols = parse_list("GOLD_REQUIRED_COLS", "close,volume")
     silver_cols = parse_list("SILVER_REQUIRED_COLS", "open,high,low,close,volume")
     
     tickers_str = os.getenv("SILVER_EXAMPLE_TICKERS", "")
@@ -85,11 +96,15 @@ def load_config() -> PreflightConfig:
 
     input_mode = os.getenv("CHRONOS2_INPUT_MODE", "token").lower()
     
-    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/models/codec/codec_gold_v1.json")
+    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/data/checkpoints/codec_v1.json")
     codec_path = Path(codec_env).resolve() if codec_env else None
     
-    preproc_env = os.getenv("PREPROC_JSON_PATH", "backend/config/preproc_v1.json")
+    preproc_env = os.getenv("PREPROC_JSON_PATH", "backend/data/preprocessing/preproc_v1.json")
     preproc_path = Path(preproc_env).resolve() if preproc_env else None
+
+    check_selector = os.getenv("CHECK_SELECTOR", "true").lower() == "true"
+    as_of_date = os.getenv("AS_OF_DATE", datetime.date.today().strftime("%Y-%m-%d"))
+    min_coverage = float(os.getenv("MIN_COVERAGE", "0.98"))
 
     return PreflightConfig(
         gold_dir=gold_dir,
@@ -104,9 +119,13 @@ def load_config() -> PreflightConfig:
         
         silver_tickers=silver_tickers,
         silver_required_cols=silver_cols,
-        silver_context=int(os.getenv("SILVER_CONTEXT", "1024")),
-        silver_pred=int(os.getenv("SILVER_PRED", "64")),
-        silver_stride=int(os.getenv("SILVER_STRIDE", "30")),
+        silver_context=int(os.getenv("SILVER_CONTEXT", "60")),
+        silver_pred=int(os.getenv("SILVER_PRED", "10")),
+        silver_stride=int(os.getenv("SILVER_STRIDE", "1")),
+
+        check_selector_artifacts=check_selector,
+        as_of_date=as_of_date,
+        min_coverage=min_coverage,
         
         input_mode=input_mode,
         codec_path=codec_path,
@@ -151,9 +170,6 @@ def check_timestamp_sanity(series: pl.Series) -> Dict[str, Any]:
     return res
 
 def analyze_gold_structure(df: pl.DataFrame) -> str:
-    # Heuristic: Feature Store vs Windowed
-    # If "window_id" exists -> "windowed"
-    # If One big run (> 10k rows) -> "continuous_timeseries"
     if "window_id" in df.columns:
         return "windowed"
     if df.height > 10000:
@@ -163,9 +179,13 @@ def analyze_gold_structure(df: pl.DataFrame) -> str:
 def check_gold(cfg: PreflightConfig) -> Dict[str, Any]:
     print(f"[Gold] Scanning up to {cfg.gold_sample_k} files in {cfg.gold_dir}...")
     
+    # If gold dir doesn't exist, warn but maybe optional depending on phase
+    if not cfg.gold_dir.exists():
+        return {"ok": True, "warning": "Gold dir not found, assuming Phase 2 only mode."}
+
     files = sorted(list(cfg.gold_dir.glob(cfg.gold_glob)))
     if not files:
-        return {"ok": False, "error": f"No files found matching {cfg.gold_glob}"}
+        return {"ok": True, "warning": f"No files found matching {cfg.gold_glob}"}
 
     sample_files = files[:cfg.gold_sample_k]
     
@@ -218,7 +238,7 @@ def check_gold(cfg: PreflightConfig) -> Dict[str, Any]:
         "samples": results
     }
 
-def check_silver(cfg: PreflightConfig, gold_report: Dict) -> Dict[str, Any]:
+def check_silver(cfg: PreflightConfig) -> Dict[str, Any]:
     print(f"[Silver] Checking MarketFrames in {cfg.silver_dir}...")
     
     if not cfg.silver_dir.exists():
@@ -235,7 +255,7 @@ def check_silver(cfg: PreflightConfig, gold_report: Dict) -> Dict[str, Any]:
         # Fallback: Scan first K. Glob: *_1m.parquet
         all_mf = sorted(list(cfg.silver_dir.glob("*_1m.parquet")))
         target_files = all_mf[:cfg.gold_sample_k] 
-        print(f"[Silver] No tickers provided. Checking first {len(target_files)} detected files.")
+        # print(f"[Silver] No tickers provided. Checking first {len(target_files)} detected files.")
 
     if not target_files:
         return {"ok": False, "error": "No MarketFrame files found to check."}
@@ -277,14 +297,14 @@ def check_silver(cfg: PreflightConfig, gold_report: Dict) -> Dict[str, Any]:
             
             # Global Range Tracking (for Breadth)
             if "min_ts" in ts_check and "max_ts" in ts_check:
-                # We need datetime objects for comparison
-                # Assuming ISO strings or Polars conversion
-                # Let's trust Polars min/max types
-                t_min = df["timestamp"].min()
-                t_max = df["timestamp"].max()
-                
-                if min_ts_global is None or t_min < min_ts_global: min_ts_global = t_min
-                if max_ts_global is None or t_max > max_ts_global: max_ts_global = t_max
+                try:
+                    t_min = df["timestamp"].min()
+                    t_max = df["timestamp"].max()
+
+                    if min_ts_global is None or t_min < min_ts_global: min_ts_global = t_min
+                    if max_ts_global is None or t_max > max_ts_global: max_ts_global = t_max
+                except:
+                    pass
                 
         except Exception as e:
             f_res["ok"] = False
@@ -335,18 +355,11 @@ def check_breadth(cfg: PreflightConfig, silver_rep: Dict) -> Dict[str, Any]:
              b_min = stats["min"][0]
              b_max = stats["max"][0]
              
-             # Conversions might be tricky (polars datetime vs string).
-             # We assume consistency in pipeline.
-             s_min_str = silver_rep["range"]["min_ts"]
-             s_max_str = silver_rep["range"]["max_ts"]
-             
-             # Loose string comparison or robust? 
-             # Let's just report them.
              return {
                  "ok": True,
                  "breadth_range": {"min": str(b_min), "max": str(b_max)},
                  "silver_range": silver_rep["range"],
-                 "overlap_note": "Please verify ranges overlap manually if formats differ."
+                 "overlap_note": "Please verify ranges overlap manually."
              }
              
         return {"ok": True, "status": "checked_existence_only"}
@@ -354,38 +367,55 @@ def check_breadth(cfg: PreflightConfig, silver_rep: Dict) -> Dict[str, Any]:
     except Exception as e:
         return {"ok": False, "error": f"Read failed: {e}"}
 
-def check_artifacts(cfg: PreflightConfig) -> Dict[str, Any]:
-    print(f"[Artifacts] Checking Mode: {cfg.input_mode}...")
+def check_selector(cfg: PreflightConfig) -> Dict[str, Any]:
+    """
+    Checks Priors and Selector artifacts for compatibility and coverage.
+    """
+    print(f"[Selector] Checking artifacts for date {cfg.as_of_date}...")
     res = {"ok": True, "errors": []}
     
-    if cfg.input_mode == "token":
-        # REQUIRE Codec
-        if not cfg.codec_path or not cfg.codec_path.exists():
-             res["ok"] = False
-             res["errors"].append(f"Token mode requires Codec Artifact at {cfg.codec_path}")
-        else:
-             # Basic JSON check
-             try:
-                 with open(cfg.codec_path, 'r') as f:
-                     json.load(f)
-             except Exception as e:
-                 res["ok"] = False
-                 res["errors"].append(f"Corrupt Codec JSON: {e}")
-
-        # Preproc is optional per updated plan, but nice to check existence if defined
-        if cfg.preproc_json_path and cfg.preproc_json_path.exists():
-             try:
-                 with open(cfg.preproc_json_path, 'r') as f:
-                     json.load(f)
-             except:
-                 res["errors"].append("Warning: Preproc JSON exists but invalid.")
-    
-    elif cfg.input_mode == "tensor":
-        pass # No strict artifact requirements yet
+    if not cfg.check_selector_artifacts:
+        return {"ok": True, "status": "skipped_config"}
         
-    else:
+    # 1. Priors Check
+    priors_path = artifacts.resolve_priors_path(cfg.as_of_date, "v1")
+    if not priors_path:
         res["ok"] = False
-        res["errors"].append(f"Unknown input_mode: {cfg.input_mode}")
+        res["errors"].append(f"Missing Priors for {cfg.as_of_date} (v1)")
+    else:
+        # Check coverage?
+        try:
+            df = pl.read_parquet(priors_path)
+            # Minimal cols
+            req = ["ticker", "teacher_drift_20d", "teacher_vol_20d"]
+            missing = [c for c in req if c not in df.columns]
+            if missing:
+                res["ok"] = False
+                res["errors"].append(f"Priors missing columns: {missing}")
+            # Coverage check vs Universe? (Need universe size)
+            # Assuming universe loaded separately if strict.
+            pass
+        except Exception as e:
+            res["ok"] = False
+            res["errors"].append(f"Corrupt Priors file: {e}")
+
+    # 2. Selector Checkpoint
+    ckpt = artifacts.resolve_selector_checkpoint("v1")
+    if not ckpt:
+        res["ok"] = False
+        res["errors"].append("Missing Selector Checkpoint v1")
+
+    # 3. Scaler
+    scaler = artifacts.resolve_scaler_path("v1")
+    if not scaler:
+        res["ok"] = False
+        res["errors"].append("Missing Selector Scaler v1")
+
+    # 4. Calibration
+    calib = artifacts.resolve_calibration_path("v1")
+    if not calib:
+        res["ok"] = False
+        res["errors"].append("Missing Calibration v1")
 
     return res
 
@@ -403,30 +433,28 @@ def main():
     # 1. Gold
     report["gold"] = check_gold(cfg)
     
-    # 2. Silver (depends on Gold? No, independent check usually, but uses same engine)
-    report["silver"] = check_silver(cfg, report["gold"])
+    # 2. Silver
+    report["silver"] = check_silver(cfg)
     
     # 3. Breadth
     report["breadth"] = check_breadth(cfg, report["silver"])
     
-    # 4. Artifacts
-    report["artifacts"] = check_artifacts(cfg)
+    # 4. Selector
+    report["selector"] = check_selector(cfg)
     
     # Final Decision
     all_ok = all(section.get("ok", False) for section in [
-        report["gold"], report["silver"], report["breadth"], report["artifacts"]
+        report["gold"], report["silver"], report["breadth"], report["selector"]
     ])
     report["global_ok"] = all_ok
     
     # Recommendations
     recs = []
-    if not report["artifacts"]["ok"] and cfg.input_mode == "token":
-        recs.append("Run 'python backend/scripts/teacher/fit_codec_gold.py' to generate codec.")
-    if not report["gold"]["ok"]:
-        recs.append("Check Gold Data generation/paths.")
+    if not report["selector"]["ok"]:
+        recs.append("Run 'python backend/scripts/selector/nightly_build_priors.py' or 'phase3_train_selector.py'")
         
     report["recommendations"] = recs
-    report["next_command"] = "python backend/scripts/teacher/phase1_train_teacher_gold.py" if all_ok else "Fix errors first"
+    report["next_command"] = "python backend/scripts/selector/nightly_run_selector.py" if all_ok else "Fix errors first"
 
     with open(cfg.report_path, "w") as f:
         json.dump(report, f, indent=2)

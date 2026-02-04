@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Union
-import numpy as np
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Any
+import datetime
 
 @dataclass
 class ModelMetadata:
@@ -28,3 +28,64 @@ class ModelSignal:
     
     # Metadata context
     metadata: Optional[ModelMetadata] = None
+
+@dataclass
+class RankScoreSignal:
+    score: float
+    rank: int
+    rank_pct: float
+    confidence: float # e.g. from uncertainty head or logic
+
+@dataclass
+class ChronosPriors:
+    drift_20d: float
+    vol_20d: float
+    downside_q10_20d: float
+    trend_conf_20d: float
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class SelectorOutputs:
+    score: float
+    rank_score_signal: RankScoreSignal
+    priors: ChronosPriors
+    # Optional heads
+    p_up: Optional[float] = None
+    mu_ret: Optional[float] = None
+
+    # Attached calibration
+    expected_value: Optional[float] = None
+
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+# Canonical Leaderboard Schema
+LEADERBOARD_SCHEMA = {
+    # Keys
+    "as_of_date": "str",   # YYYY-MM-DD
+    "ticker": "str",
+
+    # Core Ranking
+    "score": "float",
+    "rank": "int",
+    "rank_pct": "float",
+
+    # Calibration / Value
+    "ev_10d": "float",  # Expected Value over 10 days
+
+    # Teacher Priors (Attached)
+    "teacher_drift_20d": "float",
+    "teacher_vol_20d": "float",
+    "teacher_downside_q10_20d": "float",
+    "teacher_trend_conf_20d": "float",
+
+    # Metadata columns (can be uniform across file)
+    "selector_checkpoint_id": "str",
+    "selector_version": "str",
+    "selector_scaler_version": "str",
+    "calibration_version": "str",
+    "teacher_model_id": "str",
+    "teacher_adapter_id": "str",
+    "teacher_codec_version": "str",
+    "feature_contract_hash": "str",
+    "preproc_version": "str"
+}
