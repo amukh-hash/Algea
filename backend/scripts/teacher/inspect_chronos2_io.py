@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Chronos-2 inspection utility for daily equity bars + covariates (protocol-aligned).
 import os
 import sys
 import inspect

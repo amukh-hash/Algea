@@ -55,3 +55,6 @@ You can use your Claude Opus subscription with Antigravity tools using the proxy
 - `npm install -g antigravity-claude-proxy`: Install Claude Bridge.
 - `git pull`: Update local code.
 - `git push`: Send local changes to GitHub.
+
+## Operational Runbook
+See `RUNBOOK.md` for the pipeline and training sequence.
