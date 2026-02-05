@@ -79,6 +79,9 @@ class Phase1Config:
     out_dir: Path
     probe_only: bool
     allow_fallback_codec: bool
+    target_col: str
+    covariate_cols: Tuple[str, ...]
+    future_covariate_cols: Tuple[str, ...]
 
 
 def env_path(name: str, default: str) -> Path:
@@ -101,6 +104,16 @@ def load_config(args) -> Phase1Config:
         "alpha": int(os.getenv("LORA_ALPHA", "32")),
         "dropout": float(os.getenv("LORA_DROPOUT", "0.05"))
     }
+
+    target_col = os.getenv("CHRONOS2_TARGET_COL", "close_adj")
+    covariate_cols = tuple(c.strip() for c in os.getenv(
+        "CHRONOS2_COVARIATE_COLS",
+        "open_adj,high_adj,low_adj,volume,spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
+    ).split(",") if c.strip())
+    future_covariate_cols = tuple(c.strip() for c in os.getenv(
+        "CHRONOS2_FUTURE_COVARIATE_COLS",
+        ""
+    ).split(",") if c.strip())
 
     return Phase1Config(
         run_id=str(uuid.uuid4())[:8],
@@ -129,7 +142,10 @@ def load_config(args) -> Phase1Config:
         
         out_dir=env_path("TEACHER_E_GOLD_OUTDIR", "backend/models/teacher_e/gold"),
         probe_only=args.probe_only,
-        allow_fallback_codec=args.allow_fallback
+        allow_fallback_codec=args.allow_fallback,
+        target_col=target_col,
+        covariate_cols=covariate_cols,
+        future_covariate_cols=future_covariate_cols,
     )
 
 class ThreadSafeLRUCache:
@@ -244,6 +260,8 @@ class GoldFuturesWindowDataset(Dataset):
             
         # Slicing
         ts_idx = self.col_map.get("timestamp")
+        if ts_idx is None:
+            ts_idx = self.col_map.get("date")
         start_row = s
         end_row = s + self.context + self.pred
         
@@ -273,39 +291,43 @@ def _build_mask(tensor: torch.Tensor) -> torch.Tensor:
     return mask.to(dtype=torch.long)
 
 
-def get_collate_fn():
+def get_collate_fn(feature_names: List[str], target_col: str,
+                   covariate_cols: List[str], future_covariate_cols: List[str]):
+    if target_col not in feature_names:
+        raise ValueError(f"Target column '{target_col}' missing from features.")
+    target_idx = feature_names.index(target_col)
+    covariate_indices = [feature_names.index(c) for c in covariate_cols if c in feature_names]
+    future_covariate_indices = [feature_names.index(c) for c in future_covariate_cols if c in feature_names]
+
     def collate(batch):
         xs = np.stack([b["x_float"] for b in batch]) # [B, T, F]
         ys = np.stack([b["y_float"] for b in batch]) # [B, Pred, F]
         
-        B, T, F = xs.shape
-        _, P, _ = ys.shape
-        
-        # Multivariate for Chronos2: Flatten features into batch dimension
-        # [B, T, F] -> [B*F, T] - each feature becomes a separate sample
-        xs_flat = xs.transpose(0, 2, 1).reshape(B * F, T)  # [B*F, T]
-        ys_flat = ys.transpose(0, 2, 1).reshape(B * F, P)  # [B*F, Pred]
-        
-        x_pt = torch.from_numpy(xs_flat).float()
-        y_pt = torch.from_numpy(ys_flat).float()
+        x_pt = torch.from_numpy(xs).float()
+        y_pt = torch.from_numpy(ys).float()
 
-        context_mask = _build_mask(x_pt)
-        future_mask = _build_mask(y_pt)
+        context_target = x_pt[:, :, target_idx:target_idx + 1]
+        future_target = y_pt[:, :, target_idx:target_idx + 1]
+        past_covariates = x_pt[:, :, covariate_indices] if covariate_indices else None
+        future_covariates = y_pt[:, :, future_covariate_indices] if future_covariate_indices else None
 
-        x_pt = torch.nan_to_num(x_pt, nan=0.0, posinf=0.0, neginf=0.0)
-        y_pt = torch.nan_to_num(y_pt, nan=0.0, posinf=0.0, neginf=0.0)
-        
-        # group_ids: track which samples belong to each original batch item
-        # Shape [B*F] where samples 0..F-1 are group 0, F..2F-1 are group 1, etc.
-        group_ids = torch.repeat_interleave(torch.arange(B), F)
+        context_mask = _build_mask(context_target)
+        future_mask = _build_mask(future_target)
+
+        context_target = torch.nan_to_num(context_target, nan=0.0, posinf=0.0, neginf=0.0)
+        future_target = torch.nan_to_num(future_target, nan=0.0, posinf=0.0, neginf=0.0)
+        if past_covariates is not None:
+            past_covariates = torch.nan_to_num(past_covariates, nan=0.0, posinf=0.0, neginf=0.0)
+        if future_covariates is not None:
+            future_covariates = torch.nan_to_num(future_covariates, nan=0.0, posinf=0.0, neginf=0.0)
         
         return {
-            "context": x_pt,  # [B*F, T]
-            "context_mask": context_mask,  # [B*F, T]
-            "future_target": y_pt,  # [B*F, Pred]
-            "future_target_mask": future_mask,  # [B*F, Pred]
-            "group_ids": group_ids,  # [B*F]
-            "_original_shape": (B, T, F, P)  # For reshaping predictions back
+            "context": context_target,
+            "context_mask": context_mask,
+            "future_target": future_target,
+            "future_target_mask": future_mask,
+            "past_covariates": past_covariates,
+            "future_covariates": future_covariates,
         }
     return collate
 
@@ -320,12 +342,20 @@ def validation_loop(model, dl, device):
             context_mask = batch["context_mask"].to(device)
             future_target = batch["future_target"].to(device)
             future_target_mask = batch["future_target_mask"].to(device)
+            past_covariates = batch["past_covariates"]
+            future_covariates = batch["future_covariates"]
+            if past_covariates is not None:
+                past_covariates = past_covariates.to(device)
+            if future_covariates is not None:
+                future_covariates = future_covariates.to(device)
             
             out = model(
                 context,
                 context_mask=context_mask,
                 future_target=future_target,
-                future_target_mask=future_target_mask
+                future_target_mask=future_target_mask,
+                past_covariates=past_covariates,
+                future_covariates=future_covariates,
             )
             
             if hasattr(out, "loss"):
@@ -400,7 +430,10 @@ def main():
         
         train_ds, val_ds = dataset.split_validation(cfg.val_split_pct)
         
-        collate = get_collate_fn()
+        feature_names = [c for c in cfg.required_cols if c not in ("timestamp", "date")]
+        covariate_cols = [c for c in cfg.covariate_cols if c != cfg.target_col]
+        future_covariate_cols = list(cfg.future_covariate_cols)
+        collate = get_collate_fn(feature_names, cfg.target_col, covariate_cols, future_covariate_cols)
         train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, 
                               collate_fn=collate, num_workers=0)
         val_dl = DataLoader(val_ds, batch_size=cfg.batch_size, shuffle=False,
@@ -424,14 +457,16 @@ def main():
                 context_mask = batch["context_mask"].to(device)
                 future_target = batch["future_target"].to(device)
                 future_target_mask = batch["future_target_mask"].to(device)
-                group_ids = batch.get("group_ids")
-                if group_ids is not None:
-                    group_ids = group_ids.to(device)
+                past_covariates = batch["past_covariates"]
+                future_covariates = batch["future_covariates"]
+                if past_covariates is not None:
+                    past_covariates = past_covariates.to(device)
+                if future_covariates is not None:
+                    future_covariates = future_covariates.to(device)
                 
                 # Forward
                 if step == 0:
                      print(f"[Debug] Input device: {context.device}")
-                     print(f"[Debug] Context shape: {context.shape}")
                      # Probe wrapper's underlying model device
                      print(f"[Debug] Model device: {next(model_wrapper.model.parameters()).device}")
                 out = model_wrapper(
@@ -439,7 +474,8 @@ def main():
                     context_mask=context_mask,
                     future_target=future_target,
                     future_target_mask=future_target_mask,
-                    group_ids=group_ids
+                    past_covariates=past_covariates,
+                    future_covariates=future_covariates,
                 )
                 
                 loss = out.loss if hasattr(out, "loss") else None

@@ -223,12 +223,15 @@ class Chronos2NativeWrapper(nn.Module):
         context_mask: Optional[torch.Tensor] = None,
         future_target: Optional[torch.Tensor] = None,
         future_target_mask: Optional[torch.Tensor] = None,
+        past_covariates: Optional[torch.Tensor] = None,
+        future_covariates: Optional[torch.Tensor] = None,
         num_output_patches: Optional[int] = None,
-        group_ids: Optional[torch.Tensor] = None,
         **kwargs
     ):
         context = self._sanitize(context)
         future_target = self._sanitize(future_target)
+        past_covariates = self._sanitize(past_covariates)
+        future_covariates = self._sanitize(future_covariates)
 
         if context_mask is None:
             context_mask = self._build_mask(context)
@@ -244,8 +247,12 @@ class Chronos2NativeWrapper(nn.Module):
             "future_target": future_target,
             "future_target_mask": future_target_mask,
             "future_mask": future_target_mask,
+            "past_covariates": past_covariates,
+            "future_covariates": future_covariates,
+            "past_dynamic_feat": past_covariates,
+            "future_dynamic_feat": future_covariates,
+            "known_covariates": future_covariates,
             "num_output_patches": num_output_patches,
-            "group_ids": group_ids,
         }
 
         call_kwargs = {}
@@ -273,9 +280,13 @@ class Chronos2NativeWrapper(nn.Module):
         prediction_length: int = 10,
         num_samples: int = 20,
         context_mask: Optional[torch.Tensor] = None,
+        past_covariates: Optional[torch.Tensor] = None,
+        future_covariates: Optional[torch.Tensor] = None,
         **kwargs
     ) -> torch.Tensor:
         context = self._sanitize(context)
+        past_covariates = self._sanitize(past_covariates)
+        future_covariates = self._sanitize(future_covariates)
         if context_mask is None:
             context_mask = self._build_mask(context)
 
@@ -285,6 +296,8 @@ class Chronos2NativeWrapper(nn.Module):
                     context,
                     prediction_length=prediction_length,
                     num_samples=num_samples,
+                    past_covariates=past_covariates,
+                    future_covariates=future_covariates,
                     **kwargs
                 )
             elif hasattr(self.model, "generate"):
@@ -293,6 +306,8 @@ class Chronos2NativeWrapper(nn.Module):
                     context_mask=context_mask,
                     prediction_length=prediction_length,
                     num_samples=num_samples,
+                    past_covariates=past_covariates,
+                    future_covariates=future_covariates,
                     **kwargs
                 )
             else:
@@ -580,7 +595,9 @@ def infer_priors(
     input_tensor: torch.Tensor, # [B, T, F]
     horizon_days: int = 20,
     n_samples: int = 20,
-    codec: Optional[Any] = None # Chronos2Codec for token-based models
+    codec: Optional[Any] = None, # Chronos2Codec for token-based models
+    past_covariates: Optional[torch.Tensor] = None,
+    future_covariates: Optional[torch.Tensor] = None,
 ) -> List[ChronosPriors]:
     """
     Generates priors for a batch of tickers.
@@ -595,7 +612,9 @@ def infer_priors(
         values = model.generate(
             input_tensor,
             prediction_length=horizon_days,
-            num_samples=n_samples
+            num_samples=n_samples,
+            past_covariates=past_covariates,
+            future_covariates=future_covariates,
         )
     else:
         if codec is None:

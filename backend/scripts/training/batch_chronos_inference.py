@@ -8,6 +8,7 @@ from tqdm import tqdm
 from datetime import timedelta
 from backend.app.core import config, artifacts
 from backend.app.models.chronos2_teacher import load_chronos_adapter, infer_priors
+from backend.app.models.chronos2_hf_pipeline import Chronos2HFPredictor, ChronosPredictConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,6 +22,12 @@ def main():
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lookback", type=int, default=512)
     parser.add_argument("--step_days", type=int, default=1) # Run every day? Or weekly? Plan implies daily.
+    parser.add_argument("--target_col", default=os.getenv("CHRONOS2_TARGET_COL", "close"))
+    parser.add_argument(
+        "--covariate_cols",
+        default=os.getenv("CHRONOS2_COVARIATE_COLS", ""),
+        help="Comma-separated covariate columns for predict_df usage.",
+    )
     args = parser.parse_args()
 
     # 1. Load Data
@@ -31,13 +38,35 @@ def main():
     
     # 2. Load Model
     logger.info(f"Loading Model {args.model_id} on {args.device}...")
-    
-    wrapper, model_info = load_chronos_adapter(
-        args.model_id, 
-        use_qlora=False, 
-        device=torch.device(args.device),
-        eval_mode=True
-    )
+    covariate_cols = [c.strip() for c in args.covariate_cols.split(",") if c.strip()]
+    predictor = None
+    try:
+        predictor = Chronos2HFPredictor(
+            ChronosPredictConfig(
+                model_id=args.model_id,
+                target_col=args.target_col,
+                covariate_cols=covariate_cols,
+                id_col="ticker",
+                timestamp_col="date",
+            ),
+            device=args.device,
+        )
+        logger.info("Using Chronos predict_df pipeline.")
+    except Exception as exc:
+        logger.warning(f"predict_df unavailable ({exc}); falling back to native wrapper.")
+
+    if predictor is not None and args.target_col not in df.columns:
+        logger.warning(f"Target column '{args.target_col}' missing; falling back to native wrapper.")
+        predictor = None
+
+    wrapper = None
+    if predictor is None:
+        wrapper, model_info = load_chronos_adapter(
+            args.model_id,
+            use_qlora=False,
+            device=torch.device(args.device),
+            eval_mode=True,
+        )
     
     # 3. Simulate History
     start_dt = pd.to_datetime(config.TRAIN_START_DATE)
@@ -97,46 +126,51 @@ def main():
             
         valid_subset = subset[subset['ticker'].isin(valid_tickers)].copy()
         
-        # Pivot to [Ticker, Time] -> [N, 512]
-        # We use 'close' price
-        seq_df = valid_subset.pivot(index='ticker', columns='date', values='close')
-        # pivot creates columns as dates, we just want values sorted by date
-        # Groupby apply list?
-        # seq_df = valid_subset.groupby('ticker')['close'].apply(list)
-        # Much faster: reshape values
-        # valid_subset is sorted.
-        
-        # [N * 512]
-        values = valid_subset['close'].values.reshape(len(valid_tickers), args.lookback)
-        tickers = valid_tickers.tolist() # matching order if sorted by ticker primary
-        
-        # To Tensor
-        # [B, T, 1]
-        input_tensor = torch.tensor(values, dtype=torch.float32).unsqueeze(-1).to(args.device)
-        
-        # Run Inference in Batches
         priors_batch = []
-        
-        for i in range(0, len(tickers), args.batch_size):
-            batch_in = input_tensor[i : i+args.batch_size]
-            batch_tickers = tickers[i : i+args.batch_size]
-            
-            try:
-                # infer_priors returns List[ChronosPriors]
-                batch_priors = infer_priors(wrapper, batch_in, horizon_days=10, n_samples=20)
-                
-                # Append to list with ticker
-                for t, p in zip(batch_tickers, batch_priors):
-                    priors_batch.append({
+
+        if predictor is not None:
+            context_df = valid_subset.copy()
+            context_df["ticker"] = context_df["ticker"].astype(str)
+            forecast_df = predictor.predict_df(
+                context_df=context_df,
+                prediction_length=10,
+                num_samples=20,
+            )
+            priors_df = predictor.summarize_priors(forecast_df)
+            for _, row in priors_df.iterrows():
+                priors_batch.append(
+                    {
                         "date": date,
-                        "ticker": t,
-                        "drift": p.drift,
-                        "vol_forecast": p.vol_forecast,
-                        "tail_risk": p.tail_risk,
-                        "trend_conf": p.trend_conf
-                    })
-            except Exception as e:
-                logger.error(f"Inference failed for batch {i}: {e}")
+                        "ticker": row["ticker"],
+                        "drift": row["teacher_drift"],
+                        "vol_forecast": row["teacher_vol_forecast"],
+                        "tail_risk": row["teacher_tail_risk"],
+                        "trend_conf": row["teacher_trend_conf"],
+                    }
+                )
+        else:
+            # [N * 512]
+            values = valid_subset[args.target_col].values.reshape(len(valid_tickers), args.lookback)
+            tickers = valid_tickers.tolist()
+            input_tensor = torch.tensor(values, dtype=torch.float32).unsqueeze(-1).to(args.device)
+
+            for i in range(0, len(tickers), args.batch_size):
+                batch_in = input_tensor[i : i+args.batch_size]
+                batch_tickers = tickers[i : i+args.batch_size]
+
+                try:
+                    batch_priors = infer_priors(wrapper, batch_in, horizon_days=10, n_samples=20)
+                    for t, p in zip(batch_tickers, batch_priors):
+                        priors_batch.append({
+                            "date": date,
+                            "ticker": t,
+                            "drift": p.drift,
+                            "vol_forecast": p.vol_forecast,
+                            "tail_risk": p.tail_risk,
+                            "trend_conf": p.trend_conf
+                        })
+                except Exception as e:
+                    logger.error(f"Inference failed for batch {i}: {e}")
                 
         # Save
         if priors_batch:

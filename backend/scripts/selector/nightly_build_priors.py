@@ -18,7 +18,8 @@ sys.path.append(os.getcwd())
 
 from backend.app.core import config
 from backend.app.data import marketframe
-from backend.app.models import chronos2_teacher, chronos2_codec
+from backend.app.models import chronos2_teacher
+from backend.app.models.chronos2_hf_pipeline import Chronos2HFPredictor, ChronosPredictConfig
 from backend.app.models.signal_types import ChronosPriors
 
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +33,12 @@ def main():
     parser.add_argument("--horizon", type=int, default=20, help="Forecast horizon")
     parser.add_argument("--n_samples", type=int, default=20, help="Number of samples for distribution")
     parser.add_argument("--min_coverage", type=float, default=0.98, help="Minimum universe coverage ratio")
+    parser.add_argument("--target_col", default=os.getenv("CHRONOS2_TARGET_COL", "close_adj"))
+    parser.add_argument(
+        "--covariate_cols",
+        default=os.getenv("CHRONOS2_COVARIATE_COLS", ""),
+        help="Comma-separated covariate columns for predict_df usage.",
+    )
 
     args = parser.parse_args()
 
@@ -46,40 +53,37 @@ def main():
     # For now, mock universe or list files
     universe = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "SPY"] # Minimal test set
 
-    # 2. Load Model & Codec
+    # 2. Load Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_id = os.getenv("CHRONOS_MODEL_ID", "amazon/chronos-t5-tiny") # Default small for dev
 
     logger.info(f"Loading Chronos model: {model_id}")
-    model, model_info = chronos2_teacher.load_chronos_adapter(
-        model_id=model_id,
-        use_qlora=False, # Teacher usually full precision or loaded as-is
-        device=device,
-        eval_mode=True
-    )
-
-    # Codec
-    # Load default or specific codec
-    # codec = chronos2_codec.Chronos2Codec(...)
-    # For now, assume simple scaling or built-in tokenizer if using Chronos
-    # Chronos uses its own tokenizer usually.
-    # We need a wrapper to encode data for Chronos.
-    # The 'chronos2_teacher' wrapper expects input_ids.
-    # We need to bridge MarketFrame -> Token IDs.
-
-    # Simplification: Use a mock encoder/decoder if real Chronos tokenizer not available in env
-    # Or rely on 'chronos' package.
+    covariate_cols = [c.strip() for c in args.covariate_cols.split(",") if c.strip()]
+    predictor = None
     try:
-        from chronos import ChronosPipeline
-        pipeline = ChronosPipeline.from_pretrained(
-            model_id,
-            device_map=device,
-            torch_dtype=torch.bfloat16,
+        predictor = Chronos2HFPredictor(
+            ChronosPredictConfig(
+                model_id=model_id,
+                target_col=args.target_col,
+                covariate_cols=covariate_cols,
+                id_col="symbol",
+                timestamp_col="timestamp",
+            ),
+            device=str(device),
         )
-        logger.info("Loaded Chronos Pipeline successfully.")
-    except ImportError:
-        logger.warning("Chronos package not found. Using internal mock logic for development.")
-        pipeline = None
+        logger.info("Loaded Chronos predict_df pipeline.")
+    except Exception as exc:
+        logger.warning(f"Chronos predict_df unavailable ({exc}); falling back to native wrapper.")
+        predictor = None
+
+    model = None
+    if predictor is None:
+        model, model_info = chronos2_teacher.load_chronos_adapter(
+            model_id=model_id,
+            use_qlora=False, # Teacher usually full precision or loaded as-is
+            device=device,
+            eval_mode=True
+        )
 
     # 3. Process Tickers
     results = []
@@ -102,49 +106,40 @@ def main():
                 failed.append(ticker)
                 continue
 
-            # Prepare Input
-            # Chronos expects 1D array of values (e.g. Close or Log Returns)
-            # Usually Close prices, it handles scaling.
-            context_values = context["close"].to_numpy() # [T]
-            context_tensor = torch.tensor(context_values, dtype=torch.float32).unsqueeze(0) # [1, T]
-
-            # Inference
-            if pipeline:
-                # Use official pipeline
-                forecast = pipeline.predict(
-                    context_tensor,
+            if predictor is not None:
+                context_df = context.rename({"timestamp": "timestamp"}).with_columns(
+                    pl.lit(ticker).alias("symbol")
+                ).to_pandas()
+                forecast_df = predictor.predict_df(
+                    context_df=context_df,
                     prediction_length=args.horizon,
                     num_samples=args.n_samples,
-                    limit_prediction_length=False
                 )
-                # forecast: [1, NumSamples, Horizon]
-
-                # Compute Stats
-                # [NumSamples, Horizon]
-                samples = forecast[0].numpy() # [N, H]
-
-                # Drift: Median terminal value relative to last context
-                # Forecast is absolute values? Usually yes.
+                priors_df = predictor.summarize_priors(forecast_df)
+                row = priors_df.iloc[0]
+                drift = row["teacher_drift"]
+                vol = row["teacher_vol_forecast"]
+                downside_q10 = row["teacher_tail_risk"]
+                trend_conf = row["teacher_trend_conf"]
+            else:
+                target_col = args.target_col
+                if target_col not in context.columns:
+                    target_col = "close"
+                context_values = context[target_col].to_numpy()
+                context_tensor = torch.tensor(context_values, dtype=torch.float32).unsqueeze(0)
+                forecast = model.generate(
+                    context_tensor.unsqueeze(-1),
+                    prediction_length=args.horizon,
+                    num_samples=args.n_samples,
+                )
+                samples = forecast[0].cpu().numpy()
                 last_price = context_values[-1]
                 terminal_prices = samples[:, -1]
                 drift = np.median(terminal_prices) / last_price - 1.0
-
-                # Vol: Std of terminal returns
                 terminal_returns = terminal_prices / last_price - 1.0
                 vol = np.std(terminal_returns)
-
-                # Downside Q10
                 downside_q10 = np.quantile(terminal_returns, 0.10)
-
-                # Trend Conf: Prob > 0
                 trend_conf = np.mean(terminal_returns > 0)
-
-            else:
-                # Mock inference if pipeline unavailable (Dev mode)
-                drift = 0.005 # Mild drift
-                vol = 0.02
-                downside_q10 = -0.015
-                trend_conf = 0.6
 
             results.append({
                 "date": str(as_of_date),

@@ -81,6 +81,9 @@ class Phase2Config:
     out_dir: Path
     
     byte_cache_limit: int # Bytes
+    target_col: str
+    covariate_cols: Tuple[str, ...]
+    future_covariate_cols: Tuple[str, ...]
 
 
 def env_path(name: str, default: str) -> Path:
@@ -111,6 +114,16 @@ def load_config(args) -> Phase2Config:
     gold_dir_str = os.getenv("TEACHER_E_GOLD_OUTDIR", "backend/models/teacher_e/gold")
     gold_dir = Path(gold_dir_str).expanduser().resolve() if gold_dir_str else None
 
+    target_col = os.getenv("CHRONOS2_TARGET_COL", "close_adj")
+    covariate_cols = tuple(c.strip() for c in os.getenv(
+        "CHRONOS2_COVARIATE_COLS",
+        "open_adj,high_adj,low_adj,volume,spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
+    ).split(",") if c.strip())
+    future_covariate_cols = tuple(c.strip() for c in os.getenv(
+        "CHRONOS2_FUTURE_COVARIATE_COLS",
+        ""
+    ).split(",") if c.strip())
+
     return Phase2Config(
         run_id=f"silver_{str(uuid.uuid4())[:8]}",
         seed=seed,
@@ -138,7 +151,10 @@ def load_config(args) -> Phase2Config:
         
         load_gold_dir=gold_dir if gold_dir and gold_dir.exists() else None,
         out_dir=env_path("TEACHER_E_SILVER_OUTDIR", "backend/models/teacher_e/silver"),
-        byte_cache_limit=int(os.getenv("SILVER_CACHE_BYTES", "4294967296")) # 4GB
+        byte_cache_limit=int(os.getenv("SILVER_CACHE_BYTES", "4294967296")), # 4GB
+        target_col=target_col,
+        covariate_cols=covariate_cols,
+        future_covariate_cols=future_covariate_cols,
     )
 
 
@@ -292,6 +308,8 @@ class SilverMarketFrameDataset(Dataset):
         
         # Drop timestamp
         ts_idx = self.col_map.get("timestamp")
+        if ts_idx is None:
+            ts_idx = self.col_map.get("date")
         if ts_idx is not None:
              feat_indices = [i for i in range(arr.shape[1]) if i != ts_idx]
              feats = subset[:, feat_indices].astype(np.float32)
@@ -319,13 +337,20 @@ def _build_mask(tensor: torch.Tensor) -> torch.Tensor:
     return mask.to(dtype=torch.long)
 
 
-def get_collate_fn(input_names: List[str], target_names: List[str]):
+def get_collate_fn(input_names: List[str], target_names: List[str],
+                   target_col: str, covariate_cols: List[str],
+                   future_covariate_cols: List[str]):
     # Pre-compute indices
+    if target_col not in input_names:
+        raise ValueError(f"Target column '{target_col}' missing from features.")
+    target_idx = input_names.index(target_col)
     target_indices = []
     for t in target_names:
         if t in input_names:
             target_indices.append(input_names.index(t))
         # Dataset output excludes Timestamp. So we must align names.
+    covariate_indices = [input_names.index(c) for c in covariate_cols if c in input_names]
+    future_covariate_indices = [input_names.index(c) for c in future_covariate_cols if c in input_names]
         
     def collate(batch):
         xs = np.stack([b["x_float"] for b in batch])
@@ -336,18 +361,28 @@ def get_collate_fn(input_names: List[str], target_names: List[str]):
 
         if target_indices:
             y_pt = y_pt[:, :, target_indices]
+        target_context = x_pt[:, :, target_idx:target_idx + 1]
+        target_future = y_pt[:, :, target_idx:target_idx + 1]
+        past_covariates = x_pt[:, :, covariate_indices] if covariate_indices else None
+        future_covariates = y_pt[:, :, future_covariate_indices] if future_covariate_indices else None
 
-        context_mask = _build_mask(x_pt)
-        future_mask = _build_mask(y_pt)
+        context_mask = _build_mask(target_context)
+        future_mask = _build_mask(target_future)
 
-        x_pt = torch.nan_to_num(x_pt, nan=0.0, posinf=0.0, neginf=0.0)
-        y_pt = torch.nan_to_num(y_pt, nan=0.0, posinf=0.0, neginf=0.0)
+        target_context = torch.nan_to_num(target_context, nan=0.0, posinf=0.0, neginf=0.0)
+        target_future = torch.nan_to_num(target_future, nan=0.0, posinf=0.0, neginf=0.0)
+        if past_covariates is not None:
+            past_covariates = torch.nan_to_num(past_covariates, nan=0.0, posinf=0.0, neginf=0.0)
+        if future_covariates is not None:
+            future_covariates = torch.nan_to_num(future_covariates, nan=0.0, posinf=0.0, neginf=0.0)
 
         return {
-            "context": x_pt,
+            "context": target_context,
             "context_mask": context_mask,
-            "future_target": y_pt,
-            "future_target_mask": future_mask
+            "future_target": target_future,
+            "future_target_mask": future_mask,
+            "past_covariates": past_covariates,
+            "future_covariates": future_covariates,
         }
     return collate
 
@@ -367,12 +402,20 @@ def validation_loop(model, dl, device):
              context_mask = batch["context_mask"].to(device)
              future_target = batch["future_target"].to(device)
              future_target_mask = batch["future_target_mask"].to(device)
+             past_covariates = batch["past_covariates"]
+             future_covariates = batch["future_covariates"]
+             if past_covariates is not None:
+                 past_covariates = past_covariates.to(device)
+             if future_covariates is not None:
+                 future_covariates = future_covariates.to(device)
 
              out = model(
                  context,
                  context_mask=context_mask,
                  future_target=future_target,
-                 future_target_mask=future_target_mask
+                 future_target_mask=future_target_mask,
+                 past_covariates=past_covariates,
+                 future_covariates=future_covariates,
              )
              if hasattr(out, "loss"):
                  loss = out.loss
@@ -428,10 +471,18 @@ def main():
     )
     
     # Feature Names alignment (exclude TS)
-    feat_names = [c for c in cfg.required_cols if c != "timestamp"]
-    target_names = [c for c in cfg.target_cols if c != "timestamp"]
+    feat_names = [c for c in cfg.required_cols if c not in ("timestamp", "date")]
+    target_names = [c for c in cfg.target_cols if c not in ("timestamp", "date")]
+    covariate_cols = [c for c in cfg.covariate_cols if c != cfg.target_col]
+    future_covariate_cols = list(cfg.future_covariate_cols)
     
-    collate = get_collate_fn(feat_names, target_names)
+    collate = get_collate_fn(
+        feat_names,
+        target_names,
+        cfg.target_col,
+        covariate_cols,
+        future_covariate_cols,
+    )
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate, num_workers=0)
     
     # 4. Train
@@ -447,12 +498,20 @@ def main():
             context_mask = batch["context_mask"].to(device)
             future_target = batch["future_target"].to(device)
             future_target_mask = batch["future_target_mask"].to(device)
+            past_covariates = batch["past_covariates"]
+            future_covariates = batch["future_covariates"]
+            if past_covariates is not None:
+                past_covariates = past_covariates.to(device)
+            if future_covariates is not None:
+                future_covariates = future_covariates.to(device)
             
             out = model_wrapper(
                 context,
                 context_mask=context_mask,
                 future_target=future_target,
-                future_target_mask=future_target_mask
+                future_target_mask=future_target_mask,
+                past_covariates=past_covariates,
+                future_covariates=future_covariates,
             )
             loss = out.loss if hasattr(out, "loss") else None
             if loss is None:
