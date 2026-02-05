@@ -8,7 +8,6 @@ Contains logic for:
 5. Teacher Inference (Priors Generation).
 """
 
-import sys
 import re
 import inspect
 from typing import Tuple, Dict, Any, List, Optional, Union
@@ -183,6 +182,131 @@ class Chronos2ModelWrapper(nn.Module):
         self.model.save_pretrained(out_dir)
 
 
+class Chronos2NativeWrapper(nn.Module):
+    """
+    Wraps Chronos-2 native patch-based models.
+    Expected forward signature includes context/context_mask/future_target/num_output_patches.
+    """
+    def __init__(self, model: nn.Module, model_type: str, forward_params: List[str]):
+        super().__init__()
+        self.model = model
+        self.model_type = model_type
+        self.forward_params = forward_params
+
+    def _build_mask(self, tensor: torch.Tensor) -> torch.Tensor:
+        if tensor.ndim == 3:
+            mask = torch.isfinite(tensor).all(dim=-1)
+        else:
+            mask = torch.isfinite(tensor)
+        return mask.to(dtype=torch.long)
+
+    def _sanitize(self, tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
+        if tensor is None:
+            return None
+        return torch.nan_to_num(tensor, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def _infer_num_output_patches(self, pred_len: int) -> Optional[int]:
+        if pred_len <= 0:
+            return None
+        patch_len = None
+        if hasattr(self.model, "config"):
+            patch_len = getattr(self.model.config, "patch_length", None)
+            if patch_len is None:
+                patch_len = getattr(self.model.config, "patch_size", None)
+        if not patch_len:
+            return None
+        return int(np.ceil(pred_len / patch_len))
+
+    def forward(
+        self,
+        context: torch.Tensor,
+        context_mask: Optional[torch.Tensor] = None,
+        future_target: Optional[torch.Tensor] = None,
+        future_target_mask: Optional[torch.Tensor] = None,
+        num_output_patches: Optional[int] = None,
+        **kwargs
+    ):
+        context = self._sanitize(context)
+        future_target = self._sanitize(future_target)
+
+        if context_mask is None:
+            context_mask = self._build_mask(context)
+        if future_target is not None and future_target_mask is None:
+            future_target_mask = self._build_mask(future_target)
+
+        if num_output_patches is None and future_target is not None:
+            num_output_patches = self._infer_num_output_patches(future_target.shape[1])
+
+        arg_map = {
+            "context": context,
+            "context_mask": context_mask,
+            "future_target": future_target,
+            "future_target_mask": future_target_mask,
+            "future_mask": future_target_mask,
+            "num_output_patches": num_output_patches,
+        }
+
+        call_kwargs = {}
+        for k in self.forward_params:
+            if k in arg_map and arg_map[k] is not None:
+                call_kwargs[k] = arg_map[k]
+            elif k in kwargs:
+                call_kwargs[k] = kwargs[k]
+
+        if "use_cache" in self.forward_params:
+            call_kwargs["use_cache"] = False
+        if hasattr(self.model, "config"):
+            self.model.config.use_cache = False
+
+        if not hasattr(self, "_probed"):
+            print(f"[Wrapper] Native Signature: {self.forward_params}")
+            print(f"[Wrapper] Native call keys: {list(call_kwargs.keys())}")
+            self._probed = True
+
+        return self.model(**call_kwargs)
+
+    def generate(
+        self,
+        context: torch.Tensor,
+        prediction_length: int = 10,
+        num_samples: int = 20,
+        context_mask: Optional[torch.Tensor] = None,
+        **kwargs
+    ) -> torch.Tensor:
+        context = self._sanitize(context)
+        if context_mask is None:
+            context_mask = self._build_mask(context)
+
+        with torch.no_grad():
+            if hasattr(self.model, "predict"):
+                outputs = self.model.predict(
+                    context,
+                    prediction_length=prediction_length,
+                    num_samples=num_samples,
+                    **kwargs
+                )
+            elif hasattr(self.model, "generate"):
+                outputs = self.model.generate(
+                    context=context,
+                    context_mask=context_mask,
+                    prediction_length=prediction_length,
+                    num_samples=num_samples,
+                    **kwargs
+                )
+            else:
+                raise RuntimeError("Chronos native model lacks predict/generate.")
+
+        outputs = torch.as_tensor(outputs, device=context.device)
+        if outputs.ndim == 2:
+            outputs = outputs.unsqueeze(1)
+        if outputs.ndim == 3:
+            outputs = outputs.unsqueeze(-1)
+        return outputs
+
+    def save_pretrained(self, out_dir: Union[str, Path]):
+        self.model.save_pretrained(out_dir)
+
+
 def probe_model_architecture(model_id: str, use_qlora: bool) -> Tuple[Any, Dict[str, Any]]:
     print(f"[Probe] Inspecting {model_id}...")
     try:
@@ -229,9 +353,9 @@ def load_chronos_adapter(
     adapter_path: Optional[Path] = None,
     lora_config: Optional[Dict[str, Any]] = None,
     eval_mode: bool = False
-) -> Tuple[Chronos2ModelWrapper, Dict[str, Any]]:
+) -> Tuple[nn.Module, Dict[str, Any]]:
     """
-    Loads model, applies QLoRA, wraps in Chronos2ModelWrapper.
+    Loads model, applies QLoRA, wraps in Chronos2NativeWrapper or Chronos2ModelWrapper.
     """
     ModelClass, info = probe_model_architecture(model_id, use_qlora)
     
@@ -345,8 +469,12 @@ def load_chronos_adapter(
     else:
         model.train()
         
-    # Wrap
-    wrapper = Chronos2ModelWrapper(model, info["model_type"], forward_params)
+    is_native = "context" in forward_params or "future_target" in forward_params
+    wrapper: nn.Module
+    if is_native:
+        wrapper = Chronos2NativeWrapper(model, info["model_type"], forward_params)
+    else:
+        wrapper = Chronos2ModelWrapper(model, info["model_type"], forward_params)
     return wrapper, info
 
 
@@ -374,11 +502,11 @@ def find_lora_targets(model: nn.Module) -> List[str]:
     return list(final)
 
 def infer_priors(
-    model: Chronos2ModelWrapper,
-    codec: Any, # Chronos2Codec
+    model: nn.Module,
     input_tensor: torch.Tensor, # [B, T, F]
     horizon_days: int = 20,
-    n_samples: int = 20
+    n_samples: int = 20,
+    codec: Optional[Any] = None # Chronos2Codec for token-based models
 ) -> List[ChronosPriors]:
     """
     Generates priors for a batch of tickers.
@@ -386,56 +514,40 @@ def infer_priors(
                   Codec encode needs raw? Usually codec expects raw.
                   We assume input_tensor is RAW here.
     """
-    device = input_tensor.device
+    if input_tensor.ndim == 2:
+        input_tensor = input_tensor.unsqueeze(-1)
 
-    # 1. Encode
-    # Codec expects raw [B, T, F]
-    encoded = codec.encode(input_tensor)
-    input_ids = encoded["input_ids"] # [B, T, F]
-    attention_mask = encoded["attention_mask"] # [B, T]
-    scale = encoded["scale"] # [B, 1, F]
-
-    # 2. Generate
-    # Output: [B, NumSamples, PredLen, F] (Tokens)
-    token_preds = model.generate(input_ids, attention_mask, prediction_length=horizon_days, num_samples=n_samples)
-
-    # 3. Decode
-    # We need a decode method in codec or manual.
-    # We will assume a 'decode' method that takes tokens + scale -> values
-    # [B, NumSamples, PredLen, F]
-
-    # Flatten to decode batchwise if needed, or loop?
-    # Codec decode usually takes [B, T, F] tokens + [B, 1, F] scale
-    # Here we have extra dims.
-
-    # Let's trust codec.decode can handle or we loop.
-    # Simpler: Compute stats on tokens? No, need values.
-
-    # Assume decode works on [*, T, F]
-    B, N, P, F = token_preds.shape
-
-    # Reshape to [B*N, P, F]
-    flat_tokens = token_preds.reshape(B*N, P, F)
-    # Expand scale: [B, 1, F] -> [B, N, 1, F] -> [B*N, 1, F]
-    flat_scale = scale.unsqueeze(1).expand(B, N, 1, F).reshape(B*N, 1, F)
-
-    # Decode
-    # decode returns [B*N, P, F] values
-    # We need codec.decode to support this.
-    # If not implemented, we implement basic logic here based on binning.
-
-    # Quick implementation of decoding if codec doesn't fully support
-    if hasattr(codec, "decode"):
-         flat_values = codec.decode(flat_tokens, flat_scale)
+    if isinstance(model, Chronos2NativeWrapper):
+        values = model.generate(
+            input_tensor,
+            prediction_length=horizon_days,
+            num_samples=n_samples
+        )
     else:
-         # Minimal fallback if codec.decode not ready
-         # Assume buckets
-         # This is fragile. We should ensure Codec has decode.
-         # For now, return dummy if failing? No.
-         raise NotImplementedError("Codec must implement decode()")
+        if codec is None:
+            raise ValueError("Codec is required for token-based Chronos models.")
+        encoded = codec.encode(input_tensor)
+        input_ids = encoded["input_ids"]
+        attention_mask = encoded["attention_mask"]
+        scale = encoded["scale"]
 
-    # Reshape back: [B, N, P, F]
-    values = flat_values.reshape(B, N, P, F)
+        token_preds = model.generate(
+            input_ids,
+            attention_mask,
+            prediction_length=horizon_days,
+            num_samples=n_samples
+        )
+
+        B, N, P, F = token_preds.shape
+        flat_tokens = token_preds.reshape(B*N, P, F)
+        flat_scale = scale.unsqueeze(1).expand(B, N, 1, F).reshape(B*N, 1, F)
+
+        if hasattr(codec, "decode"):
+            flat_values = codec.decode(flat_tokens, flat_scale)
+        else:
+            raise NotImplementedError("Codec must implement decode().")
+
+        values = flat_values.reshape(B, N, P, F)
 
     # 4. Compute Statistics (Priors)
     # Target feature: usually "close" or "log_return"?
