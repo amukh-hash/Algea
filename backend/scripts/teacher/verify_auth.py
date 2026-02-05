@@ -1,3 +1,5 @@
+"""Verify Chronos-2 authentication for protocol-aligned daily inference/training."""
+
 from transformers import AutoModel
 import sys
 

@@ -148,11 +148,11 @@ def main():
 
             results.append({
                 "date": str(as_of_date),
-                "ticker": ticker,
-                "teacher_drift_20d": float(drift),
-                "teacher_vol_20d": float(vol),
-                "teacher_downside_q10_20d": float(downside_q10),
-                "teacher_trend_conf_20d": float(trend_conf),
+                "symbol": ticker,
+                "teacher_drift": float(drift),
+                "teacher_vol_forecast": float(vol),
+                "teacher_tail_risk": float(downside_q10),
+                "teacher_trend_conf": float(trend_conf),
 
                 # Metadata
                 "teacher_model_id": model_id,
@@ -175,7 +175,7 @@ def main():
     df = pl.DataFrame(results)
 
     # Sort
-    df = df.sort(["ticker"])
+    df = df.sort(["symbol"])
 
     # Path: backend/data/priors/chronos2/v1/YYYY-MM-DD.parquet
     out_dir = os.path.join(config.PRIORS_DIR, "chronos2", "v1")

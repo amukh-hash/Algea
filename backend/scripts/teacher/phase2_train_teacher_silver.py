@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Phase 2 (SILVER): Train Chronos-2 Large teacher on equities MarketFrame.
+Phase 2 (SILVER): Optional Chronos-2 LoRA refresh on daily equity bars + covariates.
 Features:
 - Byte-Capped LRU Cache for memory safety.
 - Resumes from Gold Adapter.
-- Swing-Consistent Targets (Session Awareness).
-- Periodic Checkpointing (5k steps).
+- Swing-consistent targets (session awareness).
+- Periodic checkpointing.
 """
 
 from __future__ import annotations
@@ -94,17 +94,17 @@ def env_path(name: str, default: str) -> Path:
 def load_config(args) -> Phase2Config:
     seed = int(os.getenv("SEED", "42"))
     
-    # Input Features (OHLCV + Breadth + Signals)
+    # Input Features (Daily adjusted OHLCV + regime covariates)
     required_cols = tuple(c.strip() for c in os.getenv(
         "SILVER_REQUIRED_COLS",
-        "timestamp,open,high,low,close,volume"
+        "date,open_adj,high_adj,low_adj,close_adj,volume,"
+        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
     ).split(","))
 
-    # Target Features (Subset, e.g. Close only for Swing)
-    # Defaults to same as input if not specified, usually we want Close.
+    # Target Features (Subset for swing; default to close)
     target_cols = tuple(c.strip() for c in os.getenv(
-        "SILVER_TARGET_COLS", "close"
-    ).split(","))
+        "SILVER_TARGET_COLS", "close_adj"
+    ).split(",")) 
 
     lora_config = {
         "rank": int(os.getenv("LORA_RANK", "16")),
@@ -115,7 +115,7 @@ def load_config(args) -> Phase2Config:
     gold_dir_str = os.getenv("TEACHER_E_GOLD_OUTDIR", "backend/models/teacher_e/gold")
     gold_dir = Path(gold_dir_str).expanduser().resolve() if gold_dir_str else None
 
-    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/models/codec/codec_gold_v1.json")
+    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/models/codec/codec_daily_v1.json")
 
     return Phase2Config(
         run_id=f"silver_{str(uuid.uuid4())[:8]}",
@@ -123,7 +123,7 @@ def load_config(args) -> Phase2Config:
         model_id=os.getenv("CHRONOS2_MODEL_ID", "amazon/chronos-2"),
         use_qlora=os.getenv("USE_QLORA", "0") == "1",
         lora_config=lora_config,
-        marketframe_dir=env_path("SILVER_MARKETFRAME_DIR", "LocalDatabase/data_cache_alpaca_curated(120)"),
+        marketframe_dir=env_path("SILVER_MARKETFRAME_DIR", "backend/data_canonical/marketframe_daily"),
         tickers_csv=os.getenv("SILVER_TICKERS", "") or None,
         required_cols=required_cols,
         target_cols=target_cols,
@@ -215,7 +215,7 @@ class SilverMarketFrameDataset(Dataset):
         ts_valid_ops = 0
         
         for t in tickers:
-            fp = marketframe_dir / f"marketframe_{t}_1m.parquet"
+            fp = marketframe_dir / f"marketframe_{t}_daily.parquet"
             if not fp.exists(): continue
             try:
                 # Light Scan for metadata
@@ -236,7 +236,7 @@ class SilverMarketFrameDataset(Dataset):
                 # Logic: Just index stride rows. 
                 # During getitem, we can't reliably check session cheaply without the dataframe.
                 # So we likely need to read timestamps into memory once during index?
-                # Timestamps for 1min data, 5 years ~ 500k rows. 120 tickers.
+                # Timestamps for daily data; length depends on history span per ticker.
                 # 500k * 8 bytes * 120 = 480MB. Fits in RAM easily.
                 
                 df_meta = pl.read_parquet(fp, columns=["timestamp"])
@@ -254,7 +254,7 @@ class SilverMarketFrameDataset(Dataset):
                 
                 for s in starts:
                     # Session Aware Check?
-                    # If we simply predict next 'pred' minutes, that's fine for physics.
+                    # Predict the next 'pred' daily steps for swing-style targets.
                     # If we want "Swing Consistent", maybe we only start windows near EOD?
                     # Plan says: "Target: Subset (e.g. Close)".
                     # Plan says: "Validate session boundaries".
@@ -278,7 +278,7 @@ class SilverMarketFrameDataset(Dataset):
     def _get_ticker_data(self, ticker: str) -> np.ndarray:
         arr = self.cache.get(ticker)
         if arr is None:
-            fp = self.marketframe_dir / f"marketframe_{ticker}_1m.parquet"
+            fp = self.marketframe_dir / f"marketframe_{ticker}_daily.parquet"
             df = pl.read_parquet(fp, columns=list(self.required_cols))
             arr = df.to_numpy()
             self.cache.put(ticker, arr)
@@ -357,7 +357,7 @@ def load_tickers(cfg):
     if cfg.tickers_csv:
         return [t.strip().upper() for t in cfg.tickers_csv.split(",") if t.strip()]
     # Scan
-    return [p.name.split("_")[0] for p in cfg.marketframe_dir.glob("*_1m.parquet")][:cfg.max_tickers]
+    return [p.name.split("_")[0] for p in cfg.marketframe_dir.glob("*_daily.parquet")][:cfg.max_tickers]
 
 def validation_loop(model, dl, device):
     model.eval()

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Phase 1 (GOLD): Train Chronos-2 Large teacher on processed L2 futures dataset.
+Phase 1 (GOLD): Optional Chronos-2 calibration on daily adjusted equity bars + covariates.
 Uses 'backend.app.models.chronos2_teacher' for model wrapper.
+This aligns with the Training Protocol (daily OHLCV + regime covariates).
 """
 
 from __future__ import annotations
@@ -90,10 +91,12 @@ def env_path(name: str, default: str) -> Path:
 def load_config(args) -> Phase1Config:
     seed = int(os.getenv("SEED", "42"))
     model_id = os.getenv("CHRONOS2_MODEL_ID", "amazon/chronos-2")
-    gold_dir = env_path("GOLD_L2_PARQUET_DIR", "legacy/v2/Legacy_Algaie_2/backend/data/processed")
-    gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "orthogonal_features_final.parquet")
+    gold_dir = env_path("GOLD_DAILY_PARQUET_DIR", "backend/data_canonical/daily_parquet")
+    gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "*.parquet")
     required_cols = tuple(c.strip() for c in os.getenv(
-        "GOLD_REQUIRED_COLS", "close_frac,OFI_L1,microprice"
+        "GOLD_REQUIRED_COLS",
+        "date,open_adj,high_adj,low_adj,close_adj,volume,"
+        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
     ).split(","))
 
     lora_config = {
@@ -102,7 +105,7 @@ def load_config(args) -> Phase1Config:
         "dropout": float(os.getenv("LORA_DROPOUT", "0.05"))
     }
 
-    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/models/codec/codec_gold_v1.json")
+    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/models/codec/codec_daily_v1.json")
     
     return Phase1Config(
         run_id=str(uuid.uuid4())[:8],
@@ -113,8 +116,8 @@ def load_config(args) -> Phase1Config:
         gold_parquet_dir=gold_dir,
         gold_glob=gold_glob,
         required_cols=required_cols,
-        context=int(os.getenv("GOLD_CONTEXT", "1024")),
-        pred=int(os.getenv("GOLD_PRED", "64")),
+        context=int(os.getenv("GOLD_CONTEXT", "180")),
+        pred=int(os.getenv("GOLD_PRED", "20")),
         stride_rows=int(os.getenv("GOLD_STRIDE", "60")),
         max_files=int(os.getenv("GOLD_MAX_FILES", "50")),
         max_windows=int(os.getenv("GOLD_MAX_WINDOWS_PER_FILE", "500")),

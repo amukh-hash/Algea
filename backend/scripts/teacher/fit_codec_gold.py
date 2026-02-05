@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Phase 0.5: Fit Codec Quantiles on Gold Data.
-Output: backend/models/codec/codec_gold_v1.json
+Phase 0.5: Fit Codec Quantiles on daily equity training data.
+Output: backend/models/codec/codec_daily_v1.json
 """
 
 import os
@@ -32,13 +32,17 @@ def main():
     args = parser.parse_args()
     
     # Config
-    gold_dir = Path(os.getenv("GOLD_L2_PARQUET_DIR", "legacy/v2/Legacy_Algaie_2/backend/data/processed")).resolve()
-    gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "orthogonal_features_final.parquet")
-    required_cols = os.getenv("GOLD_REQUIRED_COLS", "close_frac,OFI_L1,microprice").split(",")
+    gold_dir = Path(os.getenv("GOLD_DAILY_PARQUET_DIR", "backend/data_canonical/daily_parquet")).resolve()
+    gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "*.parquet")
+    required_cols = os.getenv(
+        "GOLD_REQUIRED_COLS",
+        "date,open_adj,high_adj,low_adj,close_adj,volume,"
+        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
+    ).split(",")
     required_cols = [c.strip() for c in required_cols]
     
-    # Exclude timestamp for fitting
-    feat_cols = [c for c in required_cols if c != "timestamp"]
+    # Exclude date column for fitting
+    feat_cols = [c for c in required_cols if c != "date"]
     
     # Scan files
     files = sorted(list(gold_dir.glob(gold_glob)))
@@ -99,7 +103,7 @@ def main():
     codec.fit_quantiles(data, feature_names=feat_cols)
     
     # Save
-    out_path = Path("backend/models/codec/codec_gold_v1.json")
+    out_path = Path("backend/models/codec/codec_daily_v1.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     codec.save(out_path)
     print(f"Saved artifact to {out_path}")

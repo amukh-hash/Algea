@@ -79,10 +79,10 @@ def run_nightly_cycle(as_of_date: str):
     
     priors_df = pd.DataFrame({
         'symbol': eligible_symbols,
-        'prior_drift_20d': 0.005,
-        'prior_vol_20d': 0.02,
-        'prior_downside_q10': -0.05,
-        'prior_trend_conf': 0.6
+        'drift': 0.005,
+        'vol_forecast': 0.02,
+        'tail_risk': -0.05,
+        'trend_conf': 0.6
     })
     
     # Save Priors Artifact
@@ -102,7 +102,7 @@ def run_nightly_cycle(as_of_date: str):
         'symbol': eligible_symbols,
         'date': as_of_date,
         'feature_1': 0.5, # Mock features
-        'prior_drift_20d': 0.005
+        'drift': 0.005
     })
 
     # 5. VALIDATION

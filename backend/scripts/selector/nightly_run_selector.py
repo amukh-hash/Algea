@@ -120,7 +120,7 @@ def main():
             # drift_20d, etc.
             # Assuming schema
             prior_vals = ticker_prior.select([
-                "teacher_drift_20d", "teacher_vol_20d", "teacher_downside_q10_20d", "teacher_trend_conf_20d"
+                "teacher_drift", "teacher_vol_forecast", "teacher_tail_risk", "teacher_trend_conf"
             ]).to_dict(as_series=False)
 
             # Add columns
@@ -166,7 +166,11 @@ def main():
     # Also attach teacher prior values used?
     # They are in features, but infer doesn't return features.
     # We should merge them back from priors_df.
-    leaderboard = leaderboard.join(priors_df.select(["ticker", "teacher_drift_20d", "teacher_vol_20d", "teacher_downside_q10_20d", "teacher_trend_conf_20d"]), on="ticker", how="left")
+    leaderboard = leaderboard.join(
+        priors_df.select(["symbol", "teacher_drift", "teacher_vol_forecast", "teacher_tail_risk", "teacher_trend_conf"]),
+        on="symbol",
+        how="left"
+    )
 
     # Schema Check
     validate_schema(leaderboard)
