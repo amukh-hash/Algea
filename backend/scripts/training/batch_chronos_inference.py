@@ -8,7 +8,6 @@ from tqdm import tqdm
 from datetime import timedelta
 from backend.app.core import config, artifacts
 from backend.app.models.chronos2_teacher import load_chronos_adapter, infer_priors
-from backend.app.models.chronos2_codec import Chronos2Codec, CodecConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,18 +29,8 @@ def main():
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values(['ticker', 'date'])
     
-    # 2. Load Model & Codec
+    # 2. Load Model
     logger.info(f"Loading Model {args.model_id} on {args.device}...")
-    # Codec: We need a codec. T5 uses implicit tokenization usually OR we fit one.
-    # Chronos-2 usually comes with a pre-fit codec configuration if we use the amazon package.
-    # But here we are using a custom wrapper.
-    # We will initialize a CodecConfig with defaults (linear fallback likely needed initially).
-    # Ideally we load a fitted codec artifact.
-    # For now, we use a Codec with allow_fallback=True (Linear scaling).
-    
-    codec_cfg = CodecConfig(vocab_size=4096, allow_fallback=True) 
-    codec = Chronos2Codec(codec_cfg)
-    # If we had a saved codec artifact, we'd load it: codec.load(...)
     
     wrapper, model_info = load_chronos_adapter(
         args.model_id, 
@@ -134,7 +123,7 @@ def main():
             
             try:
                 # infer_priors returns List[ChronosPriors]
-                batch_priors = infer_priors(wrapper, codec, batch_in, horizon_days=10, n_samples=20)
+                batch_priors = infer_priors(wrapper, batch_in, horizon_days=10, n_samples=20)
                 
                 # Append to list with ticker
                 for t, p in zip(batch_tickers, batch_priors):

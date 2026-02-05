@@ -27,7 +27,6 @@ import numpy as np
 
 try:
     import torch
-    import torch.nn as nn
     from torch.utils.data import Dataset, DataLoader
     from transformers import get_linear_schedule_with_warmup
 except Exception:
@@ -43,8 +42,7 @@ except Exception:
 # Imports
 sys.path.append(os.getcwd())
 try:
-    from backend.app.models.chronos2_codec import Chronos2Codec, CodecConfig
-    from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2ModelWrapper
+    from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
 except ImportError as e:
     print(f"ERROR: Backend imports failed: {e}")
     sys.exit(1)
@@ -81,8 +79,6 @@ class Phase2Config:
     
     load_gold_dir: Optional[Path]
     out_dir: Path
-    codec_path: Path
-    allow_fallback_codec: bool
     
     byte_cache_limit: int # Bytes
 
@@ -115,8 +111,6 @@ def load_config(args) -> Phase2Config:
     gold_dir_str = os.getenv("TEACHER_E_GOLD_OUTDIR", "backend/models/teacher_e/gold")
     gold_dir = Path(gold_dir_str).expanduser().resolve() if gold_dir_str else None
 
-    codec_env = os.getenv("CHRONOS2_CODEC_PATH", "backend/models/codec/codec_daily_v1.json")
-
     return Phase2Config(
         run_id=f"silver_{str(uuid.uuid4())[:8]}",
         seed=seed,
@@ -144,8 +138,6 @@ def load_config(args) -> Phase2Config:
         
         load_gold_dir=gold_dir if gold_dir and gold_dir.exists() else None,
         out_dir=env_path("TEACHER_E_SILVER_OUTDIR", "backend/models/teacher_e/silver"),
-        codec_path=Path(codec_env).resolve(),
-        allow_fallback_codec=args.allow_fallback,
         byte_cache_limit=int(os.getenv("SILVER_CACHE_BYTES", "4294967296")) # 4GB
     )
 
@@ -319,37 +311,43 @@ class SilverMarketFrameDataset(Dataset):
             "y_float": y_float
         }
 
-def get_collate_fn(codec: Chronos2Codec, input_names: List[str], target_names: List[str]):
+def _build_mask(tensor: torch.Tensor) -> torch.Tensor:
+    if tensor.ndim == 3:
+        mask = torch.isfinite(tensor).all(dim=-1)
+    else:
+        mask = torch.isfinite(tensor)
+    return mask.to(dtype=torch.long)
+
+
+def get_collate_fn(input_names: List[str], target_names: List[str]):
     # Pre-compute indices
     target_indices = []
     for t in target_names:
         if t in input_names:
             target_indices.append(input_names.index(t))
-        # Logic relies on input_names passed to Codec matching dataset output
         # Dataset output excludes Timestamp. So we must align names.
         
     def collate(batch):
         xs = np.stack([b["x_float"] for b in batch])
         ys = np.stack([b["y_float"] for b in batch])
         
-        enc_x = codec.encode(torch.from_numpy(xs)) 
-        
-        # Target Encoding
-        # Select subset of features for labels
-        # Pass feature_indices to encode_targets?
-        # Codec logic: "global_idx = feature_indices[f_idx]"
-        # We want input_ids for [B, Pred, TargetFeats]
-        target_ids = codec.encode_targets(
-            torch.from_numpy(ys), 
-            scale=enc_x["scale"], 
-            feature_indices=target_indices if target_indices else None
-        )
+        x_pt = torch.from_numpy(xs).float()
+        y_pt = torch.from_numpy(ys).float()
+
+        if target_indices:
+            y_pt = y_pt[:, :, target_indices]
+
+        context_mask = _build_mask(x_pt)
+        future_mask = _build_mask(y_pt)
+
+        x_pt = torch.nan_to_num(x_pt, nan=0.0, posinf=0.0, neginf=0.0)
+        y_pt = torch.nan_to_num(y_pt, nan=0.0, posinf=0.0, neginf=0.0)
+
         return {
-            "input_ids": enc_x["input_ids"],
-            "attention_mask": enc_x["attention_mask"],
-            "labels": target_ids,
-            "scale": enc_x["scale"],
-            "meta": enc_x["meta"]
+            "context": x_pt,
+            "context_mask": context_mask,
+            "future_target": y_pt,
+            "future_target_mask": future_mask
         }
     return collate
 
@@ -362,18 +360,32 @@ def load_tickers(cfg):
 def validation_loop(model, dl, device):
     model.eval()
     total_loss = 0
-    loss_fct = nn.CrossEntropyLoss()
     steps = 0
     with torch.no_grad():
         for batch in dl:
-             id_ = batch["input_ids"].to(device)
-             mk = batch["attention_mask"].to(device)
-             lb = batch["labels"].to(device)
-             out = model(id_, mk, labels=lb)
+             context = batch["context"].to(device)
+             context_mask = batch["context_mask"].to(device)
+             future_target = batch["future_target"].to(device)
+             future_target_mask = batch["future_target_mask"].to(device)
+
+             out = model(
+                 context,
+                 context_mask=context_mask,
+                 future_target=future_target,
+                 future_target_mask=future_target_mask
+             )
              if hasattr(out, "loss"):
                  loss = out.loss
              else:
-                 loss = loss_fct(out.logits.reshape(-1, out.logits.size(-1)), lb.reshape(-1))
+                 pred = getattr(out, "prediction", None) or getattr(out, "predictions", None)
+                 if pred is None:
+                     raise RuntimeError("Chronos native forward did not return loss or predictions.")
+                 pred = torch.as_tensor(pred)
+                 if pred.ndim == 2:
+                     pred = pred.unsqueeze(1).unsqueeze(-1)
+                 elif pred.ndim == 3:
+                     pred = pred.unsqueeze(-1)
+                 loss = torch.mean((pred - future_target) ** 2)
              total_loss += loss.item()
              steps += 1
              if steps > 50: break
@@ -400,15 +412,11 @@ def main():
         lora_config=cfg.lora_config # Fallback if no path
     )
 
-    # 2. Codec
-    if not cfg.codec_path.exists() and not cfg.allow_fallback_codec:
-        print("ERROR: Codec Missing.")
+    if not isinstance(model_wrapper, Chronos2NativeWrapper):
+        print("ERROR: Loaded model does not expose Chronos native API.")
         return 1
-    codec = Chronos2Codec(CodecConfig(allow_fallback=cfg.allow_fallback_codec))
-    if cfg.codec_path.exists():
-        codec.load(cfg.codec_path)
 
-    # 3. Data
+    # 2. Data
     tickers = load_tickers(cfg)
     ds = SilverMarketFrameDataset(
         marketframe_dir=cfg.marketframe_dir,
@@ -423,7 +431,7 @@ def main():
     feat_names = [c for c in cfg.required_cols if c != "timestamp"]
     target_names = [c for c in cfg.target_cols if c != "timestamp"]
     
-    collate = get_collate_fn(codec, feat_names, target_names)
+    collate = get_collate_fn(feat_names, target_names)
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate, num_workers=0)
     
     # 4. Train
@@ -435,15 +443,28 @@ def main():
     
     while step < cfg.max_steps:
         for batch in dl:
-            id_ = batch["input_ids"].to(device)
-            mk = batch["attention_mask"].to(device)
-            lb = batch["labels"].to(device)
+            context = batch["context"].to(device)
+            context_mask = batch["context_mask"].to(device)
+            future_target = batch["future_target"].to(device)
+            future_target_mask = batch["future_target_mask"].to(device)
             
-            out = model_wrapper(id_, mk, labels=lb)
-            loss = out.loss # Wrapper ensures loss if labels passed
+            out = model_wrapper(
+                context,
+                context_mask=context_mask,
+                future_target=future_target,
+                future_target_mask=future_target_mask
+            )
+            loss = out.loss if hasattr(out, "loss") else None
             if loss is None:
-                 # Manually compute logic
-                 pass
+                pred = getattr(out, "prediction", None) or getattr(out, "predictions", None)
+                if pred is None:
+                    raise RuntimeError("Chronos native forward did not return loss or predictions.")
+                pred = torch.as_tensor(pred)
+                if pred.ndim == 2:
+                    pred = pred.unsqueeze(1).unsqueeze(-1)
+                elif pred.ndim == 3:
+                    pred = pred.unsqueeze(-1)
+                loss = torch.mean((pred - future_target) ** 2)
             
             loss = loss / cfg.grad_accum
             loss.backward()
