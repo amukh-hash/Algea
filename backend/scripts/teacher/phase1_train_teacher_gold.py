@@ -278,8 +278,16 @@ def get_collate_fn():
         xs = np.stack([b["x_float"] for b in batch]) # [B, T, F]
         ys = np.stack([b["y_float"] for b in batch]) # [B, Pred, F]
         
-        x_pt = torch.from_numpy(xs).float()
-        y_pt = torch.from_numpy(ys).float()
+        B, T, F = xs.shape
+        _, P, _ = ys.shape
+        
+        # Multivariate for Chronos2: Flatten features into batch dimension
+        # [B, T, F] -> [B*F, T] - each feature becomes a separate sample
+        xs_flat = xs.transpose(0, 2, 1).reshape(B * F, T)  # [B*F, T]
+        ys_flat = ys.transpose(0, 2, 1).reshape(B * F, P)  # [B*F, Pred]
+        
+        x_pt = torch.from_numpy(xs_flat).float()
+        y_pt = torch.from_numpy(ys_flat).float()
 
         context_mask = _build_mask(x_pt)
         future_mask = _build_mask(y_pt)
@@ -287,11 +295,17 @@ def get_collate_fn():
         x_pt = torch.nan_to_num(x_pt, nan=0.0, posinf=0.0, neginf=0.0)
         y_pt = torch.nan_to_num(y_pt, nan=0.0, posinf=0.0, neginf=0.0)
         
+        # group_ids: track which samples belong to each original batch item
+        # Shape [B*F] where samples 0..F-1 are group 0, F..2F-1 are group 1, etc.
+        group_ids = torch.repeat_interleave(torch.arange(B), F)
+        
         return {
-            "context": x_pt,
-            "context_mask": context_mask,
-            "future_target": y_pt,
-            "future_target_mask": future_mask
+            "context": x_pt,  # [B*F, T]
+            "context_mask": context_mask,  # [B*F, T]
+            "future_target": y_pt,  # [B*F, Pred]
+            "future_target_mask": future_mask,  # [B*F, Pred]
+            "group_ids": group_ids,  # [B*F]
+            "_original_shape": (B, T, F, P)  # For reshaping predictions back
         }
     return collate
 
@@ -410,17 +424,22 @@ def main():
                 context_mask = batch["context_mask"].to(device)
                 future_target = batch["future_target"].to(device)
                 future_target_mask = batch["future_target_mask"].to(device)
+                group_ids = batch.get("group_ids")
+                if group_ids is not None:
+                    group_ids = group_ids.to(device)
                 
                 # Forward
                 if step == 0:
                      print(f"[Debug] Input device: {context.device}")
+                     print(f"[Debug] Context shape: {context.shape}")
                      # Probe wrapper's underlying model device
                      print(f"[Debug] Model device: {next(model_wrapper.model.parameters()).device}")
                 out = model_wrapper(
                     context,
                     context_mask=context_mask,
                     future_target=future_target,
-                    future_target_mask=future_target_mask
+                    future_target_mask=future_target_mask,
+                    group_ids=group_ids
                 )
                 
                 loss = out.loss if hasattr(out, "loss") else None
