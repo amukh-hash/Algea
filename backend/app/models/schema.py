@@ -77,6 +77,6 @@ class FeatureContract:
                 bad_rows = df[df[check_cols].isnull().any(axis=1)]
                 bad_tickers = bad_rows['symbol'].unique()
                 raise ValueError(f"DATA INTEGRITY ERROR: NaNs detected for {len(bad_rows)} rows. "
-                                 f"Affected tickers: {bad_tickers[:5]}...")
+                                 f"Affected symbols: {bad_symbols[:5]}...")
 
         return True

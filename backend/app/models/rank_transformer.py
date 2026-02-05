@@ -97,29 +97,15 @@ class RankTransformer(nn.Module):
 
         h = self.encoder(h, src_key_padding_mask=key_padding_mask) # [B, T, d_model]
 
-        # Pooling: Take the last valid token
-        # If no mask, just take -1
-        if mask is None:
-            h_pool = h[:, -1, :]
-        else:
-            # Gather last valid index per batch
-            # mask is [B, T], sum(dim=1) -> length
-            lengths = mask.sum(dim=1).long() - 1 # [B]
-            # Clamp to 0 just in case
-            lengths = lengths.clamp(min=0)
+        h = self.encoder(h, src_key_padding_mask=key_padding_mask) # [B, T, d_model]
 
-            # Make sure lengths within bounds [0, T-1]
-            lengths = torch.min(lengths, torch.tensor(T - 1, device=x.device))
-
-            # Gather: [B, 1, d_model]
-            # h[b, length[b], :]
-            # Use gather or advanced indexing
-            # h[torch.arange(B), lengths]
-            h_pool = h[torch.arange(B, device=x.device), lengths, :]
-
-        # Heads
-        score = self.score_head(h_pool) # [B, 1]
-        p_up = self.direction_head(h_pool) # [B, 1]
+        # No Pooling for Listwise Ranking (Option A / Modified-B)
+        # We want a score for every ticker in the sequence.
+        # h is [B, T, d_model]
+        
+        # Heads apply to the last dimension
+        score = self.score_head(h) # [B, T, 1]
+        p_up = self.direction_head(h) # [B, T, 1]
 
         return {
             "score": score,
