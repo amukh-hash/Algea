@@ -62,7 +62,7 @@ class SelectorOutputs:
 LEADERBOARD_SCHEMA = {
     # Keys
     "as_of_date": "str",   # YYYY-MM-DD
-    "ticker": "str",
+    "symbol": "str",
 
     # Core Ranking
     "score": "float",
@@ -73,10 +73,10 @@ LEADERBOARD_SCHEMA = {
     "ev_10d": "float",  # Expected Value over 10 days
 
     # Teacher Priors (Attached)
-    "teacher_drift_20d": "float",
-    "teacher_vol_20d": "float",
-    "teacher_downside_q10_20d": "float",
-    "teacher_trend_conf_20d": "float",
+    "prior_drift_20d": "float",
+    "prior_vol_20d": "float",
+    "prior_downside_q10_20d": "float",
+    "prior_trend_conf_20d": "float",
 
     # Metadata columns (can be uniform across file)
     "selector_checkpoint_id": "str",

@@ -37,8 +37,11 @@ def main():
     end_dt = pd.to_datetime(args.end)
     current = start_dt
     
-    # Iterate Days
-    while current <= end_dt:
+    # Iterate Days (Trading Days Only)
+    from backend.app.data import calendar
+    trading_days = calendar.get_trading_days(start_dt, end_dt)
+    
+    for current in trading_days:
         date_str = current.strftime("%Y-%m-%d")
         logger.info(f"Generating Priors for {date_str}...")
         
@@ -60,7 +63,7 @@ def main():
             if config.FAIL_ON_MISSING_DIRS: # Reuse flag for strictness?
                 pass
         
-        current += relativedelta(days=1)
+
 
 if __name__ == "__main__":
     main()

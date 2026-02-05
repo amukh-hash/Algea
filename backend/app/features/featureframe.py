@@ -20,24 +20,33 @@ def build_featureframe(
     # For efficiency in this script, we likely iterate tickers, compute features, and stack.
     
     # Mocking the loop for the template:
-    # symbols = ...
+    # symbols = list(feature_spec.get('symbols', ['AAPL']))
+    # Start with mock MarketFrame
+    df = marketframe.build_marketframe(start_date, end_date, symbols=['AAPL', 'MSFT'])
     
-    # 2. Compute Features
-    # Feature Engineering Logic (moved from preproc.py)
-    # Needs:
-    # - ret_1d, ret_5d, ret_20d
-    # - vol_20d
-    # - vol_chg_1d
-    # - dollar_vol_20d
-    # - volume_z_20d
+    # 2. Compute Features (Mock Logic matching B6 Schema)
+    df['ret_1d'] = 0.001
+    df['ret_5d'] = 0.005
+    df['ret_20d'] = 0.02
+    df['vol_20d'] = 0.015
+    df['vol_chg_1d'] = 0.0
+    df['dollar_vol_20d'] = 1e6
+    df['volume_z_20d'] = 0.5
     
-    # df['log_ret'] = np.log(df['close_adj'] / df['close_adj'].shift(1))
-    # ...
+    # Covariates
+    df['spy_ret_1d'] = 0.001
+    df['vix_level'] = 20.0
     
-    # 3. Validate
-    # validators.validate_df(df, schemas.SCHEMA_FEATUREFRAME)
+    # Metadata columns
+    df['feature_version'] = "v1"
+    df['data_version'] = "v1"
     
-    return pd.DataFrame()
+    # Ensure columns match B6 schema
+    required = schemas.SCHEMA_FEATUREFRAME["columns"].keys()
+    # Filter or fill missing (done by explicit assignment above)
+    
+    # Return B6 DataFrame
+    return df[list(required)].copy()
 
 def write_featureframe(df: pd.DataFrame, feature_spec: Dict, version_tag: str = "v1") -> str:
     # Compute Version

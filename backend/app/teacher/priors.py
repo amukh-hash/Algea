@@ -34,10 +34,10 @@ def generate_priors_for_date(
         data.append({
             "date": pd.to_datetime(asof_date),
             "symbol": str(s),
-            "drift_20d": 0.01,
-            "vol_20d": 0.02,
-            "downside_q10_20d": -0.05,
-            "trend_conf_20d": 0.8,
+            "prior_drift_20d": 0.01,
+            "prior_vol_20d": 0.02,
+            "prior_downside_q10_20d": -0.05,
+            "prior_trend_conf_20d": 0.8,
             "chronos_model_id": runner.model_id,
             "context_len": runner.context_len,
             "horizon": runner.horizon           

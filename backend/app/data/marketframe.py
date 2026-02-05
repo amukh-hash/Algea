@@ -22,22 +22,27 @@ def build_marketframe(start_date, end_date, symbols: List[str] = None) -> pd.Dat
     # Usually we iterate or use partitioned reads (Dask/Polars ideally).
     # For Pandas, we might need to be selective.
     
+    # Mocking implementation for migration to enable pipeline flow
+    # In real world: load partitioned OHLCV, load partitioned cov/breadth, join on date.
+    
+    dates = pd.date_range(start=start_date, end=end_date, freq='B')
+    
     if not symbols:
-        # Load from Security Master or Manifest?
-        pass
-
-    # 3. Load Covariates (B3)
-    # paths = pathmap.get_paths()
-    # cov_df = pd.read_parquet(pathmap.resolve("covariates"))
-    
-    # 4. Load Breadth (B4)
-    # breadth_df = pd.read_parquet(pathmap.resolve("breadth"))
-    
-    # 5. Join
-    # For this migration PR, we will implement a stub that assumes data fits in memory 
-    # or delegates to the FeatureFrame builder which might loop by ticker.
-    
-    # MarketFrame is conceptually the "Aligned View". 
-    # Returns a DataFrame with MultiIndex [date, symbol] or just [date, symbol, ...cols]
-    
-    return pd.DataFrame()
+        symbols = ['AAPL', 'MSFT', 'GOOGL', 'SPY'] # Mock default universe if none provided
+        
+    data = []
+    for s in symbols:
+        for d in dates:
+            data.append({
+                'date': d,
+                'symbol': s,
+                'open_adj': 150.0,
+                'high_adj': 155.0,
+                'low_adj': 149.0,
+                'close_adj': 152.0, # + np.random.randn(),
+                'volume': 1000000,
+                'spy_close': 400.0, # Mock Covariate
+                'vix_close': 20.0   # Mock Covariate
+            })
+            
+    return pd.DataFrame(data)
