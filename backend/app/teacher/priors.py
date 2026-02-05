@@ -2,7 +2,7 @@
 import os
 import pandas as pd
 import logging
-from typing import Dict, List
+from typing import Dict, List, Callable, Optional
 from backend.app.ops import pathmap, artifact_registry, config
 from backend.app.features import schemas, validators
 
@@ -13,7 +13,8 @@ def generate_priors_for_date(
     symbols: List[str], 
     prior_spec: Dict,
     # Injected runner to decouple
-    runner = None
+    runner = None,
+    load_fn: Optional[Callable] = None
 ) -> pd.DataFrame:
     """
     Generates priors for the list of symbols.
@@ -22,28 +23,14 @@ def generate_priors_for_date(
     if not runner:
         raise ValueError("Chronos Runner instance required")
         
-    # 1. Batch Inference
-    # runner.infer_batch(...)
-    # For now, stub return or mock
-    
-    # Mock result for migration structure
-    # drift_20d, vol_20d, downside_q10_20d, trend_conf_20d
-    
-    data = []
-    for s in symbols:
-        data.append({
-            "date": pd.to_datetime(asof_date),
-            "symbol": str(s),
-            "prior_drift_20d": 0.01,
-            "prior_vol_20d": 0.02,
-            "prior_downside_q10_20d": -0.05,
-            "prior_trend_conf_20d": 0.8,
-            "chronos_model_id": runner.model_id,
-            "context_len": runner.context_len,
-            "horizon": runner.horizon           
-        })
-        
-    df = pd.DataFrame(data)
+    if load_fn is None:
+        raise ValueError("load_fn is required to load series data for priors.")
+
+    df = runner.infer_batch(symbols, asof_date, load_fn=load_fn)
+    df["date"] = pd.to_datetime(asof_date)
+    df["chronos_model_id"] = runner.model_id
+    df["context_len"] = runner.context_len
+    df["horizon"] = runner.horizon
     
     return df
 

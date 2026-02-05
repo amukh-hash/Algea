@@ -1,9 +1,10 @@
 
+import os
 import pandas as pd
 import logging
 from typing import Optional, List
 from backend.app.ops import pathmap, config
-from backend.app.data import ingest_daily
+from backend.app.data import ingest_daily, calendar, security_master
 
 logger = logging.getLogger(__name__)
 
@@ -12,37 +13,50 @@ def build_marketframe(start_date, end_date, symbols: List[str] = None) -> pd.Dat
     Constructs a MarketFrame: Aligned daily OHLCV + Covariates + Breadth.
     Strictly aligned to NYSE session dates.
     """
-    # 1. Load Calendar (Stub or pandas market calendars)
-    # unique dates from spy?
-    # For now, rely on leading ticker (SPY) or range.
-    
-    # 2. Load OHLCV for symbols
-    # This can be heavy.
-    # If symbols is None, we need to load ALL?
-    # Usually we iterate or use partitioned reads (Dask/Polars ideally).
-    # For Pandas, we might need to be selective.
-    
-    # Mocking implementation for migration to enable pipeline flow
-    # In real world: load partitioned OHLCV, load partitioned cov/breadth, join on date.
-    
-    dates = pd.date_range(start=start_date, end=end_date, freq='B')
-    
+    trading_days = calendar.get_trading_days(start_date, end_date)
+    if not trading_days:
+        raise ValueError("No trading days found for marketframe build.")
+
     if not symbols:
-        symbols = ['AAPL', 'MSFT', 'GOOGL', 'SPY'] # Mock default universe if none provided
-        
-    data = []
-    for s in symbols:
-        for d in dates:
-            data.append({
-                'date': d,
-                'symbol': s,
-                'open_adj': 150.0,
-                'high_adj': 155.0,
-                'low_adj': 149.0,
-                'close_adj': 152.0, # + np.random.randn(),
-                'volume': 1000000,
-                'spy_close': 400.0, # Mock Covariate
-                'vix_close': 20.0   # Mock Covariate
-            })
-            
-    return pd.DataFrame(data)
+        try:
+            master = security_master.load_security_master()
+            symbols = master["symbol"].dropna().astype(str).unique().tolist()
+        except Exception:
+            paths = pathmap.get_paths()
+            ohlcv_root = os.path.join(paths.data_canonical, "ohlcv_adj")
+            if not os.path.exists(ohlcv_root):
+                raise FileNotFoundError("No canonical OHLCV partitions found.")
+            symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
+
+    cov_path = pathmap.resolve("covariates")
+    breadth_path = pathmap.resolve("breadth")
+    if not os.path.exists(cov_path):
+        raise FileNotFoundError(f"Missing covariates file: {cov_path}")
+    if not os.path.exists(breadth_path):
+        raise FileNotFoundError(f"Missing breadth file: {breadth_path}")
+
+    cov_df = pd.read_parquet(cov_path)
+    cov_df["date"] = pd.to_datetime(cov_df["date"])
+    breadth_df = pd.read_parquet(breadth_path)
+    breadth_df["date"] = pd.to_datetime(breadth_df["date"])
+
+    frames: List[pd.DataFrame] = []
+    for symbol in symbols:
+        ohlcv = ingest_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
+        if ohlcv.empty:
+            continue
+        ohlcv = ohlcv.copy()
+        ohlcv["date"] = pd.to_datetime(ohlcv["date"])
+        ohlcv = ohlcv.sort_values("date")
+        ohlcv = ohlcv.set_index("date").reindex(pd.DatetimeIndex(trading_days)).reset_index()
+        ohlcv = ohlcv.rename(columns={"index": "date"})
+        ohlcv["symbol"] = symbol
+
+        merged = ohlcv.merge(cov_df, on="date", how="left")
+        merged = merged.merge(breadth_df, on="date", how="left")
+        frames.append(merged)
+
+    if not frames:
+        raise ValueError("MarketFrame build produced no data.")
+
+    return pd.concat(frames, ignore_index=True)

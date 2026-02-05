@@ -64,6 +64,8 @@ python backend/scripts/03_build_featureframe.py --start 2016-01-01 --end 2025-12
 ```
 
 **Notes / Caveats**
+- The featureframe builder computes B6 features directly from canonical OHLCV partitions and will **fail hard** if required covariates or breadth files are missing. Ensure `backend/data_canonical/covariates_daily.parquet` and `backend/data_canonical/breadth_daily.parquet` exist before running.【F:backend/app/features/featureframe.py†L32-L166】
+- FeatureFrame writes deterministic `feature_version`/`data_version` columns and enforces B6 schema validation before write, so re-runs with the same inputs produce identical hashes.【F:backend/app/features/featureframe.py†L142-L194】
 - The script currently migrates from a legacy feature file if present; otherwise it warns that the full build is not implemented.【F:backend/scripts/03_build_featureframe.py†L24-L57】
 - The underlying featureframe builder is still a stub returning an empty DataFrame, so ensure legacy feature migration is available or implement the builder first.【F:backend/app/features/featureframe.py†L12-L40】
 
@@ -78,9 +80,8 @@ python backend/scripts/04_generate_priors_historical.py --start 2016-01-01 --end
 ```
 
 **Notes / Caveats**
-- The script still uses a hardcoded 3-symbol universe (`AAPL`, `MSFT`, `GOOGL`). Replace with manifest-derived symbols for full coverage.【F:backend/scripts/04_generate_priors_historical.py†L45-L55】
-- It iterates every calendar day, not trading days. Consider switching to trading calendars to avoid weekend/holiday writes.【F:backend/scripts/04_generate_priors_historical.py†L40-L63】
-- Priors are currently generated via a stub runner returning mock values.【F:backend/app/teacher/chronos_runner.py†L6-L37】
+- The script iterates **NYSE trading days** and uses universe manifests when available; otherwise it falls back to the union of manifest symbols or the security master universe.【F:backend/scripts/04_generate_priors_historical.py†L29-L99】
+- Priors are generated using Chronos if available; otherwise the runner uses a deterministic statistical fallback derived from recent returns (not random).【F:backend/app/teacher/chronos_runner.py†L13-L74】
 
 ---
 
@@ -93,8 +94,8 @@ python backend/scripts/05_build_selector_dataset.py --start 2016-01-01 --end 202
 ```
 
 **Notes / Caveats**
-- The dataset builder currently returns mock tensors and does not yet perform real joins across features/priors/labels.【F:backend/app/selector/dataset_builder.py†L12-L52】
-- Labels are currently returned as an empty schema template.【F:backend/app/selector/dataset_builder.py†L12-L28】
+- The dataset builder constructs real forward-10TD labels from canonical OHLCV and builds listwise sequences from FeatureFrame + priors, but will skip dates that fail the minimum group size filter. Ensure priors and featureframe artifacts exist for the date range before running.【F:backend/app/selector/dataset_builder.py†L12-L191】
+- Group metadata (per-date symbol lists) is persisted alongside the dataset for traceability.【F:backend/scripts/05_build_selector_dataset.py†L24-L47】
 
 ---
 
@@ -107,7 +108,7 @@ python backend/scripts/06_train_selector.py --train_end 2025-12-31
 ```
 
 **Notes / Caveats**
-- The training wrapper still delegates to a stub (`train_selector`) and will not train a real model until the trainer is fully wired in.【F:backend/scripts/06_train_selector.py†L16-L38】【F:backend/app/selector/train.py†L5-L8】
+- The training wrapper now trains the ranker directly from the selector dataset artifact and writes the model, scaler, calibrator, and PROD pointer. Ensure the dataset artifact exists before running.【F:backend/app/selector/train.py†L5-L88】
 
 If you need the legacy trainer directly:
 ```bash
@@ -126,7 +127,7 @@ python backend/scripts/07_nightly_run.py --asof 2025-01-02
 ```
 
 **Notes / Caveats**
-- The nightly script still uses empty dataframes for features and priors and a hardcoded symbol list, so it currently produces a mock leaderboard only.【F:backend/scripts/07_nightly_run.py†L42-L65】
+- The nightly script loads featureframe and priors artifacts using the PROD pointer and uses the manifest (or security master) for the universe. Ensure the required artifacts exist for the `asof` date before running.【F:backend/scripts/07_nightly_run.py†L39-L70】
 
 ---
 
