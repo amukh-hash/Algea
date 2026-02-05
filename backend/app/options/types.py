@@ -16,6 +16,8 @@ class GateReasonCode(str, Enum):
     REJECT_LIQUIDITY = "REJECT_LIQUIDITY"
     REJECT_MODEL = "REJECT_MODEL"     # Teacher/Lag-Llama veto
     REJECT_STRIKES = "REJECT_STRIKES" # No valid strikes found
+    UNCERTAINTY_HIGH = "UNCERTAINTY_HIGH" # High uncertainty from Teacher
+    TREND_WEAK = "TREND_WEAK" # Prior trend weak
 
 @dataclass
 class GateDecision:

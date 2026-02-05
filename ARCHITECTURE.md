@@ -19,13 +19,13 @@
 
 ## System Overview
 
-ALGAIE is an institutional-grade algorithmic trading platform implementing a **Teacher-Student Distillation** architecture for swing trading equities and options (put credit spreads).
+ALGAIE is an institutional-grade algorithmic trading platform implementing a **Chronos-2 Priors + Rank-Transformer Selector** architecture for swing trading equities and options (put credit spreads).
 
 ### Key Design Patterns
-- **Teacher-Student Distillation**: Chronos T5 Large (Teacher) trains nightly with acausal filters → Chronos Bolt/MLP (Student) runs live with causal-only data
+- **Chronos-2 Priors + Rank-Transformer Selector**: Chronos-2 generates probabilistic priors -> Rank-Transformer ranks equities combining priors and market features
 - **Pod-Based Engines**: EquityPod for swing equities, OptionsPod for credit spreads
 - **Multi-Stage Gating**: Risk posture, crash override, options gate for trade filtering
-- **Hierarchical Risk Parity (HRP)**: Portfolio allocation via correlation clustering
+- **Hierarchical Risk Parity (HRP)**: Portfolio allocation via correlation clustering (Planned)
 
 ### Technology Stack
 - Python 3.11+
@@ -45,9 +45,9 @@ Central configuration via environment variables.
 
 ```python
 # Key Configuration Constants
-ENABLE_OPTIONS: bool      # Toggle options trading
-OPTIONS_MODE: str         # "paper" | "live" | "shadow"
-EXECUTION_MODE: str       # "LEGACY" | "SHADOW" | "RANKING"
+ENABLE_OPTIONS: bool      # Toggle options trading (default: False)
+OPTIONS_MODE: str         # "paper" | "live" | "shadow" (default: OFF)
+EXECUTION_MODE: str       # "LEGACY" | "SHADOW" | "RANKING" (default: LEGACY)
 REBALANCE_CALENDAR: str   # Calendar identifier for rebalancing
 ```
 
@@ -1134,55 +1134,43 @@ class SpecDecodeConfig:
                                              │
                       ┌──────────────────────┴──────────────────────┐
                       │                                             │
-                      ▼                                             ▼
-        ┌─────────────────────────┐               ┌─────────────────────────┐
-        │      TEACHER (Nightly)   │               │      STUDENT (Live)      │
-        │  ┌─────────────────────┐ │               │  ┌─────────────────────┐ │
-        │  │   Chronos2Teacher   │ │               │  │   StudentRunner     │ │
-        │  │   (T5 + LoRA)       │ │               │  │   (Bolt/MLP)        │ │
-        │  └──────────┬──────────┘ │               │  └──────────┬──────────┘ │
-        │             │            │               │             │            │
-        │             ▼            │               │             ▼            │
-        │  ┌─────────────────────┐ │               │  ┌─────────────────────┐ │
-        │  │   ChronosPriors     │ │               │  │    ModelSignal      │ │
-        │  │   (drift, vol, q10) │ │               │  │   (direction, conf) │ │
-        │  └──────────┬──────────┘ │               │  └──────────┬──────────┘ │
-        └─────────────┼────────────┘               └─────────────┼────────────┘
-                      │                                          │
-                      │         ┌────────────────┐               │
-                      └────────▶│  SELECTOR      │◀──────────────┘
-                                │ RankTransformer│
-                                └───────┬────────┘
-                                        │
-                                        ▼
-                                ┌───────────────┐
-                                │ SelectorOutputs│
-                                │ (rankings,     │
-                                │  scores)       │
-                                └───────┬───────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              EQUITY POD                                  │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                 │
-│  │ SwingScheduler│──▶│ RiskManager │──▶│PortfolioBuilder│              │
-│  │ (window)     │    │ (posture)   │    │ (top-k, HRP)  │              │
-│  └─────────────┘    └─────────────┘    └──────┬────────┘              │
-│                                               │                        │
-│                           ┌───────────────────┘                        │
-│                           ▼                                            │
-│                    ┌─────────────┐                                     │
-│                    │ RiskDecision │                                     │
-│                    │ (BUY/SELL)   │                                     │
-│                    └─────────────┘                                     │
-└─────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-                                ┌───────────────┐
-                                │ PortfolioState │
-                                │ (positions,    │
-                                │  cash, equity) │
-                                └───────────────┘
+                      ▼                                             │
+        ┌─────────────────────────┐                                 │
+        │      CHRONOS-2 (Nightly) │                                 │
+        │  ┌─────────────────────┐ │                                 │
+        │  │   Chronos2Teacher   │ │                                 │
+        │  │   (T5 + LoRA)       │ │                                 │
+        │  └──────────┬──────────┘ │                                 │
+        │             │            │                                 │
+        │             ▼            │                                 │
+        │  ┌─────────────────────┐ │                                 │
+        │  │   ChronosPriors     │ │                                 │
+        │  │   (parquet)         │ │                                 │
+        │  └──────────┬──────────┘ │                                 │
+        └─────────────┼────────────┘                                 │
+                      │                                             │
+                      └───┐     ┌───────────────────────────────────┘
+                          │     │
+                          ▼     ▼
+                        ┌──────────────┐
+                        │   SELECTOR   │
+                        │(RankTransf.) │
+                        └──────┬───────┘
+                               │
+                               ▼
+                       ┌───────────────┐
+                       │  Leaderboard  │
+                       └──────┬────────┘
+                              │
+                              ▼
+                       ┌────────────────┐
+                       │PortfolioManager│
+                       └──────┬─────────┘
+                              │
+                              ▼
+                       ┌────────────────┐
+                       │   EquityPod    │
+                       └────────────────┘
 ```
 
 ---
@@ -1247,8 +1235,7 @@ backend/models/
 ├── teacher/
 │   └── chronos2_lora_v1/        # LoRA adapter weights
 └── priors/
-    └── 2024-01-15/
-        └── AAPL.parquet         # Daily teacher priors
+    └── 2024-01-15.parquet       # Daily teacher priors (all tickers)
 ```
 
 ---
@@ -1260,7 +1247,7 @@ backend/models/
 |----------|---------|---------|
 | `ENABLE_OPTIONS` | `false` | Enable options trading |
 | `OPTIONS_MODE` | `paper` | Options execution mode |
-| `EXECUTION_MODE` | `RANKING` | Equity execution mode |
+| `EXECUTION_MODE` | `LEGACY` | Equity execution mode |
 | `REBALANCE_CALENDAR` | `weekly` | Rebalance frequency |
 
 ### Key Thresholds

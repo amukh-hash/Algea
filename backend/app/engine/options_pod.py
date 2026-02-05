@@ -1,7 +1,8 @@
 from typing import Optional, Dict
 from datetime import datetime
 import logging
-from backend.app.core import config
+import polars as pl
+from backend.app.core import config, artifacts
 from backend.app.options.types import OptionsMode, OptionsDecision, GateReasonCode
 from backend.app.options.gate.context import OptionsContext
 from backend.app.options.gate.gate import OptionsGate
@@ -43,6 +44,28 @@ class OptionsPod:
         if not self.enabled or self.mode == OptionsMode.OFF:
             return None
             
+        # 0. Enrich with Equity Context & Priors
+        # Check Equity Selection
+        ctx.in_equity_selection = False
+        lb_path = artifacts.resolve_leaderboard_path(str(ctx.timestamp.date()), "v1")
+        if lb_path:
+             try:
+                 lb = pl.read_parquet(lb_path)
+                 # Check if 'selected' column exists and is true
+                 if "selected" in lb.columns:
+                     row = lb.filter((pl.col("ticker") == ctx.ticker) & (pl.col("selected") == True))
+                     if len(row) > 0:
+                         ctx.in_equity_selection = True
+                 else:
+                     # Fallback if no selected col (e.g. check top K? Assume presence = selected?)
+                     # For safety, require 'selected' or presence if strictly Top K file.
+                     pass
+             except Exception:
+                 pass
+
+        # Get Priors
+        ctx.teacher_priors = self.teacher.get_priors(ctx.ticker, ctx.timestamp.date())
+
         # 1. Enrich Context (if missing data)
         if not ctx.iv_snapshot:
             ctx.iv_snapshot = self.iv_store.get_iv(ctx.ticker, ctx.timestamp, 30)

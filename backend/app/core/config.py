@@ -34,6 +34,22 @@ MIN_HOLD_DAYS = get_int("MIN_HOLD_DAYS", 5)
 MAX_HOLD_DAYS = get_int("MAX_HOLD_DAYS", 10)
 
 # Data Paths
+# Data Paths
 DATA_DIR = os.getenv("DATA_DIR", "backend/data")
 PRIORS_DIR = os.path.join(DATA_DIR, "priors")
 SIGNALS_DIR = os.path.join(DATA_DIR, "signals")
+CHECKPOINTS_DIR = os.path.join(DATA_DIR, "checkpoints")
+
+# Inference Mode Flags
+NIGHTLY_MOCK_INFERENCE = get_bool("NIGHTLY_MOCK_INFERENCE", False)
+
+# Training Configuration
+TRAIN_START_DATE = "2016-01-01"
+TRAIN_SPLIT_DATE = "2023-01-01" # Start of Validation
+TEST_SPLIT_DATE = "2024-01-01"  # Start of Test
+TRAIN_END_DATE = "2025-12-31"   # End of data window
+
+# Model Hyperparameters
+LOOKBACK_WINDOW_CHRONOS = 512
+LOOKBACK_WINDOW_RANKER = 60
+TARGET_HORIZON = 10

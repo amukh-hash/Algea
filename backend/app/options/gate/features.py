@@ -10,7 +10,8 @@ def compute_gate_features(ctx: OptionsContext) -> Dict[str, float]:
     
     # Student Signal
     # Assuming quantiles 3D horizon
-    q_3d = ctx.student_signal.quantiles.get("3D", {})
+    quantiles = ctx.student_signal.quantiles or {}
+    q_3d = quantiles.get("3D", {})
     feats["student_p50_3d"] = q_3d.get("0.50", 0.0)
     feats["student_p05_3d"] = q_3d.get("0.05", 0.0)
     

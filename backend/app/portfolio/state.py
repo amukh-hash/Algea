@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
+from datetime import date, datetime
 from backend.app.risk.posture import RiskPosture
 
 @dataclass
@@ -8,6 +9,7 @@ class Position:
     quantity: float
     avg_price: float
     current_price: float = 0.0
+    entry_date: Optional[date] = None
 
     @property
     def market_value(self) -> float:
@@ -32,12 +34,14 @@ class PortfolioState:
         if ticker in self.positions:
             self.positions[ticker].current_price = price
             
-    def add_fill(self, ticker: str, quantity: float, price: float):
+    def add_fill(self, ticker: str, quantity: float, price: float, timestamp: Optional[datetime] = None):
         if quantity == 0: return
         
+        fill_date = timestamp.date() if timestamp else date.today()
+
         if ticker not in self.positions:
             if quantity > 0:
-                self.positions[ticker] = Position(ticker, quantity, price, price)
+                self.positions[ticker] = Position(ticker, quantity, price, price, entry_date=fill_date)
                 self.cash -= quantity * price
             else:
                 # Short selling not supported in this simple logic yet?

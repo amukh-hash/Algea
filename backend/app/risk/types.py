@@ -18,3 +18,4 @@ class RiskDecision:
     reason: str
     confidence: float = 1.0
     max_position_size: Optional[float] = None # Cap
+    target_weight: Optional[float] = None # For HRP/Portfolio sizing

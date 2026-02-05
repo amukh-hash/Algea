@@ -1,0 +1,10 @@
+alpaca-trade-api
+pandas
+polars
+pyarrow
+requests
+numpy
+scipy
+scikit-learn
+torch
+exchange_calendars

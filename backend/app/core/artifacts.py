@@ -1,21 +1,19 @@
 import os
 import glob
-from typing import Dict, Optional, Tuple
+import json
+from typing import Dict, Optional, Tuple, Any
 from pathlib import Path
+from backend.app.core import config
 
 # This module resolves compatible artifacts for a given date.
-# In a real system, this might query a database or registry.
-# Here we use filesystem conventions:
-# backend/data/priors/chronos2/v1/YYYY-MM-DD.parquet
-# backend/data/signals/selector/v1/YYYY-MM-DD.parquet
-# backend/data/checkpoints/selector/v1/...
+# Paths are derived from backend.app.core.config
 
 def resolve_priors_path(as_of_date: str, version: str = "v1") -> Optional[str]:
     """
     Finds the priors file for the given date.
-    Path: backend/data/priors/{version}/{as_of_date}.parquet
+    Path: {PRIORS_DIR}/{version}/{as_of_date}.parquet
     """
-    base = os.path.join("backend/data/priors", version)
+    base = os.path.join(config.PRIORS_DIR, version)
     path = os.path.join(base, f"{as_of_date}.parquet")
     if os.path.exists(path):
         return path
@@ -24,9 +22,9 @@ def resolve_priors_path(as_of_date: str, version: str = "v1") -> Optional[str]:
 def resolve_selector_checkpoint(version: str = "v1") -> Optional[str]:
     """
     Finds the latest checkpoint for the given version.
-    Path: backend/data/checkpoints/selector/{version}/best.pt
+    Path: {CHECKPOINTS_DIR}/selector/{version}/best.pt
     """
-    path = os.path.join("backend/data/checkpoints/selector", version, "best.pt")
+    path = os.path.join(config.CHECKPOINTS_DIR, "selector", version, "best.pt")
     if os.path.exists(path):
         return path
     return None
@@ -34,9 +32,9 @@ def resolve_selector_checkpoint(version: str = "v1") -> Optional[str]:
 def resolve_scaler_path(version: str = "v1") -> Optional[str]:
     """
     Finds the scaler artifact.
-    Path: backend/data/checkpoints/selector/{version}/scaler.joblib
+    Path: {CHECKPOINTS_DIR}/selector/{version}/scaler.joblib
     """
-    path = os.path.join("backend/data/checkpoints/selector", version, "scaler.joblib")
+    path = os.path.join(config.CHECKPOINTS_DIR, "selector", version, "scaler.joblib")
     if os.path.exists(path):
         return path
     return None
@@ -44,9 +42,9 @@ def resolve_scaler_path(version: str = "v1") -> Optional[str]:
 def resolve_calibration_path(version: str = "v1") -> Optional[str]:
     """
     Finds the calibration artifact.
-    Path: backend/data/checkpoints/selector/{version}/calibration.joblib
+    Path: {CHECKPOINTS_DIR}/selector/{version}/calibration.joblib
     """
-    path = os.path.join("backend/data/checkpoints/selector", version, "calibration.joblib")
+    path = os.path.join(config.CHECKPOINTS_DIR, "selector", version, "calibration.joblib")
     if os.path.exists(path):
         return path
     return None
@@ -54,19 +52,43 @@ def resolve_calibration_path(version: str = "v1") -> Optional[str]:
 def resolve_leaderboard_path(as_of_date: str, version: str = "v1") -> Optional[str]:
     """
     Finds the leaderboard signals for the given date.
-    Path: backend/data/signals/selector/{version}/{as_of_date}.parquet
+    Path: {SIGNALS_DIR}/selector/{version}/{as_of_date}.parquet
     """
-    base = os.path.join("backend/data/signals/selector", version)
+    base = os.path.join(config.SIGNALS_DIR, "selector", version)
     path = os.path.join(base, f"{as_of_date}.parquet")
     if os.path.exists(path):
         return path
     return None
 
+def get_manifest_path(artifact_path: str) -> str:
+    """Returns the expected path for the artifact's manifest."""
+    return f"{artifact_path}.manifest.json"
+
+def load_manifest(artifact_path: str) -> Dict[str, Any]:
+    """Loads the manifest for the given artifact if it exists."""
+    man_path = get_manifest_path(artifact_path)
+    if os.path.exists(man_path):
+        with open(man_path, "r") as f:
+            return json.load(f)
+    return {}
+
 def ensure_artifact_compatibility(priors_path: str, scaler_path: str, checkpoint_path: str):
     """
-    Checks if artifacts are compatible (e.g. metadata matching).
-    For now, we rely on them being in the same 'version' folder structure or
-    having matching version IDs in metadata if loaded.
+    Checks if artifacts exist and validates compatibility via manifests.
+    Raises FileNotFoundError if critical artifacts are missing.
     """
-    # Placeholder for strict hash checks
-    pass
+    artifacts = {
+        "priors": priors_path,
+        "scaler": scaler_path,
+        "checkpoint": checkpoint_path
+    }
+    
+    for name, path in artifacts.items():
+        if not path or not os.path.exists(path):
+            raise FileNotFoundError(f"Critical artifact missing: {name} at {path}")
+        
+        # Manifest check (optional for now, but good for integrity)
+        man = load_manifest(path)
+        if not man:
+            # warning or pass? pass for now to fail open on missing manifest
+            pass

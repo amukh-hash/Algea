@@ -1,0 +1,16 @@
+{
+    "run_id": "init_bootstrap",
+    "promoted_at": "2026-02-04T00:00:00.000000",
+    "model_version": "v1",
+    "feature_version": "v1",
+    "prior_version": "v1",
+    "cal_version": "v1",
+    "feature_spec": {
+        "returns": [
+            1,
+            5,
+            20
+        ],
+        "volatility": 20
+    }
+}

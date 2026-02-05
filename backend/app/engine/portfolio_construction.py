@@ -4,6 +4,8 @@ from datetime import date, datetime
 
 from backend.app.core.config import REBALANCE_CALENDAR, MIN_HOLD_DAYS, MAX_HOLD_DAYS
 from backend.app.risk.types import RiskDecision, ActionType
+from backend.app.portfolio.hrp import compute_hrp_weights
+import pandas as pd
 
 class PortfolioBuilder:
     """
@@ -31,7 +33,8 @@ class PortfolioBuilder:
     def construct_portfolio(self,
                             current_date: date,
                             leaderboard: pl.DataFrame,
-                            current_holdings: Dict[str, Dict] # {ticker: {entry_date: ..., shares: ...}}
+                            current_holdings: Dict[str, Dict], # {ticker: {entry_date: ..., shares: ...}}
+                            recent_returns: Optional[pl.DataFrame] = None
                            ) -> List[RiskDecision]:
         """
         Returns a list of BUY/SELL/REBALANCE decisions.
@@ -100,37 +103,78 @@ class PortfolioBuilder:
         # Update current set after planned sells
         kept_tickers = current_tickers - set(to_sell)
 
-        # B. Buys (In Top K but not held)
-        # Capacity check
+        # Identify New Buys
         slots_available = self.target_size - len(kept_tickers)
-
+        new_buys = []
         if slots_available > 0:
-            # Pick best available candidates not already held
-            new_buys = []
             for row in candidates.iter_rows(named=True):
                 t = row["ticker"]
                 if t not in current_tickers:
                     new_buys.append(row)
+            new_buys = new_buys[:slots_available]
 
-            # Take top N
+        # 3. Calculate Weights for Active Tickers
+        active_tickers = list(kept_tickers.union(set(row["ticker"] for row in new_buys)))
+        weights = {}
+        
+        if active_tickers:
+            # Try HRP
+            if recent_returns is not None and not recent_returns.is_empty():
+                 # Filter returns for active tickers
+                 # Assuming recent_returns is Polars DataFrame: date, tickers...
+                 # Or Ticker, Date, Return?
+                 # HRP expects Pandas DataFrame (T x N).
+                 # Let's assume recent_returns is "wide" (date index, ticker columns) or we pivot.
+                 # Implementation Detail: If Polars, convert to pandas.
+                 try:
+                     # Pivot if long format
+                     if "ticker" in recent_returns.columns and "return" in recent_returns.columns:
+                         # Pivot: index=date, columns=ticker, values=return
+                         pdf = recent_returns.to_pandas().pivot(index="date", columns="ticker", values="return")
+                     else:
+                         # Assume wide
+                         pdf = recent_returns.to_pandas()
+                     
+                     # Filter columns
+                     cols = [t for t in active_tickers if t in pdf.columns]
+                     if len(cols) > 1:
+                         pdf_slice = pdf[cols]
+                         weights = compute_hrp_weights(pdf_slice)
+                     else:
+                         # Fallback for 1 asset or no data
+                         weights = {t: 1.0/len(active_tickers) for t in active_tickers}
+                 except Exception as e:
+                     print(f"HRP Failed: {e}. Fallback to Equal Weight.")
+                     weights = {t: 1.0/len(active_tickers) for t in active_tickers}
+            else:
+                # Equal Weight Fallback
+                val = 1.0 / len(active_tickers)
+                weights = {t: val for t in active_tickers}
+
+        # 4. Emit Decisions for New Buys
+        slots_available = self.target_size - len(kept_tickers)
+        if slots_available > 0:
             for row in new_buys[:slots_available]:
-                # Calculate size?
-                # Simple equal weight 1/target_size
-                # Or use EV?
-                # For now, RiskDecision usually handles sizing via RiskManager?
-                # Or we output Target Weight.
-                # RiskDecision has quantity. We might need price to calc quantity.
-                # Let's assume we send BUY signal with confidence/score, and EquityPod calculates quantity.
-
+                t = row["ticker"]
+                w = weights.get(t, 0.0)
                 decisions.append(RiskDecision(
-                    ticker=row["ticker"],
+                    ticker=t,
                     action=ActionType.BUY,
-                    quantity=1, # Placeholder, sizing downstream
+                    quantity=1, # Sizing downstream uses target_weight
                     reason=f"Top {self.target_size} Entry (Rank {row['rank']})",
-                    max_position_size=self.max_weight # Example cap
+                    max_position_size=self.max_weight,
+                    target_weight=w
                 ))
-
-        # C. Rebalance Weights of Kept?
-        # Maybe later.
+        
+        # 5. Emit HOLD/REBALANCE for Kept Tickers
+        for t in kept_tickers:
+            w = weights.get(t, 0.0)
+            decisions.append(RiskDecision(
+                ticker=t,
+                action=ActionType.HOLD,
+                quantity=0,
+                reason="Maintained in Portfolio",
+                target_weight=w
+            ))
 
         return decisions

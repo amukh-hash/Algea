@@ -1,3 +1,4 @@
+import logging
 import polars as pl
 import pandas as pd
 from typing import List, Dict, Optional, Any, Union
@@ -28,9 +29,10 @@ class EquityPod:
 
         # New Execution Mode
         self.execution_mode = EXECUTION_MODE
-        self.portfolio_builder = PortfolioBuilder()
+        if self.execution_mode == "LEGACY":
+            logging.warning(f"EquityPod [{ticker}] running in LEGACY mode (DEPRECATED).")
 
-    def on_tick(self, tick: Dict[str, Any], breadth: Dict[str, float]) -> Optional[RiskDecision]:
+    def on_tick(self, tick: Dict[str, Any], breadth: Dict[str, float], instruction: Optional[RiskDecision] = None) -> Optional[RiskDecision]:
         """
         tick: {'timestamp': ..., 'open': ..., 'close': ..., 'volume': ...}
         """
@@ -81,17 +83,21 @@ class EquityPod:
         elif self.execution_mode == "SHADOW":
             # Run Legacy for actual execution
             decision = self._run_legacy_inference(allowed_actions, breadth)
-
-            # Run Ranking for logging (Shadow)
-            # We need to know if we are in rebalance window?
-            # Ranking signals are daily.
-            # We assume ranking runs once per day/session.
-            self._log_shadow_ranking(ts.date(), self.portfolio)
+            # Log placeholder
+            if instruction:
+                self._log_shadow_ranking(ts.date(), instruction)
             
         elif self.execution_mode == "RANKING":
-            # Run Ranking based execution
-            decision = self._run_ranking_execution(ts.date(), self.portfolio, allowed_actions)
-
+            # Apply Portfolio Instruction
+            if instruction:
+                # Check Schedule
+                if instruction.action.value in allowed_actions:
+                    decision = instruction
+                else:
+                    # Gated by schedule
+                    # e.g. Trying to BUY in LATE_ADJUST?
+                    pass
+        
         return decision
 
     def _run_legacy_inference(self, allowed_actions: List[int], breadth: Dict[str, float]) -> Optional[RiskDecision]:
@@ -116,113 +122,9 @@ class EquityPod:
                  
         return decision
 
-    def _run_ranking_execution(self, current_date: date, portfolio: PortfolioState, allowed_actions: List[int]) -> Optional[RiskDecision]:
-        """
-        Uses Daily Leaderboard to make decisions.
-        This function is called per ticker, but the logic depends on portfolio context.
-        Ideally EquityPod should just lookup its specific instruction from a portfolio-level plan?
+    def _log_shadow_ranking(self, date: date, instruction: RiskDecision):
+        print(f"[SHADOW] {date} Instruction for {self.ticker}: {instruction}")
 
-        BUT: Current architecture is EquityPod per ticker.
-        So we load the leaderboard, filter for THIS ticker, and check if it's a buy/sell candidate?
-
-        Better: We compute the portfolio plan ONCE (centralized) and distribute instructions?
-        Or: We compute it here, but efficiently.
-
-        Let's load the leaderboard for 'current_date' (or last close).
-        """
-        # Resolve Leaderboard
-        # Check cache?
-        # Path: backend/data/signals/selector/v1/{date}.parquet
-        # We need the leaderboard generated for decision making TODAY.
-        # This usually means produced YESTERDAY close (or today morning).
-        # As_of_date = current_date (if morning) or current_date - 1 (if trading day not closed).
-
-        # Assumption: Leaderboard is keyed by 'as_of_date'.
-        # If we trade on T, we use signals from T-1? Or T (pre-market)?
-        # Let's assume we look for TODAY's signal file (generated pre-open).
-
-        lb_path = artifacts.resolve_leaderboard_path(str(current_date), "v1")
-        if not lb_path:
-             # Try yesterday?
-             # For now, strict.
-             return None
-
-        try:
-            leaderboard = pl.read_parquet(lb_path)
-        except Exception:
-            return None
-
-        # Get decisions from PortfolioBuilder
-        # We need current holdings for ALL tickers?
-        # EquityPod only knows its own ticker portfolio state?
-        # NO: PortfolioState might be singleton or we need to pass full state.
-        # Actually PortfolioState is usually per-pod in this design?
-        # If per-pod, we can't do portfolio construction properly distributed.
-
-        # CRITICAL ADAPTATION:
-        # In this refactor, EquityPod acts as the executor for ONE ticker.
-        # But it needs to know if it should be in the portfolio.
-        # We can implement the logic:
-        # "Am I in the top K?"
-
-        # Current holdings map?
-        # We assume we only know if WE hold it.
-        # But to know if we should sell to make room, we need to know other candidates?
-        # The PortfolioBuilder needs GLOBAL state.
-
-        # Compromise for "Per-Ticker Agent":
-        # We run the builder logic assuming we know our own status.
-        # But we can't know "slots available" without global state.
-
-        # FIX: We should have a central "PortfolioManager" that runs PortfolioBuilder.
-        # But since we modify EquityPod:
-        # We can just check: "Is this ticker in Top K?"
-        # If Yes: Buy/Hold.
-        # If No: Sell/Liquidate.
-
-        target_size = self.portfolio_builder.target_size
-
-        # My rank
-        my_row = leaderboard.filter(pl.col("ticker") == self.ticker)
-        if len(my_row) == 0:
-            # Not in universe or no score
-            # Liquidate if held
-            if self.portfolio.current_position > 0:
-                 return RiskDecision(ActionType.LIQUIDATE, 0, "Not in Universe", 1.0)
-            return None
-
-        rank = my_row["rank"][0]
-        rank_pct = my_row["rank_pct"][0]
-        score = my_row["score"][0]
-
-        # Decision Logic
-        is_held = self.portfolio.current_position > 0
-        in_top_k = rank <= target_size
-
-        if is_held:
-            if not in_top_k:
-                # Sell?
-                # Check Min Hold
-                # We need entry date from portfolio
-                # Assuming portfolio tracks entry date per position
-                # If not, assume liquidatable.
-                 return RiskDecision(ActionType.LIQUIDATE, 0, f"Rank {rank} > {target_size}", 1.0)
-            else:
-                return RiskDecision(ActionType.HOLD, 0, f"Rank {rank} (Top {target_size})", rank_pct)
-        else:
-            if in_top_k:
-                # Buy
-                # Only if allowed (rebalance day?)
-                if self.portfolio_builder.is_rebalance_day(current_date):
-                     return RiskDecision(ActionType.BUY, 1, f"Rank {rank} Entry", rank_pct)
-
-        return None
-
-    def _log_shadow_ranking(self, date: date, portfolio: PortfolioState):
-        # Log what we WOULD have done
-        # Just print for now
-        # logger.info(...)
-        pass
         
     def execute_decision(self, decision: RiskDecision):
         # Update portfolio state (Paper execution)

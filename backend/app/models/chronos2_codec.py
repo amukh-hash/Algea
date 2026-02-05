@@ -254,7 +254,67 @@ class Chronos2Codec:
 
     def decode(self, ids: torch.Tensor, scale: torch.Tensor, feature_indices: Optional[List[int]] = None) -> torch.Tensor:
         """
-        Reverse binning.
+        Reverse binning: ID -> Value.
+        ids: [B, T, F] (Long)
+        scale: [B, 1, F] (Float)
+        returns: values [B, T, F] (Float)
         """
-        # Inverse logic: map id -> bin center -> * scale
-        pass # Implement if needed for validation visualization
+        B, T, F = ids.shape
+        device = ids.device
+        values = torch.zeros((B, T, F), params=None, dtype=torch.float32, device=device)
+        
+        feat_names = self.config.feature_names
+        
+        for f_idx in range(F):
+            global_idx = feature_indices[f_idx] if feature_indices else f_idx
+            fname = feat_names[global_idx]
+            token_ids = ids[:, :, f_idx]
+            
+            # Remove special tokens offset
+            bin_ids = token_ids - self.config.special_tokens
+            
+            # Mask special tokens? if id < special_tokens -> 0 or NaN?
+            # We assume generated tokens are valid content tokens.
+            
+            edges = self.config.quantiles.get(fname)
+            if edges:
+                # Quantile Decoding
+                # Map bin_id `k` to (edges[k] + edges[k+1]) / 2
+                # edges has n_bins + 1 elements.
+                # bin_ids in [0, n_bins-1]
+                
+                # Convert list to tensor
+                bins = torch.tensor(edges, device=device, dtype=torch.float32)
+                
+                # Clamp for safety
+                n_bins = len(edges) - 1
+                safe_ids = torch.clamp(bin_ids, 0, n_bins - 1)
+                
+                # Gather edges
+                # left edge = bins[safe_ids]
+                # right edge = bins[safe_ids + 1]
+                left = bins[safe_ids]
+                
+                # Handle right edge safely
+                # If safe_ids == n_bins - 1, right is bins[n_bins] (last element)
+                # But we can just use torch.gather or simple indexing if safe_ids shape matches
+                # bins[safe_ids + 1] works because safe_ids max is len(bins)-2
+                
+                right = bins[safe_ids + 1]
+                
+                # Center
+                vals_scaled = (left + right) / 2.0
+                
+            else:
+                # Linear Fallback
+                limit = 10.0
+                n_bins = self.config.vocab_size - self.config.special_tokens
+                norm = bin_ids.float() / (n_bins - 1)
+                vals_scaled = norm * (2 * limit) - limit
+                
+            # Apply scale: val = scaled * scale
+            # scale slice: [B, 1]
+            s = scale[:, :, f_idx] # [B, 1]
+            values[:, :, f_idx] = vals_scaled * s
+            
+        return values
