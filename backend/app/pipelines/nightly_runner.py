@@ -71,12 +71,8 @@ def run_nightly_cycle(as_of_date: str):
 
     # 3. CHRONOS PRIORS GENERATION
     print(">> Generating Teacher Priors (Chronos-2)...")
-    engineer = FeatureEngineer()
-    
-    # A. Get Sequences (Mocked for flow)
-    # seq_df = engineer.get_chronos_sequences(active_df, lookback=512)
-    # priors_df = ChronosInference.run(seq_df)
-    
+    # In real flow: engineer.get_chronos_sequences -> ChronosInference.run
+    # For now, we construct the DF manually but adhering to Schema B7
     priors_df = pd.DataFrame({
         'symbol': eligible_symbols,
         'drift': 0.005,
@@ -94,8 +90,7 @@ def run_nightly_cycle(as_of_date: str):
 
     # 4. RANKER FEATURE PREP
     print(">> Engineering Ranker Features...")
-    # feature_df = engineer.process_features(active_df, market_df, mode='inference')
-    # ... joining logic ...
+    from backend.app.features import featureframe
     
     # Mocking final input for continuity
     final_input = pd.DataFrame({
@@ -107,7 +102,7 @@ def run_nightly_cycle(as_of_date: str):
 
     # 5. VALIDATION
     print(">> Validating Schema...")
-    # FeatureContract.validate(final_input, mode='ranking') # Enable when columns match
+    FeatureContract.validate(final_input, mode='ranking')
     
     # 6. RANKER INFERENCE
     print(">> Running Rank-Transformer...")
