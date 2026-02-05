@@ -19,19 +19,29 @@ def main():
     
     logger.info("Building Selector Dataset...")
     
-    # Delegate to DatasetBuilder logic (Stubbed in PR-2, needs real logic eventually)
-    # The requirement is that this script exists and calls the right place.
-    # In PR-11 we finalize the logic.
-    
-    # Stub Logic
     try:
         # 1. Build Labels (Schema B8)
         labels = dataset_builder.build_labels_fwd10d(args.start, args.end)
+        labels_path = pathmap.resolve("labels")
+        os.makedirs(os.path.dirname(labels_path), exist_ok=True)
+        labels.to_parquet(labels_path)
+        logger.info(f"Labels written: {labels_path}")
         
         # 2. Build Rank Dataset (Tensors)
-        dataset = dataset_builder.build_rank_dataset(args.start, args.end, sequence_len=60)
+        dataset = dataset_builder.build_rank_dataset(args.start, args.end, sequence_len=config.SEQUENCE_LEN)
+        dataset_path = pathmap.resolve("dataset_selector")
+        os.makedirs(os.path.dirname(dataset_path), exist_ok=True)
+        import torch
+        torch.save(dataset, dataset_path)
+        logger.info(f"Dataset tensors written: {dataset_path}")
+
+        groups_path = pathmap.resolve("dataset_selector_groups")
+        groups_df = pd.DataFrame(dataset.get("groups", []))
+        if not groups_df.empty:
+            groups_df.to_parquet(groups_path)
+            logger.info(f"Dataset groups written: {groups_path}")
         
-        logger.info("Dataset built successfully (Stub).")
+        logger.info("Dataset built successfully.")
         
     except Exception as e:
         logger.error(f"Dataset build failed: {e}")
