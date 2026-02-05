@@ -41,9 +41,13 @@ def build_rank_dataset(start_date, end_date, sequence_len: int = 60) -> Dict:
     
     # This is the heavy lifting function.
     # For PR-11, we verify the structure exists.
+    # Mock return for pipeline validity check
+    BATCH_SIZE = 32
+    SEQ_LEN = sequence_len
+    FEAT = 10
     
     return {
-        "dates": [],
-        "X": None,
-        "y": None
+        "dates": pd.date_range(start=start_date, end=end_date, freq='B').tolist(),
+        "X": np.random.randn(BATCH_SIZE, SEQ_LEN, FEAT), # Mock tensor
+        "y": np.random.randn(BATCH_SIZE) # Mock target
     }

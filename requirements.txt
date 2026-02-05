@@ -8,3 +8,14 @@ scipy
 scikit-learn
 torch
 exchange_calendars
+tqdm
+python-dateutil
+pandas_market_calendars
+transformers
+peft
+bitsandbytes
+joblib
+pydantic
+psutil
+huggingface_hub
+chronos

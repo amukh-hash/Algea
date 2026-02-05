@@ -38,14 +38,16 @@ def validate_df(df: pd.DataFrame, schema: Dict, context: str = "", strict: bool 
         is_dt = "datetime" in dtype
         
         # Validations
+        # Validations
         if "float" in expected and not is_float:
-             # Int is acceptable for float usually? No, strict.
-             # Allow int -> float promotion?
-             pass 
+             if strict or config.STRICT_SCHEMA:
+                 raise ValueError(f"[{context}] Column '{col}' expected float, got {dtype}")
         if "int" in expected and not is_int:
-             pass
+             if strict or config.STRICT_SCHEMA:
+                 raise ValueError(f"[{context}] Column '{col}' expected int, got {dtype}")
         if "string" in expected and not is_obj:
-             pass
+             if strict or config.STRICT_SCHEMA:
+                 raise ValueError(f"[{context}] Column '{col}' expected string/object, got {dtype}")
         
     # 3. Null Checks
     for col in req_cols:

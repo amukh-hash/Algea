@@ -3,6 +3,7 @@ import json
 import pandas as pd
 from datetime import datetime
 from backend.app.core import config
+from backend.app.ops import pathmap
 from backend.app.data.universe import UniverseSelector
 from backend.app.data.preproc import FeatureEngineer
 from backend.app.models.schema import FeatureContract
@@ -30,7 +31,7 @@ def run_nightly_cycle(as_of_date: str):
     
     # 1. LOAD RAW DATA
     print(">> Loading Raw Data...")
-    # Using config.DATA_DIR for raw paths too
+    # Using pathmap for consistent paths if possible, or config.DATA_DIR for raw
     raw_path = os.path.join(config.DATA_DIR, "raw", "prices_v1.parquet")
     meta_path = os.path.join(config.DATA_DIR, "raw", "metadata.csv") 
     market_path = os.path.join(config.DATA_DIR, "raw", "market_features.csv")
@@ -42,8 +43,8 @@ def run_nightly_cycle(as_of_date: str):
     except FileNotFoundError:
         print(f"WARNING: Data files not found at {config.DATA_DIR}/raw/. Using Mock Data.")
         # Create mock data for testing flow if real data missing
-        raw_df = pd.DataFrame({'ticker': ['AAPL', 'MSFT'], 'date': [as_of_date]*2, 'close': [150, 300]})
-        meta_df = pd.DataFrame({'ticker': ['AAPL', 'MSFT']})
+        raw_df = pd.DataFrame({'symbol': ['AAPL', 'MSFT'], 'date': [as_of_date]*2, 'close': [150, 300]})
+        meta_df = pd.DataFrame({'symbol': ['AAPL', 'MSFT']})
         market_df = pd.DataFrame({'date': [as_of_date], 'spy_close': [400]})
 
     # 2. UNIVERSE SELECTION
@@ -51,23 +52,22 @@ def run_nightly_cycle(as_of_date: str):
     selector = UniverseSelector()
     # universe_map = selector.select(raw_df, meta_df, as_of_date)
     # Mocking selector output for now as logic might depend on real data
-    universe_map = pd.DataFrame({'ticker': raw_df['ticker'].unique(), 'is_eligible': True})
+    universe_map = pd.DataFrame({'symbol': raw_df['symbol'].unique(), 'is_eligible': True})
     
     # Save Universe Artifact
-    universe_dir = os.path.join(config.DATA_DIR, "artifacts", "universe")
-    os.makedirs(universe_dir, exist_ok=True)
-    universe_path = os.path.join(universe_dir, f"universe_{as_of_date}.parquet")
+    universe_path = pathmap.resolve("manifest", date=as_of_date)
+    os.makedirs(os.path.dirname(universe_path), exist_ok=True)
     universe_map.to_parquet(universe_path)
     write_manifest(universe_path, {"type": "universe", "date": as_of_date})
     
-    eligible_tickers = universe_map[universe_map['is_eligible']]['ticker'].tolist()
-    print(f"   {len(eligible_tickers)} tickers eligible.")
+    eligible_symbols = universe_map[universe_map['is_eligible']]['symbol'].tolist()
+    print(f"   {len(eligible_symbols)} symbols eligible.")
 
-    if not eligible_tickers:
-        raise RuntimeError("No tickers found! Check data feed.")
+    if not eligible_symbols:
+        raise RuntimeError("No symbols found! Check data feed.")
 
     # Filter Data to Eligible Only
-    active_df = raw_df[raw_df['ticker'].isin(eligible_tickers)].copy()
+    active_df = raw_df[raw_df['symbol'].isin(eligible_symbols)].copy()
 
     # 3. CHRONOS PRIORS GENERATION
     print(">> Generating Teacher Priors (Chronos-2)...")
@@ -78,7 +78,7 @@ def run_nightly_cycle(as_of_date: str):
     # priors_df = ChronosInference.run(seq_df)
     
     priors_df = pd.DataFrame({
-        'ticker': eligible_tickers,
+        'symbol': eligible_symbols,
         'prior_drift_20d': 0.005,
         'prior_vol_20d': 0.02,
         'prior_downside_q10': -0.05,
@@ -86,9 +86,8 @@ def run_nightly_cycle(as_of_date: str):
     })
     
     # Save Priors Artifact
-    priors_v1_dir = os.path.join(config.PRIORS_DIR, "v1")
-    os.makedirs(priors_v1_dir, exist_ok=True)
-    priors_path = os.path.join(priors_v1_dir, f"{as_of_date}.parquet")
+    priors_path = pathmap.resolve("priors_date", date=as_of_date, version="v1")
+    os.makedirs(os.path.dirname(priors_path), exist_ok=True)
     
     priors_df.to_parquet(priors_path)
     write_manifest(priors_path, {"type": "priors", "version": "v1", "date": as_of_date})
@@ -100,7 +99,7 @@ def run_nightly_cycle(as_of_date: str):
     
     # Mocking final input for continuity
     final_input = pd.DataFrame({
-        'ticker': eligible_tickers,
+        'symbol': eligible_symbols,
         'date': as_of_date,
         'feature_1': 0.5, # Mock features
         'prior_drift_20d': 0.005
@@ -113,16 +112,15 @@ def run_nightly_cycle(as_of_date: str):
     # 6. RANKER INFERENCE
     print(">> Running Rank-Transformer...")
     # leaderboard = RankerInference.predict(final_input)
-    leaderboard = final_input[['ticker']].copy()
+    leaderboard = final_input[['symbol']].copy()
     leaderboard['rank_score'] = 0.85 
     leaderboard['p_up'] = 0.6
     leaderboard['selected'] = True
     
     # 7. FINAL ARTIFACT
     print(">> Saving Leaderboard...")
-    leaderboard_v1_dir = os.path.join(config.SIGNALS_DIR, "selector", "v1")
-    os.makedirs(leaderboard_v1_dir, exist_ok=True)
-    leaderboard_path = os.path.join(leaderboard_v1_dir, f"{as_of_date}.parquet")
+    leaderboard_path = pathmap.resolve("leaderboard", date=as_of_date)
+    os.makedirs(os.path.dirname(leaderboard_path), exist_ok=True)
     
     leaderboard.to_parquet(leaderboard_path)
     write_manifest(leaderboard_path, {"type": "leaderboard", "version": "v1", "date": as_of_date})

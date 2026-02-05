@@ -6,6 +6,12 @@ from typing import List
 # Singleton Calendar
 _NYSE = mcal.get_calendar('NYSE')
 
+def get_calendar(name: str):
+    """
+    Returns the requested calendar.
+    """
+    return mcal.get_calendar(name)
+
 def get_trading_days(start_date, end_date) -> List[pd.Timestamp]:
     """
     Returns list of trading days (NYSE) between start and end (inclusive).

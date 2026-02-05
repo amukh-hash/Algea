@@ -22,8 +22,17 @@ class RankTransformer(nn.Module):
         n_head: int = 4,
         n_layers: int = 2,
         dropout: float = 0.1,
-        max_len: int = 64
+        max_len: int = 64,
+        **kwargs
     ):
+        # Support aliases for Trainer compatibility
+        if 'input_dim' in kwargs:
+            d_input = kwargs['input_dim']
+        if 'nhead' in kwargs:
+            n_head = kwargs['nhead']
+        if 'num_layers' in kwargs:
+            n_layers = kwargs['num_layers']
+            
         super().__init__()
         self.d_model = d_model
 

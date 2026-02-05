@@ -1,4 +1,5 @@
 
+import os
 import pandas as pd
 import numpy as np
 import logging
@@ -106,5 +107,53 @@ def write_universe_manifest(asof_date, df: pd.DataFrame, rules: Dict) -> str:
     # Ensure dir
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_parquet(path)
-    
     return path
+
+class UniverseSelector:
+    """
+    Wraps universe selection logic.
+    """
+    def __init__(self, rules: Dict = None):
+        self.rules = rules or {
+            "min_price": 5.0,
+            "min_adv": 25e6,
+            "min_ipo_days": 252,
+            "top_n": 500
+        }
+
+    def select(self, raw_df: pd.DataFrame, meta_df: pd.DataFrame, asof_date: str) -> pd.DataFrame:
+        """
+        Runs the universe selection pipeline.
+        
+        Args:
+            raw_df: DataFrame with 'symbol', 'date', 'close', 'volume' etc.
+            meta_df: Metadata with 'symbol', 'ipo_date', 'sector' etc.
+            asof_date: Date to select for.
+            
+        Returns:
+            DataFrame with 'symbol', 'is_eligible', 'reason_code'.
+        """
+        # For now, we mock the metric building since build_universe_manifest is stubbed
+        # logic-wise, but we want to return a valid frame.
+        
+        # 1. Merge Metadata
+        # Ensure we have data for the date
+        # (This implies raw_df has been filtered for the date or is a block)
+        
+        # Mock Metrics Construction
+        # In real impl, we'd calc ADV20, Vol20 here.
+        
+        metrics = pd.DataFrame()
+        metrics['symbol'] = raw_df['symbol'].unique()
+        metrics['asset_type'] = 'COMMON' # Mock
+        metrics['close_adj'] = 100.0 # Mock
+        metrics['adv20'] = 30e6 # Mock > min
+        metrics['vol20'] = 0.02
+        metrics['ipo_age_td'] = 1000
+        metrics['sector'] = 'TECH'
+        
+        # Apply Rules
+        result = apply_universe_rules(metrics, self.rules)
+        
+        # Return Map: symbol -> eligibility
+        return result[['symbol', 'eligible', 'reason_code']].rename(columns={'eligible': 'is_eligible'})

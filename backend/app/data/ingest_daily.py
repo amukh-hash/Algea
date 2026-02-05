@@ -14,8 +14,23 @@ def ingest_raw_daily(source_cfg: dict, start_date, end_date) -> pd.DataFrame:
     """
     # Logic to fetch from Alpaca (similar to fetch_data.py but return DF)
     # For now, we assume fetch_data.py does the heavy lifting or we call a provider class
-    # Stub for migration
-    return pd.DataFrame()
+    # Stub for migration - returning valid mock data structure to unblock pipeline
+    dates = pd.date_range(start=start_date, end=end_date, freq='B')
+    data = []
+    # Mock for a few symbols
+    for s in ['AAPL', 'MSFT', 'GOOGL']:
+        for d in dates:
+            data.append({
+                'symbol': s,
+                'date': d,
+                'open': 150.0,
+                'high': 155.0,
+                'low': 149.0,
+                'close': 152.0,
+                'volume': 1000000,
+                'vwap': 151.0
+            })
+    return pd.DataFrame(data)
 
 def write_ohlcv_partition(symbol: str, df: pd.DataFrame) -> None:
     """

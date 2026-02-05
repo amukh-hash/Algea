@@ -10,8 +10,8 @@ class FeatureContract:
     # --- Feature Groups ---
     
     CORE_FEATURES = [
-        'ticker', 'date',
-        'log_return_1d', 'log_return_5d', 'log_return_20d',
+        'symbol', 'date',
+        'ret_1d', 'ret_5d', 'ret_20d',
         'volatility_20d', 'relative_volume_20d'
     ]
     
@@ -50,12 +50,21 @@ class FeatureContract:
             
         # 2. Type Checks
         # Dates must be dates, not strings
+        # Avoid mutating the input dataframe unless explicitly allowed. 
+        # For validation, we check. If coercion is needed, the caller should handle it or we assume it fails.
         if not np.issubdtype(df['date'].dtype, np.datetime64):
-            # Try to coerce strictly
-            try:
-                df['date'] = pd.to_datetime(df['date'])
-            except:
-                raise TypeError("SCHEMA ERROR: 'date' column must be datetime64")
+             # Check if they look like dates without mutating
+             try:
+                 pd.to_datetime(df['date'], errors='raise')
+             except:
+                 raise TypeError("SCHEMA ERROR: 'date' column must be datetime64 and could not be coerced.")
+             
+             # If we want to strictly enforce types without implicit coercion in the object
+             # raise TypeError("SCHEMA ERROR: 'date' column must be datetime64 (passed as object/string)")
+             
+             # User Request: "Avoid mutating input".
+             # So we do NOT write back to df['date'].
+             pass
 
         # 3. NaN Policy (The 'Zero Tolerance' Rule)
         # In ranking mode, any NaN in a feature = unknown behavior = DANGEROUS.
