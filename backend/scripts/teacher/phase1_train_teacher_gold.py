@@ -306,8 +306,8 @@ def get_collate_fn(feature_names: List[str], target_col: str,
         x_pt = torch.from_numpy(xs).float()
         y_pt = torch.from_numpy(ys).float()
 
-        context_target = x_pt[:, :, target_idx:target_idx + 1]
-        future_target = y_pt[:, :, target_idx:target_idx + 1]
+        context_target = x_pt[:, :, target_idx]  # [B, T]
+        future_target = y_pt[:, :, target_idx]    # [B, Pred]
         past_covariates = x_pt[:, :, covariate_indices] if covariate_indices else None
         future_covariates = y_pt[:, :, future_covariate_indices] if future_covariate_indices else None
 

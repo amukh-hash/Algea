@@ -213,9 +213,11 @@ class Chronos2NativeWrapper(nn.Module):
             patch_len = getattr(self.model.config, "patch_length", None)
             if patch_len is None:
                 patch_len = getattr(self.model.config, "patch_size", None)
+        # Chronos 2 default: patch stride is 16 (note: input_patch_embedding.in_features=48 is embedding dim, not stride)
         if not patch_len:
-            return None
-        return int(np.ceil(pred_len / patch_len))
+            patch_len = 16
+        num_patches = int(np.ceil(pred_len / patch_len))
+        return num_patches
 
     def forward(
         self,
@@ -270,7 +272,12 @@ class Chronos2NativeWrapper(nn.Module):
         if not hasattr(self, "_probed"):
             print(f"[Wrapper] Native Signature: {self.forward_params}")
             print(f"[Wrapper] Native call keys: {list(call_kwargs.keys())}")
+            print(f"[Wrapper] num_output_patches: {num_output_patches}")
             self._probed = True
+        
+        # Force num_output_patches if computed (required for training with future_target)
+        if num_output_patches is not None:
+            call_kwargs["num_output_patches"] = num_output_patches
 
         return self.model(**call_kwargs)
 
