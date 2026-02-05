@@ -59,8 +59,9 @@ SCHEMA_FEATUREFRAME = {
         "date": "datetime64[ns]",
         "symbol": "string",
         "ret_1d": "float64",
+        "ret_3d": "float64",
         "ret_5d": "float64",
-        "ret_20d": "float64",
+        "ret_10d": "float64",
         "vol_20d": "float64",
         "vol_chg_1d": "float64",
         "dollar_vol_20d": "float64",
@@ -68,11 +69,21 @@ SCHEMA_FEATUREFRAME = {
         # Covariates - allow dynamic? Or fixed?
         # Fixed for now as per spec
         "spy_ret_1d": "float64",
+        "qqq_ret_1d": "float64",
+        "iwm_ret_1d": "float64",
         "vix_level": "float64",
+        "rate_proxy": "float64",
+        "market_breadth_ad": "float64",
         "feature_version": "string",
         "data_version": "string"
     },
-    "nullable": ["vol_chg_1d", "volume_z_20d", "vix_level"],
+    "nullable": [
+        "vol_chg_1d",
+        "volume_z_20d",
+        "vix_level",
+        "rate_proxy",
+        "market_breadth_ad"
+    ],
 }
 
 # B7: Priors
@@ -80,10 +91,10 @@ SCHEMA_PRIORS = {
     "columns": {
         "date": "datetime64[ns]",
         "symbol": "string",
-        "drift_20d": "float64",
-        "vol_20d": "float64",
-        "downside_q10_20d": "float64",
-        "trend_conf_20d": "float64",
+        "drift": "float64",
+        "vol_forecast": "float64",
+        "tail_risk": "float64",
+        "trend_conf": "float64",
         "prior_version": "string",
         "chronos_model_id": "string",
         "context_len": "int32",
@@ -97,8 +108,10 @@ SCHEMA_LABELS = {
     "columns": {
         "date": "datetime64[ns]",
         "symbol": "string",
-        "fwd_ret_10d": "float64",
-        "fwd_up_10d": "int8"
+        "fwd_ret": "float64",
+        "fwd_up": "int8",
+        "fwd_vol": "float64",
+        "horizon": "int32"
     }
 }
 

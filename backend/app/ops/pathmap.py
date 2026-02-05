@@ -88,7 +88,8 @@ def resolve(kind: str, *, legacy_ok: bool = True, **kwargs) -> str:
         
     # 7. B8 Labels
     elif kind == "labels":
-        return os.path.join(paths.datasets, "labels_fwd10d.parquet")
+        horizon = kwargs.get("horizon", 10)
+        return os.path.join(paths.datasets, f"labels_fwd{horizon}d.parquet")
         
     # 8. B9 Leaderboard
     elif kind == "leaderboard":
@@ -101,6 +102,9 @@ def resolve(kind: str, *, legacy_ok: bool = True, **kwargs) -> str:
     # Dataset tensors (Selector)
     elif kind == "dataset_selector":
         return os.path.join(paths.datasets, "selector_dataset.pt") 
+
+    elif kind == "dataset_selector_groups":
+        return os.path.join(paths.datasets, "selector_dataset_groups.parquet")
         
     # Models
     elif kind == "model_selector":

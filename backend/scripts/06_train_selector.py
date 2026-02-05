@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_end", default="2025-12-31")
+    parser.add_argument("--val_pct", type=float, default=0.1)
+    parser.add_argument("--test_pct", type=float, default=0.1)
+    parser.add_argument("--embargo_td", type=int, default=config.LABEL_HORIZON_TD)
     args = parser.parse_args()
     
     bootstrap.ensure_dirs()
@@ -21,7 +24,10 @@ def main():
     cfg = {
         "train_end": args.train_end,
         "epochs": 10,
-        "batch_size": 32
+        "batch_size": 32,
+        "val_pct": args.val_pct,
+        "test_pct": args.test_pct,
+        "embargo_td": args.embargo_td
     }
     
     try:

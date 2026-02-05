@@ -487,10 +487,10 @@ def infer_priors(
         trend_conf = float((terminal_returns[b] > 0).float().mean())
 
         priors_list.append(ChronosPriors(
-            drift_20d=drift,
-            vol_20d=vol,
-            downside_q10_20d=downside_q10,
-            trend_conf_20d=trend_conf,
+            drift=drift,
+            vol_forecast=vol,
+            tail_risk=downside_q10,
+            trend_conf=trend_conf,
             metadata={"n_samples": n_samples, "horizon": horizon_days}
         ))
 

@@ -5,7 +5,7 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 from backend.app.ops import bootstrap, pathmap, config, promotion_gate
-from backend.app.data import ingest_daily, universe, security_master
+from backend.app.data import ingest_daily, universe, security_master, calendar
 from backend.app.features import featureframe
 from backend.app.teacher import priors, chronos_runner
 from backend.app.selector import infer
@@ -33,30 +33,35 @@ def main():
     prod_cfg = promotion_gate.load_prod_pointer()
     logger.info(f"PROD Configuration: {prod_cfg}")
 
-    # 1. Ingest Latest
+    # 1. Ingest Latest (no-op placeholder if data already present)
     logger.info("1. Ingesting Daily Bars and Updating Factors...")
-    # call ingest_daily.ingest_raw_daily(...)
-    # call marketframe.update(...)
-    # Stub for now
-    
-    # 2. Build FeatureFrame for Today (using PROD feature spec)
-    logger.info("2. Handling Features...")
-    # df_features = featureframe.build_featureframe(asof_date, asof_date, spec=prod_cfg['feature_spec'])
-    # Stub
-    df_features = pd.DataFrame() 
 
-    # 3. Generate Priors (using PROD prior spec)
+    # 2. Load FeatureFrame for Today (using PROD feature spec)
+    logger.info("2. Handling Features...")
+    feature_path = pathmap.resolve("featureframe", version=prod_cfg.get("feature_version", "v1"))
+    if not os.path.exists(feature_path):
+        raise FileNotFoundError(f"Missing featureframe: {feature_path}")
+    df_features = pd.read_parquet(feature_path)
+    df_features["date"] = pd.to_datetime(df_features["date"])
+
+    # 3. Load Priors for Today (using PROD prior spec)
     logger.info("3. Generating Priors...")
-    # df_priors = priors.generate_priors_for_date(...)
-    # Stub
-    df_priors = pd.DataFrame()
+    prior_version = prod_cfg.get("prior_version", "v1")
+    df_priors = priors.load_priors(asof_date, prior_version=prior_version)
+    df_priors["date"] = pd.to_datetime(df_priors["date"])
     
     # 4. Selector Inference
     logger.info("4. Running Selector Inference...")
     predictor = infer.SelectorInference(model_version=prod_cfg['model_version'])
     
     # Get Universe
-    symbols = ["AAPL", "TEST"] # Stub
+    manifest_path = pathmap.resolve("manifest", date=asof_date)
+    if os.path.exists(manifest_path):
+        manifest = pd.read_parquet(manifest_path)
+        symbols = manifest.loc[manifest["eligible"] == True, "symbol"].astype(str).tolist()
+    else:
+        sec_master = security_master.load_security_master()
+        symbols = sec_master["symbol"].dropna().astype(str).unique().tolist()
     
     leaderboard = predictor.predict(date_str, symbols, df_features, df_priors)
     
