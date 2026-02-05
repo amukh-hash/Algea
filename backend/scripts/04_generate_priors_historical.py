@@ -25,6 +25,7 @@ def main():
         "horizon": config.PRIOR_HORIZON
     }
 
+    # Chronos should be pre-calibrated and frozen before running priors generation.
     runner = chronos_runner.ChronosRunner(
         model_id=spec["model"],
         context_len=spec["context"],

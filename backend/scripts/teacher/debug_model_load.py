@@ -1,3 +1,5 @@
+"""Debug Chronos-2 model loading for daily equity protocol usage."""
+
 import torch
 from transformers import AutoModel, AutoConfig, BitsAndBytesConfig
 from peft import prepare_model_for_kbit_training

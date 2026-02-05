@@ -56,6 +56,10 @@ class ChronosRunner:
         }
 
     def infer_one(self, symbol: str, asof_date, series_df, covariates_df) -> dict:
+        """
+        Generate priors from a frozen Chronos model (or deterministic fallback).
+        Chronos should not be re-trained as part of selector training or nightly runs.
+        """
         self._ensure_model()
         return self._fallback_priors(series_df)
 

@@ -42,9 +42,14 @@ This runbook documents the current end-to-end flow for the **data pipeline** and
 - Then generate priors for `as_of_date`, run selector inference, and write leaderboard.
 
 ### D) Chronos-2 training cadence
-- **Recommended**: Chronos-2 is mostly inference-only.
-- Fit the **Chronos codec once**, run nightly inference for priors, and only fine-tune (LoRA) occasionally if it improves calibration.
-- If fine-tuning: do **monthly/quarterly** LoRA refreshes on the full historical daily dataset; treat it as adaptation, not alpha training.
+- **Recommended**: Chronos-2 is mostly inference-only and **not** part of the selector’s learning loop.
+- Fit the **Chronos codec once**, optionally calibrate Chronos on equities, then **freeze** the model.
+- If fine-tuning: do **monthly/quarterly** LoRA refreshes on the full historical daily dataset; treat it as adaptation (calibration), not alpha training.
+
+### E) Three-phase pipeline separation (critical)
+- **Phase A (required for initial training): Chronos-2 adaptation** — calibrate Chronos on the *same daily equity dataset* the selector will later train on, then freeze. This is **not** selector training.
+- **Phase B (required): Historical priors generation** — run frozen Chronos over all historical dates to materialize priors per date.
+- **Phase C (required): Selector training** — train the Rank-Transformer on FeatureFrame + frozen priors (listwise by date).
 
 ---
 
