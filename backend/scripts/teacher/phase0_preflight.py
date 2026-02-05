@@ -387,7 +387,7 @@ def check_selector(cfg: PreflightConfig) -> Dict[str, Any]:
         try:
             df = pl.read_parquet(priors_path)
             # Minimal cols
-            req = ["ticker", "teacher_drift_20d", "teacher_vol_20d"]
+            req = ["symbol", "drift", "vol_forecast"]
             missing = [c for c in req if c not in df.columns]
             if missing:
                 res["ok"] = False

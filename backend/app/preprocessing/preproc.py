@@ -101,7 +101,7 @@ class Preprocessor:
     def attach_teacher_priors(self, feature_df: pl.DataFrame, priors_df: pl.DataFrame) -> pl.DataFrame:
         """
         Joins precomputed teacher priors to the feature dataframe.
-        priors_df must have: [date, ticker, drift_20d, vol_20d, downside_q10_20d, trend_conf_20d]
+        priors_df must have: [date, symbol, drift, vol_forecast, tail_risk, trend_conf]
         feature_df must have: [timestamp, ticker, ...]
         """
         # Ensure timestamp alignment
@@ -116,12 +116,12 @@ class Preprocessor:
         # We might need to cast feature_df timestamp to date.
         
         # Check columns
-        required_priors = ["teacher_drift_20d", "teacher_vol_20d", "teacher_downside_q10_20d", "teacher_trend_conf_20d"]
+        required_priors = ["teacher_drift", "teacher_vol_forecast", "teacher_tail_risk", "teacher_trend_conf"]
         # If priors_df uses short names, rename them.
 
         # Rename mapping if needed
         rename_map = {}
-        for col in ["drift_20d", "vol_20d", "downside_q10_20d", "trend_conf_20d"]:
+        for col in ["drift", "vol_forecast", "tail_risk", "trend_conf"]:
             if col in priors_df.columns and f"teacher_{col}" not in priors_df.columns:
                 rename_map[col] = f"teacher_{col}"
 

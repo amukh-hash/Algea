@@ -1,5 +1,6 @@
 
 import os
+import pandas as pd
 from typing import Dict
 import torch
 from backend.app.ops import pathmap
@@ -18,14 +19,39 @@ def train_selector(run_cfg: Dict) -> Dict:
     dataset = torch.load(dataset_path)
     X_list = dataset["X"]
     y_list = dataset["y"]
+    dates = dataset.get("dates", [])
 
     if not X_list or not y_list:
         raise ValueError("Empty dataset artifacts.")
 
     feature_cols = dataset.get("feature_cols", [])
     prior_cols = dataset.get("prior_cols", [])
+    label_horizon = int(dataset.get("label_horizon", 0))
 
-    X_flat = torch.cat([x.reshape(-1, x.shape[-1]) for x in X_list], dim=0).numpy()
+    def split_indices():
+        if not dates:
+            return list(range(len(X_list))), [], []
+        date_index = pd.to_datetime(pd.Series(dates)).sort_values().tolist()
+        n = len(date_index)
+        if n < 10:
+            return list(range(n)), [], []
+
+        val_pct = float(run_cfg.get("val_pct", 0.1))
+        test_pct = float(run_cfg.get("test_pct", 0.1))
+        train_end = int(n * (1.0 - val_pct - test_pct))
+        val_end = int(n * (1.0 - test_pct))
+        embargo = int(run_cfg.get("embargo_td", label_horizon))
+
+        train_idx = list(range(0, max(train_end - embargo, 0)))
+        val_idx = list(range(min(train_end + embargo, n), max(val_end - embargo, 0)))
+        test_idx = list(range(min(val_end + embargo, n), n))
+        return train_idx, val_idx, test_idx
+
+    train_idx, val_idx, test_idx = split_indices()
+    if not train_idx:
+        raise ValueError("No training samples after split/embargo.")
+
+    X_flat = torch.cat([X_list[i].reshape(-1, X_list[i].shape[-1]) for i in train_idx], dim=0).numpy()
     scaler = SelectorFeatureScaler(version="v1", feature_names=feature_cols + prior_cols)
     scaler.fit(X_flat)
 
@@ -36,7 +62,9 @@ def train_selector(run_cfg: Dict) -> Dict:
     epochs = run_cfg.get("epochs", 5)
     for epoch in range(epochs):
         total_loss = 0.0
-        for X, y in zip(X_list, y_list):
+        for idx in train_idx:
+            X = X_list[idx]
+            y = y_list[idx]
             X_scaled = scaler.transform(X).unsqueeze(0)
             scores = model(X_scaled)["score"].squeeze(0)
 
@@ -49,7 +77,7 @@ def train_selector(run_cfg: Dict) -> Dict:
             optimizer.step()
             total_loss += loss.item()
 
-        print(f"Epoch {epoch+1} Loss: {total_loss / len(X_list):.6f}")
+        print(f"Epoch {epoch+1} Loss: {total_loss / len(train_idx):.6f}")
 
     model_path = pathmap.resolve("model_selector", version="v1")
     os.makedirs(os.path.dirname(model_path), exist_ok=True)
@@ -59,7 +87,11 @@ def train_selector(run_cfg: Dict) -> Dict:
         "input_dim": input_dim,
         "feature_cols": feature_cols,
         "prior_cols": prior_cols,
-        "sequence_len": dataset.get("sequence_len", None)
+        "sequence_len": dataset.get("sequence_len", None),
+        "label_horizon": label_horizon,
+        "val_pct": run_cfg.get("val_pct", 0.1),
+        "test_pct": run_cfg.get("test_pct", 0.1),
+        "embargo_td": run_cfg.get("embargo_td", label_horizon)
     }
     artifact_registry.write_metadata(model_path + ".meta", meta)
 

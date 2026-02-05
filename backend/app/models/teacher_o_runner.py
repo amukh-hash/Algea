@@ -32,18 +32,18 @@ class TeacherORunner:
         df = self.priors_cache[date_str]
         
         # Filter (Polars)
-        row = df.filter(pl.col("ticker") == ticker)
+        row = df.filter(pl.col("symbol") == ticker)
         if len(row) == 0:
             return None
             
         # unpack
-        # Assuming schema: prior_drift_20d, prior_vol_20d, prior_downside_q10, prior_trend_conf
+        # Assuming schema: drift, vol_forecast, tail_risk, trend_conf
         try:
             return ChronosPriors(
-                drift_20d=row["prior_drift_20d"][0],
-                vol_20d=row["prior_vol_20d"][0],
-                downside_q10_20d=row["prior_downside_q10"][0],
-                trend_conf_20d=row["prior_trend_conf"][0]
+                drift=row["drift"][0],
+                vol_forecast=row["vol_forecast"][0],
+                tail_risk=row["tail_risk"][0],
+                trend_conf=row["trend_conf"][0]
             )
         except Exception:
             # Schema mismatch?

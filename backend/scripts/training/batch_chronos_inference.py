@@ -141,10 +141,10 @@ def main():
                     priors_batch.append({
                         "date": date,
                         "ticker": t,
-                        "prior_drift_20d": p.drift_20d,
-                        "prior_vol_20d": p.vol_20d,
-                        "prior_downside_q10": p.downside_q10_20d,
-                        "prior_trend_conf": p.trend_conf_20d
+                        "drift": p.drift,
+                        "vol_forecast": p.vol_forecast,
+                        "tail_risk": p.tail_risk,
+                        "trend_conf": p.trend_conf
                     })
             except Exception as e:
                 logger.error(f"Inference failed for batch {i}: {e}")

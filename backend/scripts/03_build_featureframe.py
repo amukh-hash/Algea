@@ -23,7 +23,7 @@ def main():
     
     # Spec (could be loaded from file)
     spec = {
-        "returns": [1, 5, 20],
+        "returns": [1, 3, 5, 10],
         "volatility": 20,
         "volume_z": 20
     }

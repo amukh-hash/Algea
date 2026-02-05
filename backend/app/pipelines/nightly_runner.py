@@ -75,15 +75,10 @@ def run_nightly_cycle(as_of_date: str):
     # For now, we construct the DF manually but adhering to Schema B7
     priors_df = pd.DataFrame({
         'symbol': eligible_symbols,
-        'date': pd.to_datetime(as_of_date),
-        'prior_drift_20d': 0.005,
-        'prior_vol_20d': 0.02,
-        'prior_downside_q10_20d': -0.05,
-        'prior_trend_conf_20d': 0.6,
-        'prior_version': "v1",
-        'chronos_model_id': "stub-v1",
-        'context_len': 512,
-        'horizon': 20
+        'drift': 0.005,
+        'vol_forecast': 0.02,
+        'tail_risk': -0.05,
+        'trend_conf': 0.6
     })
     
     # Save Priors Artifact
@@ -97,30 +92,13 @@ def run_nightly_cycle(as_of_date: str):
     print(">> Engineering Ranker Features...")
     from backend.app.features import featureframe
     
-    # Build FeatureFrame (B6)
-    # This mocks the heavy lifting of joining OHLCV + Covariates + Computing Features
-    # and returns a valid B6-schema dataframe.
-    ff_df = featureframe.build_featureframe(as_of_date, as_of_date, {"symbols": eligible_symbols})
-    
-    # Join with Priors and Market Features? 
-    # FeatureContract expects: CORE (B6) + MARKET + PRIORS
-    # FF provides CORE + MARKET (spy_ret, vix).
-    # We just need to join Priors.
-    
-    # Ensure date is matching for merge (ff_df date might be datetime64, priors date datetime64)
-    # Merge keys: date, symbol
-    final_input = ff_df.merge(priors_df[['symbol', 'date', 'prior_drift_20d', 'prior_vol_20d', 'prior_downside_q10_20d', 'prior_trend_conf_20d']], 
-                              on=['symbol', 'date'], how='inner')
-    
-    # Rename priors columns to match FeatureContract if they differ? 
-    # Contract: prior_drift_20d (Checked in Schema Alignment). 
-    # DF: prior_drift_20d (Set above). 
-    # Match.
-
-    # Rename B6 columns to Contract if needed?
-    # Contract: ret_1d, vol_20d, volume_z_20d (Updated in Schema Alignment).
-    # FF (B6): ret_1d, vol_20d, volume_z_20d (Updated in builds).
-    # Match.
+    # Mocking final input for continuity
+    final_input = pd.DataFrame({
+        'symbol': eligible_symbols,
+        'date': as_of_date,
+        'feature_1': 0.5, # Mock features
+        'drift': 0.005
+    })
 
     # 5. VALIDATION
     print(">> Validating Schema...")

@@ -9,7 +9,7 @@ class OptionsGate:
             "min_bpi": 30.0,
             "min_student_p50": -0.01,
             "min_prior_trend_conf": 0.5,
-            "max_prior_downside_q10": -0.10 # e.g. -10% drop
+            "max_prior_tail_risk": -0.10 # e.g. -10% drop
         }
         
     def evaluate(self, ctx: OptionsContext) -> GateDecision:
@@ -30,8 +30,8 @@ class OptionsGate:
             return GateDecision(False, GateReasonCode.UNCERTAINTY_HIGH, "Missing teacher priors")
             
         priors = ctx.teacher_priors
-        if priors.trend_conf_20d < self.thresholds["min_prior_trend_conf"]:
-             return GateDecision(False, GateReasonCode.TREND_WEAK, f"Prior Trend Conf {priors.trend_conf_20d:.2f} < {self.thresholds['min_prior_trend_conf']}")
+        if priors.trend_conf < self.thresholds["min_prior_trend_conf"]:
+             return GateDecision(False, GateReasonCode.TREND_WEAK, f"Prior Trend Conf {priors.trend_conf:.2f} < {self.thresholds['min_prior_trend_conf']}")
 
         # 1. Compute Features(Legacy + New)
         # Assuming Mock AI uncertainty 0.5 for now

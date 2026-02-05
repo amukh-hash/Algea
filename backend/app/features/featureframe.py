@@ -51,7 +51,14 @@ def build_featureframe(
     cov_df["date"] = pd.to_datetime(cov_df["date"])
     breadth_df["date"] = pd.to_datetime(breadth_df["date"])
 
-    required_cov_cols = ["date", "spy_ret_1d", "vix_level"]
+    required_cov_cols = [
+        "date",
+        "spy_ret_1d",
+        "qqq_ret_1d",
+        "iwm_ret_1d",
+        "vix_level",
+        "rate_proxy"
+    ]
     missing_cov = [c for c in required_cov_cols if c not in cov_df.columns]
     if missing_cov:
         raise ValueError(f"Covariates missing required columns: {missing_cov}")
@@ -82,8 +89,9 @@ def build_featureframe(
             continue
 
         ohlcv["ret_1d"] = ohlcv["close_adj"].pct_change()
+        ohlcv["ret_3d"] = ohlcv["close_adj"].pct_change(3)
         ohlcv["ret_5d"] = ohlcv["close_adj"].pct_change(5)
-        ohlcv["ret_20d"] = ohlcv["close_adj"].pct_change(20)
+        ohlcv["ret_10d"] = ohlcv["close_adj"].pct_change(10)
         ohlcv["vol_20d"] = ohlcv["ret_1d"].rolling(20).std()
         ohlcv["vol_chg_1d"] = ohlcv["vol_20d"].pct_change()
         ohlcv["dollar_vol_20d"] = ohlcv["dollar_volume"].rolling(20).mean()
@@ -96,14 +104,15 @@ def build_featureframe(
 
         feat = feat[[
             "date", "symbol",
-            "ret_1d", "ret_5d", "ret_20d",
+            "ret_1d", "ret_3d", "ret_5d", "ret_10d",
             "vol_20d", "vol_chg_1d",
             "dollar_vol_20d", "volume_z_20d"
         ]]
 
         feat = feat.merge(cov_df[required_cov_cols], on="date", how="left")
-        if "market_breadth_ad" in breadth_df.columns:
-            feat = feat.merge(breadth_df[["date", "market_breadth_ad"]], on="date", how="left")
+        if "market_breadth_ad" not in breadth_df.columns:
+            raise ValueError("Breadth missing required column: market_breadth_ad")
+        feat = feat.merge(breadth_df[["date", "market_breadth_ad"]], on="date", how="left")
 
         frames.append(feat)
 
@@ -112,10 +121,11 @@ def build_featureframe(
 
     df = pd.concat(frames, ignore_index=True)
     df = df.dropna(subset=[
-        "ret_1d", "ret_5d", "ret_20d",
+        "ret_1d", "ret_3d", "ret_5d", "ret_10d",
         "vol_20d", "dollar_vol_20d",
         "volume_z_20d", "vol_chg_1d",
-        "spy_ret_1d", "vix_level"
+        "spy_ret_1d", "qqq_ret_1d", "iwm_ret_1d",
+        "vix_level", "rate_proxy", "market_breadth_ad"
     ])
 
     data_version = feature_spec.get("data_version") if feature_spec else None

@@ -22,10 +22,10 @@ class ChronosRunner:
     def _fallback_priors(self, series_df: pd.DataFrame) -> dict:
         if series_df is None or series_df.empty:
             return {
-                "prior_drift_20d": 0.0,
-                "prior_vol_20d": 0.0,
-                "prior_downside_q10": 0.0,
-                "prior_trend_conf": 0.5
+                "drift": 0.0,
+                "vol_forecast": 0.0,
+                "tail_risk": 0.0,
+                "trend_conf": 0.5
             }
 
         df = series_df.copy()
@@ -34,25 +34,25 @@ class ChronosRunner:
 
         df = df.sort_values("date")
         df["ret_1d"] = df["close_adj"].pct_change()
-        window = df["ret_1d"].dropna().tail(20)
+        window = df["ret_1d"].dropna().tail(self.horizon)
         if window.empty:
             return {
-                "prior_drift_20d": 0.0,
-                "prior_vol_20d": 0.0,
-                "prior_downside_q10": 0.0,
-                "prior_trend_conf": 0.5
+                "drift": 0.0,
+                "vol_forecast": 0.0,
+                "tail_risk": 0.0,
+                "trend_conf": 0.5
             }
 
         drift = float(window.mean())
         vol = float(window.std(ddof=0))
-        downside_q10 = float(np.quantile(window, 0.1))
+        tail_risk = float(np.quantile(window, 0.1))
         trend_conf = float((window > 0).mean())
 
         return {
-            "prior_drift_20d": drift,
-            "prior_vol_20d": vol,
-            "prior_downside_q10": downside_q10,
-            "prior_trend_conf": trend_conf
+            "drift": drift,
+            "vol_forecast": vol,
+            "tail_risk": tail_risk,
+            "trend_conf": trend_conf
         }
 
     def infer_one(self, symbol: str, asof_date, series_df, covariates_df) -> dict:

@@ -11,24 +11,26 @@ class FeatureContract:
     
     CORE_FEATURES = [
         'symbol', 'date',
-        'ret_1d', 'ret_5d', 'ret_20d',
-        'vol_20d', 'volume_z_20d'
+        'ret_1d', 'ret_3d', 'ret_5d', 'ret_10d',
+        'vol_20d', 'vol_chg_1d',
+        'dollar_vol_20d', 'volume_z_20d'
     ]
     
     MARKET_FEATURES = [
-        'spy_ret_1d', 'vix_level'
+        'spy_ret_1d', 'qqq_ret_1d', 'iwm_ret_1d',
+        'vix_level', 'rate_proxy', 'market_breadth_ad'
     ]
     
     # The 'Teacher' Priors (Chronos-2 Outputs)
     # Must match EXACTLY what the nightly inference produces
     PRIOR_FEATURES = [
-        'prior_drift_20d',
-        'prior_vol_20d',
-        'prior_downside_q10_20d', # The 10th percentile outcome (Tail Risk)
-        'prior_trend_conf_20d'    # Probability of positive trend
+        'drift',
+        'vol_forecast',
+        'tail_risk', # The 10th percentile outcome (Tail Risk)
+        'trend_conf' # Probability of positive trend
     ]
     
-    TARGETS = ['target_10d_fwd']
+    TARGETS = ['fwd_ret', 'fwd_up', 'fwd_vol']
 
     @classmethod
     def validate(cls, df: pd.DataFrame, mode: str = 'inference') -> bool:
@@ -70,10 +72,10 @@ class FeatureContract:
         # In ranking mode, any NaN in a feature = unknown behavior = DANGEROUS.
         if mode in ['ranking', 'train']:
             # Check only feature columns (ignore metadata if any exists)
-            check_cols = [c for c in required if c != 'target_10d_fwd']
+            check_cols = [c for c in required if c not in cls.TARGETS]
             if df[check_cols].isnull().any().any():
                 bad_rows = df[df[check_cols].isnull().any(axis=1)]
-                bad_symbols = bad_rows['symbol'].unique()
+                bad_tickers = bad_rows['symbol'].unique()
                 raise ValueError(f"DATA INTEGRITY ERROR: NaNs detected for {len(bad_rows)} rows. "
                                  f"Affected symbols: {bad_symbols[:5]}...")
 

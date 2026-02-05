@@ -65,12 +65,13 @@ class SelectorInference:
         sequence_len: int,
     ) -> Dict[str, torch.Tensor]:
         feature_cols = self.feature_cols or [
-            "ret_1d", "ret_5d", "ret_20d",
+            "ret_1d", "ret_3d", "ret_5d", "ret_10d",
             "vol_20d", "vol_chg_1d",
             "dollar_vol_20d", "volume_z_20d",
-            "spy_ret_1d", "vix_level"
+            "spy_ret_1d", "qqq_ret_1d", "iwm_ret_1d",
+            "vix_level", "rate_proxy", "market_breadth_ad"
         ]
-        prior_cols = self.prior_cols or ["prior_drift_20d", "prior_vol_20d", "prior_downside_q10", "prior_trend_conf"]
+        prior_cols = self.prior_cols or ["drift", "vol_forecast", "tail_risk", "trend_conf"]
         priors_map = priors_df.set_index("symbol")
 
         sequences = []

@@ -11,11 +11,14 @@ from backend.app.data import calendar, ingest_daily
 
 logger = logging.getLogger(__name__)
 
-def build_labels_fwd10d(start_date, end_date) -> pd.DataFrame:
+def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFrame:
     """
-    Builds forward 10-day returns labels.
-    Shift = 10 trading days.
+    Builds forward returns, direction, and realized vol labels.
+    Shift = horizon trading days.
     """
+    if horizon_td is None:
+        horizon_td = config.LABEL_HORIZON_TD
+
     trading_days = calendar.get_trading_days(start_date, end_date)
     if not trading_days:
         raise ValueError("No trading days found for label build.")
@@ -37,9 +40,10 @@ def build_labels_fwd10d(start_date, end_date) -> pd.DataFrame:
         if df["close_adj"].isnull().all():
             continue
 
+        ret_series = df["close_adj"].pct_change()
         for current in trading_days:
             try:
-                fwd_date = calendar.shift_trading_days(pd.Timestamp(current), config.LABEL_HORIZON_TD)
+                fwd_date = calendar.shift_trading_days(pd.Timestamp(current), horizon_td)
             except Exception:
                 continue
 
@@ -52,18 +56,30 @@ def build_labels_fwd10d(start_date, end_date) -> pd.DataFrame:
                 continue
 
             fwd_ret = float(close_fwd / close_now - 1.0)
+            window_rets = ret_series.loc[current:fwd_date].dropna()
+            if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
+                window_rets = window_rets.iloc[1:]
+            fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
             labels.append({
                 "date": pd.to_datetime(current),
                 "symbol": symbol,
-                "fwd_ret_10d": fwd_ret,
-                "fwd_up_10d": int(fwd_ret > 0)
+                "fwd_ret": fwd_ret,
+                "fwd_up": int(fwd_ret > 0),
+                "fwd_vol": fwd_vol,
+                "horizon": int(horizon_td)
             })
 
     labels_df = pd.DataFrame(labels)
     validators.validate_df(labels_df, schemas.SCHEMA_LABELS, context="Labels Build", strict=True)
     return labels_df
 
-def build_rank_dataset(start_date, end_date, sequence_len: int = 60, min_group_size: int = 200) -> Dict:
+def build_rank_dataset(
+    start_date,
+    end_date,
+    sequence_len: int = 60,
+    min_group_size: int = 200,
+    horizon_td: int = None
+) -> Dict:
     """
     Builds the tensors for the selector model.
     X: [Batch, Seq, Features]
@@ -76,7 +92,7 @@ def build_rank_dataset(start_date, end_date, sequence_len: int = 60, min_group_s
     features = pd.read_parquet(feature_path)
     features["date"] = pd.to_datetime(features["date"])
 
-    labels = build_labels_fwd10d(start_date, end_date)
+    labels = build_labels_fwd(start_date, end_date, horizon_td=horizon_td)
     labels["date"] = pd.to_datetime(labels["date"])
 
     trading_days = calendar.get_trading_days(start_date, end_date)
@@ -103,12 +119,13 @@ def build_rank_dataset(start_date, end_date, sequence_len: int = 60, min_group_s
         return os.path.join(priors_dir, candidates[-1])
 
     feature_cols = [
-        "ret_1d", "ret_5d", "ret_20d",
+        "ret_1d", "ret_3d", "ret_5d", "ret_10d",
         "vol_20d", "vol_chg_1d",
         "dollar_vol_20d", "volume_z_20d",
-        "spy_ret_1d", "vix_level"
+        "spy_ret_1d", "qqq_ret_1d", "iwm_ret_1d",
+        "vix_level", "rate_proxy", "market_breadth_ad"
     ]
-    prior_cols = ["prior_drift_20d", "prior_vol_20d", "prior_downside_q10", "prior_trend_conf"]
+    prior_cols = ["drift", "vol_forecast", "tail_risk", "trend_conf"]
 
     for current in trading_days:
         current = pd.Timestamp(current)
@@ -152,7 +169,7 @@ def build_rank_dataset(start_date, end_date, sequence_len: int = 60, min_group_s
         for idx, symbol in enumerate(seq_symbols):
             if symbol not in label_map.index:
                 continue
-            y.append(float(label_map.loc[symbol, "fwd_ret_10d"]))
+            y.append(float(label_map.loc[symbol, "fwd_ret"]))
             keep_symbols.append(symbol)
             keep_X.append(X[idx])
 
@@ -176,6 +193,7 @@ def build_rank_dataset(start_date, end_date, sequence_len: int = 60, min_group_s
         "y": y_list,
         "symbols": symbols_list,
         "sequence_len": sequence_len,
+        "label_horizon": int(horizon_td) if horizon_td is not None else int(config.LABEL_HORIZON_TD),
         "groups": groups,
         "feature_cols": feature_cols,
         "prior_cols": prior_cols

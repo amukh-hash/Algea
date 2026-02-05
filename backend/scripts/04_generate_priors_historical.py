@@ -15,14 +15,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", default="2016-01-01")
     parser.add_argument("--end", default="2026-02-03")
+    parser.add_argument("--context", type=int, default=config.CONTEXT_LEN)
+    parser.add_argument("--horizon", type=int, default=config.PRIOR_HORIZON)
     args = parser.parse_args()
 
     bootstrap.ensure_dirs()
 
     spec = {
         "model": "chronos-t5-small",
-        "context": config.CONTEXT_LEN,
-        "horizon": config.PRIOR_HORIZON
+        "context": args.context,
+        "horizon": args.horizon
     }
 
     # Chronos should be pre-calibrated and frozen before running priors generation.

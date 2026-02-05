@@ -38,10 +38,10 @@ class RankScoreSignal:
 
 @dataclass
 class ChronosPriors:
-    drift_20d: float
-    vol_20d: float
-    downside_q10_20d: float
-    trend_conf_20d: float
+    drift: float
+    vol_forecast: float
+    tail_risk: float
+    trend_conf: float
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
@@ -61,7 +61,7 @@ class SelectorOutputs:
 # Canonical Leaderboard Schema
 LEADERBOARD_SCHEMA = {
     # Keys
-    "as_of_date": "str",   # YYYY-MM-DD
+    "date": "str",   # YYYY-MM-DD
     "symbol": "str",
 
     # Core Ranking
@@ -73,10 +73,10 @@ LEADERBOARD_SCHEMA = {
     "ev_10d": "float",  # Expected Value over 10 days
 
     # Teacher Priors (Attached)
-    "prior_drift_20d": "float",
-    "prior_vol_20d": "float",
-    "prior_downside_q10_20d": "float",
-    "prior_trend_conf_20d": "float",
+    "teacher_drift": "float",
+    "teacher_vol_forecast": "float",
+    "teacher_tail_risk": "float",
+    "teacher_trend_conf": "float",
 
     # Metadata columns (can be uniform across file)
     "selector_checkpoint_id": "str",
