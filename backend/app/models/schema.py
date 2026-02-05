@@ -12,11 +12,11 @@ class FeatureContract:
     CORE_FEATURES = [
         'symbol', 'date',
         'ret_1d', 'ret_5d', 'ret_20d',
-        'volatility_20d', 'relative_volume_20d'
+        'vol_20d', 'volume_z_20d'
     ]
     
     MARKET_FEATURES = [
-        'spy_ret_1d', 'vix_level', 'vix_ret_1d', 'market_breadth_ad'
+        'spy_ret_1d', 'vix_level'
     ]
     
     # The 'Teacher' Priors (Chronos-2 Outputs)
@@ -24,8 +24,8 @@ class FeatureContract:
     PRIOR_FEATURES = [
         'prior_drift_20d',
         'prior_vol_20d',
-        'prior_downside_q10', # The 10th percentile outcome (Tail Risk)
-        'prior_trend_conf'    # Probability of positive trend
+        'prior_downside_q10_20d', # The 10th percentile outcome (Tail Risk)
+        'prior_trend_conf_20d'    # Probability of positive trend
     ]
     
     TARGETS = ['target_10d_fwd']
@@ -73,8 +73,8 @@ class FeatureContract:
             check_cols = [c for c in required if c != 'target_10d_fwd']
             if df[check_cols].isnull().any().any():
                 bad_rows = df[df[check_cols].isnull().any(axis=1)]
-                bad_tickers = bad_rows['ticker'].unique()
+                bad_symbols = bad_rows['symbol'].unique()
                 raise ValueError(f"DATA INTEGRITY ERROR: NaNs detected for {len(bad_rows)} rows. "
-                                 f"Affected tickers: {bad_tickers[:5]}...")
+                                 f"Affected symbols: {bad_symbols[:5]}...")
 
         return True

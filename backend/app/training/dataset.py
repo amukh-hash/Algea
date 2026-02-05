@@ -31,7 +31,7 @@ class RankingDataset(Dataset):
         # Feature columns (exclude meta)
         # We assume scaler transformed correctly and we just pick float cols
         # Or hardcode?
-        exclude = ['date', 'ticker', target_col, 'target_10d_fwd_bin']
+        exclude = ['date', 'ticker', 'symbol', target_col, 'target_10d_fwd_bin']
         self.feat_cols = [c for c in self.features_df.columns if c not in exclude]
         
     def __len__(self):
@@ -51,7 +51,18 @@ class RankingDataset(Dataset):
         if os.path.exists(priors_path):
             priors_df = pd.read_parquet(priors_path)
             # Merge
-            day_df = day_df.merge(priors_df, on="ticker", how="left")
+            # Assume priors file uses 'symbol' per new schema
+            # But dataset features might have 'ticker' or 'symbol' depending on scaling script?
+            # We standardize internally to 'symbol'.
+            if "ticker" in priors_df.columns and "symbol" not in priors_df.columns:
+                 priors_df.rename(columns={"ticker": "symbol"}, inplace=True)
+            
+            # Features DF also needs to align
+            join_key = "symbol"
+            if "symbol" not in day_df.columns and "ticker" in day_df.columns:
+                day_df.rename(columns={"ticker": "symbol"}, inplace=True)
+                
+            day_df = day_df.merge(priors_df, on="symbol", how="left")
         else:
             # Missing priors? Pad with 0 or skip?
             # Model needs priors. 
@@ -64,7 +75,17 @@ class RankingDataset(Dataset):
         X_feats = day_df[self.feat_cols].values.astype(np.float32)
         
         # Priors (drift, vol, downside, conf)
-        prior_cols = ["prior_drift_20d", "prior_vol_20d", "prior_downside_q10", "prior_trend_conf"]
+        # Updated to new schema names (prior_*)
+        prior_cols = ["prior_drift_20d", "prior_vol_20d", "prior_downside_q10_20d", "prior_trend_conf_20d"]
+        # Also support legacy names if mismatched during migration
+        legacy_map = {
+            "drift_20d": "prior_drift_20d",
+            "vol_20d": "prior_vol_20d",
+            "downside_q10_20d": "prior_downside_q10", 
+            "trend_conf_20d": "prior_trend_conf"
+        }
+        day_df.rename(columns=legacy_map, inplace=True)
+        
         # Ensure cols exist
         for c in prior_cols:
             if c not in day_df.columns:
@@ -87,7 +108,7 @@ class RankingDataset(Dataset):
             "priors": torch.tensor(X_priors),
             "targets": torch.tensor(y),
             "date": date_str,
-            "tickers": day_df['ticker'].values
+            "symbols": day_df['symbol'].values
         }
 
 def ranking_collate_fn(batch):

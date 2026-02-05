@@ -66,6 +66,8 @@ python backend/scripts/03_build_featureframe.py --start 2016-01-01 --end 2025-12
 **Notes / Caveats**
 - The featureframe builder computes B6 features directly from canonical OHLCV partitions and will **fail hard** if required covariates or breadth files are missing. Ensure `backend/data_canonical/covariates_daily.parquet` and `backend/data_canonical/breadth_daily.parquet` exist before running.【F:backend/app/features/featureframe.py†L32-L166】
 - FeatureFrame writes deterministic `feature_version`/`data_version` columns and enforces B6 schema validation before write, so re-runs with the same inputs produce identical hashes.【F:backend/app/features/featureframe.py†L142-L194】
+- The script currently migrates from a legacy feature file if present; otherwise it warns that the full build is not implemented.【F:backend/scripts/03_build_featureframe.py†L24-L57】
+- The underlying featureframe builder is still a stub returning an empty DataFrame, so ensure legacy feature migration is available or implement the builder first.【F:backend/app/features/featureframe.py†L12-L40】
 
 ---
 
