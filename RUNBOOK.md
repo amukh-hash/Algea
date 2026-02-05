@@ -24,6 +24,30 @@ This runbook documents the current end-to-end flow for the **data pipeline** and
 
 ---
 
+## Training Protocol (Data Requirements & Cadence)
+
+### A) Selector training data (Rank-Transformer + calibration)
+- **Daily per-ticker OHLCV (adjusted for splits/dividends)** with at least 8–12 years of history where possible.
+- **Daily market/regime covariates**: SPY/QQQ/IWM returns/vol, VIX level/returns, rates proxy (2Y/10Y or IEF/TLT), and preferred breadth features (AD line, BPI).
+- **Labels**: primary label is forward 10-trading-day close-to-close return; optional auxiliary label is 10-day direction (up/down).
+- **Corporate actions**: adjusted prices/returns are required; unadjusted series will pollute training.
+
+### B) Chronos-2 priors (nightly generation)
+- **Inputs**: same daily per-ticker series and covariates as training.
+- **Outputs per date (all tickers)**: drift proxy, forecast dispersion/vol proxy, downside quantile (q10), and trend confidence (stored in priors parquet for selector features).
+- Chronos priors are **signals inputs**, not trade signals.
+
+### C) Nightly execution inputs
+- Latest daily bar per ticker, updated breadth/context, updated covariates.
+- Then generate priors for `as_of_date`, run selector inference, and write leaderboard.
+
+### D) Chronos-2 training cadence
+- **Recommended**: Chronos-2 is mostly inference-only.
+- Fit the **Chronos codec once**, run nightly inference for priors, and only fine-tune (LoRA) occasionally if it improves calibration.
+- If fine-tuning: do **monthly/quarterly** LoRA refreshes on the full historical daily dataset; treat it as adaptation, not alpha training.
+
+---
+
 ## 2) Canonical Data Ingestion & Backfill (Daily Bars)
 
 **Goal:** Create B2 OHLCV partitions in `backend/data_canonical/ohlcv_adj/...`.
@@ -66,8 +90,6 @@ python backend/scripts/03_build_featureframe.py --start 2016-01-01 --end 2025-12
 **Notes / Caveats**
 - The featureframe builder computes B6 features directly from canonical OHLCV partitions and will **fail hard** if required covariates or breadth files are missing. Ensure `backend/data_canonical/covariates_daily.parquet` and `backend/data_canonical/breadth_daily.parquet` exist before running.【F:backend/app/features/featureframe.py†L32-L166】
 - FeatureFrame writes deterministic `feature_version`/`data_version` columns and enforces B6 schema validation before write, so re-runs with the same inputs produce identical hashes.【F:backend/app/features/featureframe.py†L142-L194】
-- The script currently migrates from a legacy feature file if present; otherwise it warns that the full build is not implemented.【F:backend/scripts/03_build_featureframe.py†L24-L57】
-- The underlying featureframe builder is still a stub returning an empty DataFrame, so ensure legacy feature migration is available or implement the builder first.【F:backend/app/features/featureframe.py†L12-L40】
 
 ---
 
