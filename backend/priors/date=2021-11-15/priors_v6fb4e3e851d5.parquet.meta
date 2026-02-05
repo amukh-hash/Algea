@@ -1,0 +1,10 @@
+{
+  "version": "6fb4e3e851d5",
+  "spec": {
+    "model": "chronos-t5-small",
+    "context": 512,
+    "horizon": 20
+  },
+  "rows": 3,
+  "date": "2021-11-15 00:00:00"
+}

@@ -9,4 +9,5 @@ backend/data/options/gate_datasets/
 legacy/
 *.pyc
 **/.ipynb_checkpoints/
+backend/data/
 backend/reports/
