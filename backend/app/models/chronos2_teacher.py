@@ -386,16 +386,54 @@ def load_chronos_adapter(
         )
 
     print(f"[Load] Model Class: {ModelClass.__name__}")
-    try:
-        # Load with device_map="auto" for QLoRA/Quantization
-        model = ModelClass.from_pretrained(
-            model_id,
-            quantization_config=bnb_config,
-            device_map="auto" if use_qlora else None,
-            trust_remote_code=True,
-            torch_dtype=torch.bfloat16
-        )
-        # Force disable cache globally
+    print(f"[Load] Model Class: {ModelClass.__name__}")
+    
+    # Special handling for Chronos 2 to get the native Chronos2Model (not T5ForConditionalGeneration)
+    if "chronos-2" in model_id.lower():
+        print(f"[Load] Detecting Chronos 2: Using Chronos2Pipeline to load native model...")
+        try:
+            from chronos import Chronos2Pipeline
+            # Load via pipeline to get the correct custom model class
+            pipeline = Chronos2Pipeline.from_pretrained(
+                model_id,
+                device_map="auto" if use_qlora else None,
+                dtype=torch.bfloat16
+            )
+            model = pipeline.model
+            # Pipeline loads to device automatically?
+            # Ensure config is accessible
+            if not hasattr(model, "config"):
+                # Chronos2Model might stash config elsewhere or not standard HF
+                pass
+        except ImportError:
+            print("[Load] ERROR: 'chronos' package not found. Cannot load native Chronos 2.")
+            raise
+        except Exception as e:
+            print(f"[Load] Pipeline load failed: {e}. Falling back to AutoModel...")
+            # Fallthrough
+            model = ModelClass.from_pretrained(
+                model_id,
+                quantization_config=bnb_config,
+                device_map="auto" if use_qlora else None,
+                trust_remote_code=True,
+                torch_dtype=torch.bfloat16
+            )
+    else:
+        try:
+            # Load with device_map="auto" for QLoRA/Quantization
+            model = ModelClass.from_pretrained(
+                model_id,
+                quantization_config=bnb_config,
+                device_map="auto" if use_qlora else None,
+                trust_remote_code=True,
+                torch_dtype=torch.bfloat16
+            )
+        except Exception as e:
+            print(f"[Load] from_pretrained failed: {e}")
+            raise e
+
+    # Force disable cache globally
+    if hasattr(model, "config"):
         model.config.use_cache = False
         
         # Force to device early if not quantized
@@ -406,9 +444,12 @@ def load_chronos_adapter(
         # Debug: Check vocab size vs embeddings
         print(f"[Load] Config Vocab: {model.config.vocab_size}")
         if model.config.vocab_size < 4096:
-             print("[Load] Resizing embeddings to 4096...")
-             model.resize_token_embeddings(4096)
-             print(f"[Load] New Vocab: {model.config.vocab_size}")
+             try:
+                 print("[Load] Resizing embeddings to 4096...")
+                 model.resize_token_embeddings(4096)
+                 print(f"[Load] New Vocab: {model.config.vocab_size}")
+             except Exception as e:
+                 print(f"[Load] Skipping resize_token_embeddings: {e}")
 
         # Fix T5 IDs for training if missing
         if model.config.pad_token_id is None:
@@ -419,11 +460,11 @@ def load_chronos_adapter(
              model.config.eos_token_id = 1
 
         if hasattr(model, "get_input_embeddings"):
-             emb = model.get_input_embeddings()
-             print(f"[Load] Embedding Shape: {emb.weight.shape}")
-    except Exception as e:
-        print(f"[Load] from_pretrained failed: {e}")
-        raise e
+             try:
+                 emb = model.get_input_embeddings()
+                 print(f"[Load] Embedding Shape: {emb.weight.shape}")
+             except Exception as e:
+                 print(f"[Load] Skipping get_input_embeddings: {e}")
 
     # Sig check
     forward_params = []
@@ -452,25 +493,56 @@ def load_chronos_adapter(
         print(f"[Load] Loading adapter from {adapter_path}...")
         model = PeftModel.from_pretrained(model, str(adapter_path), is_trainable=not eval_mode)
     elif lora_config:
-        print(f"[Load] Init NEW LoRA...")
         targets = find_lora_targets(model)
         print(f"[Load] LoRA Targets: {targets}")
         
-        peft_cfg = LoraConfig(
-            r=lora_config.get("rank", 16),
-            lora_alpha=lora_config.get("alpha", 32),
-            target_modules=targets,
-            lora_dropout=lora_config.get("dropout", 0.05),
-            bias="none",
-            task_type=TaskType.SEQ_2_SEQ_LM if "t5" in info["model_type"].lower() else TaskType.CAUSAL_LM
-        )
-        model = get_peft_model(model, peft_cfg)
-        
-        # Ensure resized embeddings/head are trainable
-        # PEFT often freezes these if they are considered "base model"
-        for name, param in model.named_parameters():
-             if "shared" in name or "embed_tokens" in name or "lm_head" in name or "wte" in name:
-                  param.requires_grad = True
+        # Chronos 2: Use inject_adapter_in_model to preserve native forward signature
+        if "chronos-2" in model_id.lower():
+            print("[Load] Using inject_adapter_in_model for Chronos 2 (preserves native API)")
+            from peft import inject_adapter_in_model
+            
+            peft_cfg = LoraConfig(
+                r=lora_config.get("rank", 16),
+                lora_alpha=lora_config.get("alpha", 32),
+                target_modules=targets,
+                lora_dropout=lora_config.get("dropout", 0.05),
+                bias="none",
+            )
+            # inject_adapter_in_model modifies the model in-place
+            model = inject_adapter_in_model(peft_cfg, model)
+            
+            # Freeze base model, unfreeze LoRA params
+            for name, param in model.named_parameters():
+                if "lora_" in name.lower():
+                    param.requires_grad = True
+                else:
+                    param.requires_grad = False
+                    
+            trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            total = sum(p.numel() for p in model.parameters())
+            print(f"[Load] LoRA injected. Trainable: {trainable:,} / {total:,} ({100*trainable/total:.2f}%)")
+        else:
+            # Standard PEFT wrapping for other models
+            print(f"[Load] Init NEW LoRA...")
+            if "t5" in info["model_type"].lower():
+                task_type = TaskType.SEQ_2_SEQ_LM
+            else:
+                task_type = TaskType.CAUSAL_LM
+                
+            peft_cfg = LoraConfig(
+                r=lora_config.get("rank", 16),
+                lora_alpha=lora_config.get("alpha", 32),
+                target_modules=targets,
+                lora_dropout=lora_config.get("dropout", 0.05),
+                bias="none",
+                task_type=task_type
+            )
+            model = get_peft_model(model, peft_cfg)
+            
+            # Ensure resized embeddings/head are trainable
+            for name, param in model.named_parameters():
+                 if "shared" in name or "embed_tokens" in name or "lm_head" in name or "wte" in name:
+                      param.requires_grad = True
 
     # Enable gradient checkpointing AFTER PEFT wrapping
     if not eval_mode and use_qlora:
