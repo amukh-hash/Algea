@@ -50,13 +50,28 @@ def write_ohlcv_partition(symbol: str, df: pd.DataFrame) -> None:
 def load_ohlcv(symbol: str, start_date=None, end_date=None) -> pd.DataFrame:
     paths = pathmap.get_paths()
     path = os.path.join(paths.data_canonical, "ohlcv_adj", f"ticker={symbol}", "data.parquet")
-    
-    if not os.path.exists(path):
-        # Fallback needed if ALLOW_LEGACY_READ?
-        # Or just return empty
-        return pd.DataFrame()
-        
-    df = pd.read_parquet(path)
+    df = pd.DataFrame()
+
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+    else:
+        daily_dir = os.path.join(paths.data_canonical, "daily_parquet")
+        fallback_candidates = [
+            os.path.join(daily_dir, f"{symbol}.parquet"),
+            os.path.join(daily_dir, f"{symbol}_daily.parquet"),
+            os.path.join(daily_dir, f"ticker={symbol}", "data.parquet"),
+        ]
+        fallback_path = next((p for p in fallback_candidates if os.path.exists(p)), None)
+        if fallback_path:
+            df = pd.read_parquet(fallback_path)
+        else:
+            return pd.DataFrame()
+
+    if "close_adj" not in df.columns:
+        if "adj_close" in df.columns:
+            df["close_adj"] = df["adj_close"]
+        elif "close" in df.columns:
+            df["close_adj"] = df["close"]
     # Filter dates
     if start_date:
         df = df[df["date"] >= pd.Timestamp(start_date)]

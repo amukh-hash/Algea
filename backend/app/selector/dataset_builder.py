@@ -26,9 +26,18 @@ def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFra
     labels = []
     paths = pathmap.get_paths()
     ohlcv_root = os.path.join(paths.data_canonical, "ohlcv_adj")
-    if not os.path.exists(ohlcv_root):
-        raise FileNotFoundError(f"Missing OHLCV root: {ohlcv_root}")
-    symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
+    daily_root = os.path.join(paths.data_canonical, "daily_parquet")
+    if os.path.exists(ohlcv_root):
+        symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
+    elif os.path.exists(daily_root):
+        symbols = []
+        for fname in os.listdir(daily_root):
+            if fname.endswith(".parquet"):
+                symbols.append(fname.replace("_daily.parquet", "").replace(".parquet", ""))
+            elif fname.startswith("ticker="):
+                symbols.append(fname.split("ticker=")[-1])
+    else:
+        raise FileNotFoundError(f"Missing OHLCV roots: {ohlcv_root} and {daily_root}")
 
     for symbol in symbols:
         df = ingest_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
@@ -37,10 +46,14 @@ def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFra
         df = df.sort_values("date")
         df["date"] = pd.to_datetime(df["date"])
         df = df.set_index("date").reindex(pd.DatetimeIndex(trading_days))
-        if df["close_adj"].isnull().all():
+        if "close_adj" in df.columns and not df["close_adj"].isnull().all():
+            ret_series = df["close_adj"].pct_change()
+            use_close = True
+        elif "ret_1d" in df.columns:
+            ret_series = df["ret_1d"]
+            use_close = False
+        else:
             continue
-
-        ret_series = df["close_adj"].pct_change()
         for current in trading_days:
             try:
                 fwd_date = calendar.shift_trading_days(pd.Timestamp(current), horizon_td)
@@ -50,16 +63,24 @@ def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFra
             if current not in df.index or fwd_date not in df.index:
                 continue
 
-            close_now = df.loc[current, "close_adj"]
-            close_fwd = df.loc[fwd_date, "close_adj"]
-            if pd.isna(close_now) or pd.isna(close_fwd):
-                continue
-
-            fwd_ret = float(close_fwd / close_now - 1.0)
-            window_rets = ret_series.loc[current:fwd_date].dropna()
-            if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
-                window_rets = window_rets.iloc[1:]
-            fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
+            if use_close:
+                close_now = df.loc[current, "close_adj"]
+                close_fwd = df.loc[fwd_date, "close_adj"]
+                if pd.isna(close_now) or pd.isna(close_fwd):
+                    continue
+                fwd_ret = float(close_fwd / close_now - 1.0)
+                window_rets = ret_series.loc[current:fwd_date].dropna()
+                if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
+                    window_rets = window_rets.iloc[1:]
+                fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
+            else:
+                window_rets = ret_series.loc[current:fwd_date].dropna()
+                if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
+                    window_rets = window_rets.iloc[1:]
+                if window_rets.empty:
+                    continue
+                fwd_ret = float((1.0 + window_rets).prod() - 1.0)
+                fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
             labels.append({
                 "date": pd.to_datetime(current),
                 "symbol": symbol,
@@ -129,25 +150,16 @@ def build_rank_dataset(
 
     for current in trading_days:
         current = pd.Timestamp(current)
-        day_features = features[features["date"] <= current].copy()
+        day_features = features[features["date"] == current].copy()
         if day_features.empty:
             continue
 
-        grouped = day_features.groupby("symbol")
-        seq_frames = []
-        seq_symbols = []
-        for symbol, g in grouped:
-            g = g.sort_values("date").tail(sequence_len)
-            if len(g) < sequence_len:
-                continue
-            seq_frames.append(g)
-            seq_symbols.append(symbol)
-
-        if len(seq_frames) < min_group_size:
+        day_features = day_features.sort_values("symbol")
+        seq_symbols = day_features["symbol"].astype(str).tolist()
+        if len(seq_symbols) < min_group_size:
             continue
 
-        X = np.stack([f[feature_cols].values.astype(np.float32) for f in seq_frames])
-
+        X = day_features[feature_cols].values.astype(np.float32)
         priors_path = resolve_latest_priors_path(current)
         priors = pd.read_parquet(priors_path)
         priors_map = priors.set_index("symbol")
@@ -158,8 +170,7 @@ def build_rank_dataset(
             else:
                 priors_vec.append(np.zeros(len(prior_cols), dtype=np.float32))
         priors_vec = np.stack(priors_vec)
-        priors_seq = np.repeat(priors_vec[:, None, :], sequence_len, axis=1)
-        X = np.concatenate([X, priors_seq], axis=-1)
+        X = np.concatenate([X, priors_vec], axis=-1)
 
         day_labels = labels[labels["date"] == current]
         label_map = day_labels.set_index("symbol")
@@ -192,7 +203,7 @@ def build_rank_dataset(
         "X": X_list,
         "y": y_list,
         "symbols": symbols_list,
-        "sequence_len": sequence_len,
+        "sequence_len": 1,
         "label_horizon": int(horizon_td) if horizon_td is not None else int(config.LABEL_HORIZON_TD),
         "groups": groups,
         "feature_cols": feature_cols,
