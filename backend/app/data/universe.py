@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict
 from backend.app.ops import pathmap, config, artifact_registry
 from backend.app.features import schemas, validators
-from backend.app.data import security_master
+from backend.app.data import ingest_daily, security_master
 
 logger = logging.getLogger(__name__)
 
@@ -15,18 +15,60 @@ def build_universe_manifest(asof_date, base_symbols: List[str], rules: Dict) -> 
     Applies filtering rules to base symbols for a given date.
     Returns Schema B5 DataFrame.
     """
-    # 1. Gather Data for filtering (Price, ADV, IPO Date, Sector)
-    # This implies loading daily bars for all symbols? Expensive?
-    # Or assuming base_symbols contains pre-computed metrics?
-    # Ideally: load metrics from a "MarketFrame" or similar cache.
-    # For bootstrap, we might have to inefficiently load OHLCV partitions.
-    # Or rely on "02_build_universe" script to pass in enriched data.
-    
-    # We'll assume the caller (script) prepares a DataFrame with columns:
-    # [symbol, close_adj, adv20, vol20, ipo_date, sector]
-    
-    # FOR NOW: Stub the data gathering inside script, here we implement logic on DF.
-    pass
+    asof_ts = pd.Timestamp(asof_date)
+    security_df = security_master.load_security_master()
+    security_df = security_df.set_index("symbol", drop=False)
+
+    metrics_rows = []
+    for symbol in base_symbols:
+        ohlcv = ingest_daily.load_ohlcv(symbol, end_date=asof_ts)
+        if ohlcv.empty:
+            continue
+
+        ohlcv = ohlcv.sort_values("date")
+        ohlcv = ohlcv[ohlcv["date"] <= asof_ts]
+
+        last_row = ohlcv.tail(1)
+        close_adj = float(last_row["close"].iloc[0]) if not last_row.empty else np.nan
+
+        recent = ohlcv.tail(20)
+        if len(recent) < 5:
+            continue
+
+        dollar_vol = recent["close"] * recent["volume"]
+        adv20 = float(dollar_vol.median())
+
+        returns = recent["close"].pct_change().dropna()
+        vol20 = float(returns.std()) if not returns.empty else np.nan
+
+        sm_row = security_df.loc[symbol] if symbol in security_df.index else None
+        asset_type = sm_row["asset_type"] if sm_row is not None else "COMMON"
+        ipo_date = sm_row["ipo_date"] if sm_row is not None else pd.Timestamp("1900-01-01")
+        sector = sm_row["sector"] if sm_row is not None else None
+
+        if pd.isna(ipo_date):
+            ipo_age_td = 0
+        else:
+            ipo_age_td = len(pd.bdate_range(start=ipo_date, end=asof_ts))
+
+        metrics_rows.append(
+            {
+                "symbol": symbol,
+                "asset_type": asset_type,
+                "close_adj": close_adj,
+                "adv20": adv20,
+                "vol20": vol20,
+                "ipo_date": ipo_date,
+                "ipo_age_td": ipo_age_td,
+                "sector": sector,
+            }
+        )
+
+    metrics_df = pd.DataFrame(metrics_rows)
+    if metrics_df.empty:
+        return metrics_df
+
+    return apply_universe_rules(metrics_df, rules)
 
 def apply_universe_rules(metrics_df: pd.DataFrame, rules: Dict) -> pd.DataFrame:
     """
@@ -133,27 +175,9 @@ class UniverseSelector:
         Returns:
             DataFrame with 'symbol', 'is_eligible', 'reason_code'.
         """
-        # For now, we mock the metric building since build_universe_manifest is stubbed
-        # logic-wise, but we want to return a valid frame.
-        
-        # 1. Merge Metadata
-        # Ensure we have data for the date
-        # (This implies raw_df has been filtered for the date or is a block)
-        
-        # Mock Metrics Construction
-        # In real impl, we'd calc ADV20, Vol20 here.
-        
-        metrics = pd.DataFrame()
-        metrics['symbol'] = raw_df['symbol'].unique()
-        metrics['asset_type'] = 'COMMON' # Mock
-        metrics['close_adj'] = 100.0 # Mock
-        metrics['adv20'] = 30e6 # Mock > min
-        metrics['vol20'] = 0.02
-        metrics['ipo_age_td'] = 1000
-        metrics['sector'] = 'TECH'
-        
-        # Apply Rules
-        result = apply_universe_rules(metrics, self.rules)
-        
-        # Return Map: symbol -> eligibility
-        return result[['symbol', 'eligible', 'reason_code']].rename(columns={'eligible': 'is_eligible'})
+        base_symbols = raw_df["symbol"].unique().tolist()
+        result = build_universe_manifest(asof_date, base_symbols, self.rules)
+        if result.empty:
+            return pd.DataFrame(columns=["symbol", "is_eligible", "reason_code"])
+
+        return result[["symbol", "eligible", "reason_code"]].rename(columns={"eligible": "is_eligible"})
