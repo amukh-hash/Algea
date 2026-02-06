@@ -29,12 +29,18 @@ class TeacherERunner:
         # We'll assume these are standard for Phase 1 (e.g. Lookback=512).
         # Or store in metadata.
         
-        # Hack for Phase 1 Baseline: Hardcoded dims matching test/train script
-        # Input dim depends on preproc output columns.
-        # Preproc config has 5 columns: timestamp, log_ret, volume_norm, ad_line_norm, bpi_norm.
-        # Timestamp is not feature. So 4 features.
-        input_dim = 4 
+        feature_cols = [
+            "log_return_1d",
+            "log_return_5d",
+            "log_return_20d",
+            "volatility_20d",
+            "volume_log_change_5d",
+            "ad_line_trend_5d",
+            "bpi_level",
+        ]
+        input_dim = len(feature_cols)
         lookback = 128 # Default for now, should be in metadata
+        self.feature_cols = feature_cols
         
         self.model = model_class(input_dim=input_dim, lookback=lookback)
         self.model.load_state_dict(state_dict)
@@ -49,10 +55,7 @@ class TeacherERunner:
         # Select feature columns (exclude timestamp)
         # Order matters! Must match training.
         # Preproc transform returns specific columns.
-        cols = ["log_ret", "volume_norm", "ad_line_norm", "bpi_norm"]
-        
-        # Check if columns exist
-        data = df_trans.select(cols).to_numpy().astype(np.float32)
+        data = df_trans.select(self.feature_cols).to_numpy().astype(np.float32)
         
         x = torch.from_numpy(data).unsqueeze(0).to(self.device) # (1, L, F)
         
