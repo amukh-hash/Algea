@@ -26,7 +26,7 @@ def train_model():
     # Expect RankTransformer in backend/app/models/rank_transformer.py
     # Hyperparams: input_dim = feats + priors
     # feats 5 + priors 4 = 9
-    model = RankTransformer(input_dim=9, d_model=64, nhead=2, num_layers=2).to(device)
+    model = RankTransformer(input_dim=9, d_model=64, nhead=2, num_layers=2, pooling="none").to(device)
     
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     
@@ -52,10 +52,15 @@ def train_model():
             # Forward
             out = model(x, mask) 
             scores = out["score"].squeeze(-1) # [B, L]
-            
-            # Loss
-            # Listwise Softmax Loss
-            loss = listwise_softmax_loss(scores, targets)
+
+            batch_losses = []
+            for i in range(scores.size(0)):
+                valid = mask[i]
+                if valid.sum() < 2:
+                    continue
+                batch_losses.append(listwise_softmax_loss(scores[i][valid], targets[i][valid]))
+
+            loss = torch.stack(batch_losses).mean() if batch_losses else torch.tensor(0.0, device=device)
             
             loss.backward()
             optimizer.step()

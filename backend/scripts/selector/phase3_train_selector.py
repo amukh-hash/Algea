@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from datetime import datetime, timedelta
+from typing import List
 import joblib
 
 # Adjust path
@@ -148,7 +149,7 @@ def train():
             optimizer.zero_grad()
 
             out = model(X)
-            scores = out["score"] # [N, 1]
+            scores = out["score"].squeeze(-1) # [N]
 
             # Loss: Listwise + Pairwise
             loss_list = listwise_softmax_loss(scores, y)
@@ -181,7 +182,7 @@ def train():
 
                 X = scaler.transform(X)
                 out = model(X)
-                scores = out["score"]
+                scores = out["score"].squeeze(-1)
 
                 loss = listwise_softmax_loss(scores, y) + 0.5 * pairwise_margin_loss(scores, y)
                 val_loss += loss.item()
