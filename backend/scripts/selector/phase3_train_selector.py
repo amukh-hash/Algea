@@ -140,16 +140,16 @@ def train():
             if not batch["valid"]:
                 continue
 
-            X = batch["X"].to(args.device) # [N, T, F]
+            X = batch["X"][:, -1, :].to(args.device) # [N, F]
             y = batch["y"].to(args.device) # [N]
 
             # Scale
-            X = scaler.transform(X)
+            X = scaler.transform(X).unsqueeze(0)
 
             optimizer.zero_grad()
 
             out = model(X)
-            scores = out["score"].squeeze(-1) # [N]
+            scores = out["score"].squeeze(0).squeeze(-1) # [N]
 
             # Loss: Listwise + Pairwise
             loss_list = listwise_softmax_loss(scores, y)
@@ -177,12 +177,12 @@ def train():
                 if not batch["valid"]:
                     continue
 
-                X = batch["X"].to(args.device)
+                X = batch["X"][:, -1, :].to(args.device)
                 y = batch["y"].to(args.device)
 
-                X = scaler.transform(X)
+                X = scaler.transform(X).unsqueeze(0)
                 out = model(X)
-                scores = out["score"].squeeze(-1)
+                scores = out["score"].squeeze(0).squeeze(-1)
 
                 loss = listwise_softmax_loss(scores, y) + 0.5 * pairwise_margin_loss(scores, y)
                 val_loss += loss.item()

@@ -129,25 +129,16 @@ def build_rank_dataset(
 
     for current in trading_days:
         current = pd.Timestamp(current)
-        day_features = features[features["date"] <= current].copy()
+        day_features = features[features["date"] == current].copy()
         if day_features.empty:
             continue
 
-        grouped = day_features.groupby("symbol")
-        seq_frames = []
-        seq_symbols = []
-        for symbol, g in grouped:
-            g = g.sort_values("date").tail(sequence_len)
-            if len(g) < sequence_len:
-                continue
-            seq_frames.append(g)
-            seq_symbols.append(symbol)
-
-        if len(seq_frames) < min_group_size:
+        day_features = day_features.sort_values("symbol")
+        seq_symbols = day_features["symbol"].astype(str).tolist()
+        if len(seq_symbols) < min_group_size:
             continue
 
-        X = np.stack([f[feature_cols].values.astype(np.float32) for f in seq_frames])
-
+        X = day_features[feature_cols].values.astype(np.float32)
         priors_path = resolve_latest_priors_path(current)
         priors = pd.read_parquet(priors_path)
         priors_map = priors.set_index("symbol")
@@ -158,8 +149,7 @@ def build_rank_dataset(
             else:
                 priors_vec.append(np.zeros(len(prior_cols), dtype=np.float32))
         priors_vec = np.stack(priors_vec)
-        priors_seq = np.repeat(priors_vec[:, None, :], sequence_len, axis=1)
-        X = np.concatenate([X, priors_seq], axis=-1)
+        X = np.concatenate([X, priors_vec], axis=-1)
 
         day_labels = labels[labels["date"] == current]
         label_map = day_labels.set_index("symbol")
@@ -192,7 +182,7 @@ def build_rank_dataset(
         "X": X_list,
         "y": y_list,
         "symbols": symbols_list,
-        "sequence_len": sequence_len,
+        "sequence_len": 1,
         "label_horizon": int(horizon_td) if horizon_td is not None else int(config.LABEL_HORIZON_TD),
         "groups": groups,
         "feature_cols": feature_cols,

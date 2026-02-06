@@ -65,8 +65,8 @@ def train_selector(run_cfg: Dict) -> Dict:
         for idx in train_idx:
             X = X_list[idx]
             y = y_list[idx]
-            X_scaled = scaler.transform(X)
-            scores = model(X_scaled)["score"].squeeze(-1)
+            X_scaled = scaler.transform(X).unsqueeze(0)
+            scores = model(X_scaled)["score"].squeeze(0).squeeze(-1)
 
             y_soft = torch.softmax(y, dim=0)
             s_soft = torch.softmax(scores, dim=0)
@@ -103,8 +103,8 @@ def train_selector(run_cfg: Dict) -> Dict:
     all_targets = []
     with torch.no_grad():
         for X, y in zip(X_list, y_list):
-            X_scaled = scaler.transform(X)
-            scores = model(X_scaled)["score"].squeeze(-1)
+            X_scaled = scaler.transform(X).unsqueeze(0)
+            scores = model(X_scaled)["score"].squeeze(0).squeeze(-1)
             all_scores.append(scores)
             all_targets.append(y)
     all_scores = torch.cat(all_scores).numpy()
