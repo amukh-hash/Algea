@@ -11,3 +11,6 @@ legacy/
 **/.ipynb_checkpoints/
 backend/data/
 backend/reports/
+backend/models/teacher_e/
+backend/models/options_gate/
+backend/data_canonical/

@@ -62,10 +62,22 @@ SCHEMA_FEATUREFRAME = {
         "ret_3d": "float64",
         "ret_5d": "float64",
         "ret_10d": "float64",
+        "ret_20d": "float64",
         "vol_20d": "float64",
+        "ewma_vol_10d": "float64",
+        "ewma_vol_20d": "float64",
+        "parkinson_vol_10d": "float64",
+        "parkinson_vol_20d": "float64",
+        "range_pct_1d": "float64",
         "vol_chg_1d": "float64",
         "dollar_vol_20d": "float64",
+        "adv_dollars_20d": "float64",
         "volume_z_20d": "float64", # Nullable
+        "volume_stability_20d": "float64",
+        "gap_freq_20d": "float64",
+        "rel_ret_1d": "float64",
+        "beta_spy_20d": "float64",
+        "xsec_disp_ret_1d": "float64",
         # Covariates - allow dynamic? Or fixed?
         # Fixed for now as per spec
         "spy_ret_1d": "float64",
@@ -78,11 +90,15 @@ SCHEMA_FEATUREFRAME = {
         "data_version": "string"
     },
     "nullable": [
-        "vol_chg_1d",
-        "volume_z_20d",
-        "vix_level",
-        "rate_proxy",
-        "market_breadth_ad"
+        "ret_1d", "ret_3d", "ret_5d", "ret_10d", "ret_20d",
+        "vol_20d", "vol_chg_1d",
+        "ewma_vol_10d", "ewma_vol_20d",
+        "parkinson_vol_10d", "parkinson_vol_20d",
+        "range_pct_1d",
+        "dollar_vol_20d", "adv_dollars_20d", "volume_z_20d", "volume_stability_20d", "gap_freq_20d",
+        "rel_ret_1d", "beta_spy_20d", "xsec_disp_ret_1d",
+        "spy_ret_1d", "qqq_ret_1d", "iwm_ret_1d",
+        "vix_level", "rate_proxy", "market_breadth_ad"
     ],
 }
 

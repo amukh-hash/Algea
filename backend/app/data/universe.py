@@ -15,30 +15,41 @@ def build_universe_manifest(asof_date, base_symbols: List[str], rules: Dict) -> 
     Applies filtering rules to base symbols for a given date.
     Returns Schema B5 DataFrame.
     """
-    asof_ts = pd.Timestamp(asof_date)
+    # Create both Naive and UTC versions of asof_ts for robust filtering
+    asof_ts_utc = pd.Timestamp(asof_date).tz_localize("UTC")
+    asof_ts_naive = pd.Timestamp(asof_date)
+    
     security_df = security_master.load_security_master()
     security_df = security_df.set_index("symbol", drop=False)
 
     metrics_rows = []
     for symbol in base_symbols:
-        ohlcv = ingest_daily.load_ohlcv(symbol, end_date=asof_ts)
+        # Load FULL history (no end_date args to avoid ingest_daily TZ issues)
+        ohlcv = ingest_daily.load_ohlcv(symbol, end_date=None)
         if ohlcv.empty:
             continue
-
+            
+        # Detect TZ of loaded data
+        is_tz_aware = ohlcv["date"].dt.tz is not None
+        if is_tz_aware:
+            cutoff = asof_ts_utc
+        else:
+            cutoff = asof_ts_naive
+            
         ohlcv = ohlcv.sort_values("date")
-        ohlcv = ohlcv[ohlcv["date"] <= asof_ts]
+        ohlcv = ohlcv[ohlcv["date"] <= cutoff]
 
         last_row = ohlcv.tail(1)
-        close_adj = float(last_row["close"].iloc[0]) if not last_row.empty else np.nan
+        close_adj = float(last_row["close_adj"].iloc[0]) if not last_row.empty else np.nan
 
         recent = ohlcv.tail(20)
         if len(recent) < 5:
             continue
 
-        dollar_vol = recent["close"] * recent["volume"]
+        dollar_vol = recent["close_adj"] * recent["volume"]
         adv20 = float(dollar_vol.median())
 
-        returns = recent["close"].pct_change().dropna()
+        returns = recent["close_adj"].pct_change().dropna()
         vol20 = float(returns.std()) if not returns.empty else np.nan
 
         sm_row = security_df.loc[symbol] if symbol in security_df.index else None
@@ -49,7 +60,7 @@ def build_universe_manifest(asof_date, base_symbols: List[str], rules: Dict) -> 
         if pd.isna(ipo_date):
             ipo_age_td = 0
         else:
-            ipo_age_td = len(pd.bdate_range(start=ipo_date, end=asof_ts))
+            ipo_age_td = len(pd.bdate_range(start=ipo_date, end=asof_ts_naive))
 
         metrics_rows.append(
             {
@@ -87,7 +98,7 @@ def apply_universe_rules(metrics_df: pd.DataFrame, rules: Dict) -> pd.DataFrame:
     df["reason_code"] = "OK"
     
     # 1. Asset Type
-    mask_common = df["asset_type"] == "COMMON"
+    mask_common = df["asset_type"].isin(["COMMON", "stock", "Common Stock"])
     df.loc[~mask_common, "reason_code"] = "NON_COMMON"
     
     # 2. Price
