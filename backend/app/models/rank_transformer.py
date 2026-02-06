@@ -23,6 +23,7 @@ class RankTransformer(nn.Module):
         n_layers: int = 2,
         dropout: float = 0.1,
         max_len: int = 64,
+        pooling: str = "mean",
         **kwargs
     ):
         # Support aliases for Trainer compatibility
@@ -35,6 +36,7 @@ class RankTransformer(nn.Module):
             
         super().__init__()
         self.d_model = d_model
+        self.pooling = pooling
 
         # Input Projection
         self.input_proj = nn.Linear(d_input, d_model)
@@ -69,6 +71,26 @@ class RankTransformer(nn.Module):
             nn.Sigmoid() # Probability
         )
 
+    def _pool(self, h: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+        if self.pooling == "none":
+            return h
+
+        if self.pooling == "last":
+            if mask is None:
+                return h[:, -1, :]
+            lengths = mask.sum(dim=1).clamp(min=1).to(h.device)
+            idx = (lengths - 1).view(-1, 1, 1).expand(-1, 1, h.size(-1))
+            return h.gather(1, idx).squeeze(1)
+
+        if self.pooling == "mean":
+            if mask is None:
+                return h.mean(dim=1)
+            weights = mask.to(h.dtype).unsqueeze(-1)
+            denom = weights.sum(dim=1).clamp(min=1.0)
+            return (h * weights).sum(dim=1) / denom
+
+        raise ValueError(f"Unsupported pooling mode: {self.pooling}")
+
     def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """
         x: [B, T, F]
@@ -97,15 +119,10 @@ class RankTransformer(nn.Module):
 
         h = self.encoder(h, src_key_padding_mask=key_padding_mask) # [B, T, d_model]
 
-        h = self.encoder(h, src_key_padding_mask=key_padding_mask) # [B, T, d_model]
+        pooled = self._pool(h, mask)
 
-        # No Pooling for Listwise Ranking (Option A / Modified-B)
-        # We want a score for every ticker in the sequence.
-        # h is [B, T, d_model]
-        
-        # Heads apply to the last dimension
-        score = self.score_head(h) # [B, T, 1]
-        p_up = self.direction_head(h) # [B, T, 1]
+        score = self.score_head(pooled)
+        p_up = self.direction_head(pooled)
 
         return {
             "score": score,
