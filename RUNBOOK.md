@@ -99,7 +99,7 @@ export PYTHONPATH="$PWD/backend"
 **Command**
 
 ```bash
-python backend/scripts/02_build_universe_manifests.py --start 2016-01-01 --end 2025-12-31 --freq monthly
+python backend/scripts/universe/universe_build_manifests.py --start 2016-01-01 --end 2025-12-31 --freq monthly
 ```
 
 ---
@@ -113,13 +113,13 @@ python backend/scripts/02_build_universe_manifests.py --start 2016-01-01 --end 2
 **Step A — Fetch raw daily bars (legacy ingest if needed)**
 
 ```bash
-python backend/scripts/ingest/fetch_data.py --start 2016-01-01 --end 2025-12-31
+python backend/scripts/ingest/ingest_ohlcv_raw.py --start 2016-01-01 --end 2025-12-31
 ```
 
 **Step B — Backfill canonical daily partitions**
 
 ```bash
-python backend/scripts/01_backfill_canonical_daily.py --start 2016-01-01 --end 2025-12-31
+python backend/scripts/canonicalize/canonicalize_ohlcv_daily.py --start 2016-01-01 --end 2025-12-31
 ```
 
 **Canonical output**
@@ -186,7 +186,7 @@ Per ticker-day inputs (minimum recommended):
 **Command**
 
 ```bash
-python backend/scripts/03_build_featureframe.py --start 2016-01-01 --end 2025-12-31
+python backend/scripts/features/features_build_featureframe.py --start 2016-01-01 --end 2025-12-31
 ```
 
 > **Causality rule:** anything used at date t uses only data ≤ t.
@@ -217,22 +217,22 @@ Use this sequence to make the Phase 1 gold pipeline reproducible and debuggable 
 
 1. **Preflight the gold daily parquet + codec inputs**  
    Run the Phase 0 preflight to validate schemas, timestamps, and input mode expectations (token vs tensor).  
-   `python backend/scripts/teacher/phase0_preflight.py`
+   `python backend/scripts/train/teacher/preflight_check.py`
 2. **Confirm Chronos-2 auth/model access**  
    Verify that `amazon/chronos-2` resolves in your environment.  
-   `python backend/scripts/teacher/verify_auth.py`
+   `python backend/scripts/train/teacher/verify_auth.py`
 3. **List available Chronos checkpoints (optional sanity)**  
-   `python backend/scripts/teacher/list_models.py`
+   `python backend/scripts/train/teacher/list_models.py`
 4. **Inspect Chronos-2 I/O contract**  
    Saves a local report with forward signature + config metadata for the active model.  
-   `python backend/scripts/teacher/inspect_chronos2_io.py`
+   `python backend/scripts/train/teacher/inspect_chronos2_io.py`
 5. **Fit the codec for token mode (if using token inputs)**  
    Produces the quantile codec used by Phase 1 training.  
-   `python backend/scripts/teacher/fit_codec_gold.py --k_files 10`
+   `python backend/scripts/train/teacher/fit_codec_gold.py --k_files 10`
 6. **Debug model load + LoRA/QLoRA plumbing (only if needed)**  
-   `python backend/scripts/teacher/debug_model_load.py`
+   `python backend/scripts/train/teacher/debug_model_load.py`
 7. **Run Phase 1 gold training**  
-   `python backend/scripts/teacher/phase1_train_teacher_gold.py`
+   `python backend/scripts/train/teacher/train_teacher_gold.py`
 
 If you skip silver training, this gold checkpoint + priors output become the direct teacher features for the selector dataset builder.
 
@@ -254,7 +254,7 @@ If you skip silver training, this gold checkpoint + priors output become the dir
 **Command**
 
 ```bash
-python backend/scripts/04_generate_priors_historical.py --start 2016-01-01 --end 2025-12-31
+python backend/scripts/priors/priors_generate_historical.py --start 2016-01-01 --end 2025-12-31
 ```
 
 **Must-haves**
@@ -327,7 +327,7 @@ Per ticker-day:
 **Command**
 
 ```bash
-python backend/scripts/05_build_selector_dataset.py --start 2016-01-01 --end 2025-12-31 --horizon 10 --seq_len 60
+python backend/scripts/dataset/dataset_build_selector.py --start 2016-01-01 --end 2025-12-31 --horizon 10 --seq_len 60
 ```
 
 **Hard rules**
@@ -380,7 +380,7 @@ Multi-task:
 **Command**
 
 ```bash
-python backend/scripts/06_train_selector.py --train_end 2025-12-31 --horizon 10 --seq_len 60
+python backend/scripts/train/selector_train_cli.py --train_end 2025-12-31 --horizon 10 --seq_len 60
 ```
 
 **Outputs**
@@ -435,7 +435,7 @@ python backend/scripts/06_train_selector.py --train_end 2025-12-31 --horizon 10 
 **Command**
 
 ```bash
-python backend/scripts/07_nightly_run.py --asof 2025-01-02
+python backend/scripts/run/run_nightly_cycle.py --asof 2025-01-02
 ```
 
 **Output**
@@ -468,7 +468,7 @@ Run after each major build step (and automatically inside scripts):
 **Command**
 
 ```bash
-python backend/scripts/validate_phase1_artifacts.py
+python backend/scripts/run/validate_artifacts.py
 ```
 
 ---

@@ -398,7 +398,7 @@ Model serialization with metadata.
 
 ---
 
-### student_runner.py
+### student_inference.py
 Real-time student model inference wrapper.
 
 **Class: `StudentRunner`**
@@ -468,7 +468,7 @@ Mock student for testing without GPU.
 
 ---
 
-### teacher_e_runner.py / teacher_o_runner.py
+### teacher_equity_inference.py / teacher_o_runner.py
 Equity and Options teacher runners (similar interface to StudentRunner).
 
 ---
@@ -1063,7 +1063,7 @@ class SpecDecodeConfig:
 ### Training Scripts
 | Script | Purpose |
 |--------|---------|
-| `train_student_baseline.py` | Train baseline MLP student |
+| `train/student_baseline_train.py` | Train baseline MLP student |
 | `train_selector.py` | Train RankTransformer selector |
 | `train_chronos2_teacher.py` | Fine-tune Chronos teacher with LoRA |
 | `fit_scaler.py` | Fit SelectorFeatureScaler |
@@ -1072,15 +1072,15 @@ class SpecDecodeConfig:
 ### Execution Scripts
 | Script | Purpose |
 |--------|---------|
-| `run_alga3_swing_equities.py` | Run equity swing trading simulation |
-| `run_alga3_swing_hybrid_monitor.py` | Run with options overlay |
+| `run/run_swing_equities.py` | Run equity swing trading simulation |
+| `run/run_swing_hybrid_monitor.py` | Run with options overlay |
 | `run_options_only.py` | Run options-only mode |
 
 ### Data Scripts
 | Script | Purpose |
 |--------|---------|
 | `download_data.py` | Download market data |
-| `build_marketframe.py` | Build MarketFrame parquets |
+| `canonicalize/canonicalize_marketframe.py` | Build MarketFrame parquets |
 | `compute_breadth.py` | Compute breadth indicators |
 | `generate_teacher_priors.py` | Generate teacher priors |
 

@@ -107,7 +107,7 @@ class TestDataPipeline(unittest.TestCase):
     def test_priors_no_future_data(self):
         """
         Inferred check: verify we only use data <= as_of_date in priors generation.
-        This logic is in 'nightly_build_priors.py', harder to unit test without mocking `marketframe.build`.
+        This logic is in 'priors_build_nightly.py', harder to unit test without mocking `marketframe.build`.
         We rely on the script logic: context = mf.filter(timestamp <= as_of_date).
         """
         pass

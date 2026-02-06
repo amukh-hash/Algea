@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from backend.app.models.teacher_e_runner import TeacherERunner
+from backend.app.models.teacher_equity_inference import TeacherERunner
 from backend.app.models.signal_types import ModelMetadata
 
-@patch("backend.app.models.teacher_e_runner.Preprocessor")
+@patch("backend.app.models.teacher_equity_inference.Preprocessor")
 def test_preproc_id_mismatch(mock_preproc_cls):
     # Setup Mocks
     mock_preproc = MagicMock()
@@ -16,7 +16,7 @@ def test_preproc_id_mismatch(mock_preproc_cls):
     )
     
     # We patch load_model ONLY, so verify_preproc_compatibility is real
-    with patch("backend.app.models.teacher_e_runner.model_io.load_model") as mock_load:
+    with patch("backend.app.models.teacher_equity_inference.model_io.load_model") as mock_load:
         mock_load.return_value = ({}, mock_meta)
         
         # We need to pass a mock model class to avoid real model instantiation/loading

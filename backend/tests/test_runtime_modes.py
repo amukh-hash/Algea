@@ -8,7 +8,7 @@ from backend.app.models.feature_contracts import compute_contract_hash, validate
 
 # Mock calendar to avoid ImportError if dependencies missing
 sys.modules["backend.app.data.calendar"] = MagicMock()
-sys.modules["backend.app.data.universe"] = MagicMock() # Often imported by runners
+sys.modules["backend.app.data.universe_selector"] = MagicMock() # Often imported by runners
 sys.modules["exchange_calendars"] = MagicMock()
 
 from backend.app.engine.equity_pod import EquityPod

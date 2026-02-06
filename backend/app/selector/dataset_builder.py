@@ -7,7 +7,8 @@ from typing import Dict, List
 import torch
 from backend.app.ops import pathmap, artifact_registry, config
 from backend.app.features import schemas, validators
-from backend.app.data import calendar, ingest_daily
+from backend.app.data import calendar
+from backend.app.data.ingest import ohlcv_daily
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFra
     symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
 
     for symbol in symbols:
-        df = ingest_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
+        df = ohlcv_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
         if df.empty:
             continue
         df = df.sort_values("date")

@@ -3,11 +3,11 @@ import torch
 import polars as pl
 import numpy as np
 from unittest.mock import MagicMock, patch
-from backend.app.models.teacher_e_runner import TeacherERunner
+from backend.app.models.teacher_equity_inference import TeacherERunner
 from backend.app.models.signal_types import ModelSignal, ModelMetadata
 
-@patch("backend.app.models.teacher_e_runner.Preprocessor")
-@patch("backend.app.models.teacher_e_runner.model_io")
+@patch("backend.app.models.teacher_equity_inference.Preprocessor")
+@patch("backend.app.models.teacher_equity_inference.model_io")
 def test_teacher_runner_contract(mock_io, mock_preproc_cls):
     # Setup Mocks
     mock_preproc = MagicMock()

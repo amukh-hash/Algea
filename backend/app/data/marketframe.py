@@ -4,7 +4,8 @@ import pandas as pd
 import logging
 from typing import Optional, List
 from backend.app.ops import pathmap, config
-from backend.app.data import ingest_daily, calendar, security_master
+from backend.app.data import calendar, security_master
+from backend.app.data.ingest import ohlcv_daily
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def build_marketframe(start_date, end_date, symbols: List[str] = None) -> pd.Dat
 
     frames: List[pd.DataFrame] = []
     for symbol in symbols:
-        ohlcv = ingest_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
+        ohlcv = ohlcv_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
         if ohlcv.empty:
             continue
         ohlcv = ohlcv.copy()
