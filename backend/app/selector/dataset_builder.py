@@ -39,21 +39,21 @@ def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFra
     else:
         raise FileNotFoundError(f"Missing OHLCV roots: {ohlcv_root} and {daily_root}")
 
+    required_cols = ["date", "ret_1d"]
     for symbol in symbols:
-        df = ingest_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
+        df = ingest_daily.load_ohlcv(
+            symbol,
+            start_date=start_date,
+            end_date=end_date,
+            required_cols=required_cols,
+            target_col="ret_1d",
+        )
         if df.empty:
             continue
         df = df.sort_values("date")
         df["date"] = pd.to_datetime(df["date"])
         df = df.set_index("date").reindex(pd.DatetimeIndex(trading_days))
-        if "close_adj" in df.columns and not df["close_adj"].isnull().all():
-            ret_series = df["close_adj"].pct_change()
-            use_close = True
-        elif "ret_1d" in df.columns:
-            ret_series = df["ret_1d"]
-            use_close = False
-        else:
-            continue
+        ret_series = df["ret_1d"]
         for current in trading_days:
             try:
                 fwd_date = calendar.shift_trading_days(pd.Timestamp(current), horizon_td)
@@ -63,24 +63,13 @@ def build_labels_fwd(start_date, end_date, horizon_td: int = None) -> pd.DataFra
             if current not in df.index or fwd_date not in df.index:
                 continue
 
-            if use_close:
-                close_now = df.loc[current, "close_adj"]
-                close_fwd = df.loc[fwd_date, "close_adj"]
-                if pd.isna(close_now) or pd.isna(close_fwd):
-                    continue
-                fwd_ret = float(close_fwd / close_now - 1.0)
-                window_rets = ret_series.loc[current:fwd_date].dropna()
-                if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
-                    window_rets = window_rets.iloc[1:]
-                fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
-            else:
-                window_rets = ret_series.loc[current:fwd_date].dropna()
-                if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
-                    window_rets = window_rets.iloc[1:]
-                if window_rets.empty:
-                    continue
-                fwd_ret = float((1.0 + window_rets).prod() - 1.0)
-                fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
+            window_rets = ret_series.loc[current:fwd_date].dropna()
+            if not window_rets.empty and window_rets.index[0] == pd.Timestamp(current):
+                window_rets = window_rets.iloc[1:]
+            if window_rets.empty:
+                continue
+            fwd_ret = float((1.0 + window_rets).prod() - 1.0)
+            fwd_vol = float(window_rets.std(ddof=0)) if not window_rets.empty else 0.0
             labels.append({
                 "date": pd.to_datetime(current),
                 "symbol": symbol,
@@ -188,7 +177,14 @@ def build_rank_dataset(
             continue
 
         X_list.append(torch.tensor(np.stack(keep_X), dtype=torch.float32))
-        y_list.append(torch.tensor(np.array(y), dtype=torch.float32))
+        y_tensor = torch.tensor(np.array(y), dtype=torch.float32)
+        if y_tensor.numel() == 0:
+            raise ValueError(f"Empty target vector on {date_str}")
+        if torch.std(y_tensor) <= 1e-12 or torch.all(y_tensor == y_tensor[0]):
+            raise ValueError(f"Degenerate targets on {date_str}")
+        if torch.mean(torch.abs(y_tensor)) <= 1e-12:
+            raise ValueError(f"Near-zero targets on {date_str}")
+        y_list.append(y_tensor)
         date_str = current.strftime("%Y-%m-%d")
         dates_list.append(date_str)
         symbols_list.append(keep_symbols)

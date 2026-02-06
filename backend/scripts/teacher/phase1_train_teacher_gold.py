@@ -96,9 +96,8 @@ def load_config(args) -> Phase1Config:
     gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "*.parquet")
     required_cols = tuple(c.strip() for c in os.getenv(
         "GOLD_REQUIRED_COLS",
-        "date,open_adj,high_adj,low_adj,close_adj,volume,"
-        "ret_1d,ret_5d,ret_20d,ewma_vol_20d,parkinson_vol_20d,range_pct_1d,volume_z_20d,"
-        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad,rel_ret_1d,beta_spy_20d"
+        "date,ret_1d,ret_3d,ret_5d,ret_10d,volume,"
+        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
     ).split(","))
 
     lora_config = {
@@ -107,11 +106,10 @@ def load_config(args) -> Phase1Config:
         "dropout": float(os.getenv("LORA_DROPOUT", "0.05"))
     }
 
-    target_col = os.getenv("CHRONOS2_TARGET_COL", "close_adj")
+    target_col = os.getenv("CHRONOS2_TARGET_COL", "ret_1d")
     covariate_cols = tuple(c.strip() for c in os.getenv(
         "CHRONOS2_COVARIATE_COLS",
-        "ret_1d,ret_5d,ret_20d,ewma_vol_20d,parkinson_vol_20d,range_pct_1d,volume_z_20d,"
-        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad,rel_ret_1d,beta_spy_20d"
+        "volume,spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
     ).split(",") if c.strip())
     future_covariate_cols = tuple(c.strip() for c in os.getenv(
         "CHRONOS2_FUTURE_COVARIATE_COLS",
@@ -311,9 +309,24 @@ class GoldFuturesWindowDataset(Dataset):
         # Subset deals with it. 'idx' here is into self.index
         
         fi, s, _ = self.index[idx]
+        fp = self.files[fi]
         
-        # Direct access to prefetched data (already in RAM)
-        arr = self.data[fi]
+        # Cache access
+        arr = self.cache.get(fi)
+        if arr is None:
+            # Flexible read: Only read columns that exist
+            schema = pl.scan_parquet(fp).schema
+            missing = [c for c in self.required_cols if c not in schema]
+            if missing:
+                raise ValueError(f"Missing required columns {missing} in file {fp}")
+            actual_cols = list(self.required_cols)
+            
+            # Limit memory spike by using scan
+            df = pl.scan_parquet(fp).select(actual_cols).collect()
+            arr = df.to_numpy().astype(np.float32)
+            del df
+            gc.collect() 
+            self.cache.put(fi, arr)
             
         # Slicing
         ts_idx = self.col_map.get("timestamp")
@@ -407,12 +420,14 @@ class CollateFn:
         context_mask = _build_mask(context_target)
         future_mask = _build_mask(future_target)
 
-        context_target = torch.nan_to_num(context_target, nan=0.0, posinf=0.0, neginf=0.0)
-        future_target = torch.nan_to_num(future_target, nan=0.0, posinf=0.0, neginf=0.0)
-        if past_covariates is not None:
-            past_covariates = torch.nan_to_num(past_covariates, nan=0.0, posinf=0.0, neginf=0.0)
-        if future_covariates is not None:
-            future_covariates = torch.nan_to_num(future_covariates, nan=0.0, posinf=0.0, neginf=0.0)
+        if not torch.isfinite(context_target).all():
+            raise ValueError("Non-finite values in context target.")
+        if not torch.isfinite(future_target).all():
+            raise ValueError("Non-finite values in future target.")
+        if context_target.std() <= 1e-12 or torch.all(context_target == context_target.flatten()[0]):
+            raise ValueError("Degenerate context target detected.")
+        if future_target.std() <= 1e-12 or torch.all(future_target == future_target.flatten()[0]):
+            raise ValueError("Degenerate future target detected.")
         
         return {
             "context": context_target,

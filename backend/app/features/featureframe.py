@@ -111,24 +111,15 @@ def build_featureframe(
     if "data_version" in breadth_df.columns:
         source_versions["breadth"].extend(breadth_df["data_version"].dropna().astype(str).unique().tolist())
 
-    start_ts_utc = pd.Timestamp(start_date).tz_localize("UTC")
-    start_ts_naive = pd.Timestamp(start_date)
-    end_ts_utc = pd.Timestamp(end_date).tz_localize("UTC")
-    end_ts_naive = pd.Timestamp(end_date)
-
+    required_ohlcv_cols = ["date", "ret_1d", "ret_3d", "ret_5d", "ret_10d", "volume"]
     for symbol in symbols:
-        # Load implicit full range first (to avoid filter error)
-        
-        ohlcv = ingest_daily.load_ohlcv(symbol, start_date=None, end_date=None)
-        if ohlcv.empty:
-            continue
-            
-        # Robust Filter
-        is_tz_aware = ohlcv["date"].dt.tz is not None
-        s_ts = start_ts_utc if is_tz_aware else start_ts_naive
-        e_ts = end_ts_utc if is_tz_aware else end_ts_naive
-        
-        ohlcv = ohlcv[(ohlcv["date"] >= s_ts) & (ohlcv["date"] <= e_ts)]
+        ohlcv = ingest_daily.load_ohlcv(
+            symbol,
+            start_date=start_date,
+            end_date=end_date,
+            required_cols=required_ohlcv_cols,
+            target_col="ret_1d",
+        )
         if ohlcv.empty:
             continue
 
@@ -158,21 +149,8 @@ def build_featureframe(
                 ohlcv["data_version"].dropna().astype(str).unique().tolist()
             )
 
-        if "close_adj" not in ohlcv.columns or ohlcv["close_adj"].isnull().all():
-            if "ret_1d" not in ohlcv.columns:
-                continue
-        else:
-            if "ret_1d" not in ohlcv.columns:
-                ohlcv["ret_1d"] = ohlcv["close_adj"].pct_change()
-            if "ret_3d" not in ohlcv.columns:
-                ohlcv["ret_3d"] = ohlcv["close_adj"].pct_change(3)
-            if "ret_5d" not in ohlcv.columns:
-                ohlcv["ret_5d"] = ohlcv["close_adj"].pct_change(5)
-            if "ret_10d" not in ohlcv.columns:
-                ohlcv["ret_10d"] = ohlcv["close_adj"].pct_change(10)
-
         if "ret_3d" not in ohlcv.columns or "ret_5d" not in ohlcv.columns or "ret_10d" not in ohlcv.columns:
-            continue
+            raise ValueError(f"Missing return columns for {symbol}")
         ohlcv["vol_20d"] = ohlcv["ret_1d"].rolling(20).std()
         ohlcv["vol_chg_1d"] = ohlcv["vol_20d"].pct_change()
         if "dollar_volume" not in ohlcv.columns:

@@ -36,7 +36,7 @@ def main():
     gold_glob = os.getenv("GOLD_EXAMPLE_GLOB", "*.parquet")
     required_cols = os.getenv(
         "GOLD_REQUIRED_COLS",
-        "date,open_adj,high_adj,low_adj,close_adj,volume,"
+        "date,ret_1d,ret_3d,ret_5d,ret_10d,volume,"
         "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
     ).split(",")
     required_cols = [c.strip() for c in required_cols]

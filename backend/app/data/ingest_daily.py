@@ -54,7 +54,13 @@ def write_ohlcv_partition(symbol: str, df: pd.DataFrame) -> None:
     
     df.to_parquet(out_path)
     
-def load_ohlcv(symbol: str, start_date=None, end_date=None) -> pd.DataFrame:
+def load_ohlcv(
+    symbol: str,
+    start_date=None,
+    end_date=None,
+    required_cols=None,
+    target_col=None,
+) -> pd.DataFrame:
     paths = pathmap.get_paths()
     path = os.path.join(paths.data_canonical, "ohlcv_adj", f"ticker={symbol}", "data.parquet")
     df = pd.DataFrame()
@@ -79,6 +85,20 @@ def load_ohlcv(symbol: str, start_date=None, end_date=None) -> pd.DataFrame:
             df["close_adj"] = df["adj_close"]
         elif "close" in df.columns:
             df["close_adj"] = df["close"]
+
+    if required_cols:
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise ValueError(f"Missing required columns {missing} in file {path}")
+
+    if target_col:
+        if target_col not in df.columns:
+            raise ValueError(f"{target_col} missing in file {path}")
+        target = pd.to_numeric(df[target_col], errors="coerce")
+        if target.isna().all():
+            raise ValueError(f"{target_col} contains only nulls in file {path}")
+        if target.nunique(dropna=True) <= 1:
+            raise ValueError(f"{target_col} is constant in file {path}")
     # Filter dates
     if start_date:
         df = df[df["date"] >= pd.Timestamp(start_date)]
