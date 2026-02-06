@@ -500,7 +500,18 @@ def load_chronos_adapter(
         print(f"[Load] Loading adapter from {adapter_path}...")
         model = PeftModel.from_pretrained(model, str(adapter_path), is_trainable=not eval_mode)
     elif lora_config:
-        targets = find_lora_targets(model)
+        # Determine target modules: explicit list or auto-discovery
+        target_mod_config = lora_config.get("target_modules", None)
+        if target_mod_config == "all":
+             targets = find_lora_targets(model, include_mlp=True)
+        elif isinstance(target_mod_config, list):
+             targets = target_mod_config
+        elif isinstance(target_mod_config, str) and "," in target_mod_config:
+             targets = [t.strip() for t in target_mod_config.split(",")]
+        else:
+             # Default: Auto-discovery (Attention only usually, unless include_mlp passed in future)
+             targets = find_lora_targets(model, include_mlp=False)
+
         print(f"[Load] LoRA Targets: {targets}")
         
         # Chronos 2: Use inject_adapter_in_model to preserve native forward signature
@@ -574,14 +585,27 @@ def load_chronos_adapter(
     return wrapper, info
 
 
-def find_lora_targets(model: nn.Module) -> List[str]:
+def find_lora_targets(model: nn.Module, include_mlp: bool = False) -> List[str]:
     modules = {name for name, _ in model.named_modules() if isinstance(_, nn.Linear)}
+    
+    # Attention patterns (always included)
     patterns = [
         r".*attention.*(q|k|v|o)_proj",
         r".*SelfAttention\.(q|k|v|o)",
         r".*(q|v)_proj",
         r".*(q|v)$"
     ]
+    
+    if include_mlp:
+        # T5/Chronos MLP layers: wi, wo, wi_0, wi_1
+        # Llama/Mistral MLP: gate_proj, up_proj, down_proj
+        patterns.extend([
+            r".*wi.*",
+            r".*wo.*",
+            r".*mlp.*(dense|fc).*",
+            r".*(gate|up|down)_proj"
+        ])
+
     targets = set()
     for p in patterns:
         regex = re.compile(p, re.IGNORECASE)
@@ -590,12 +614,16 @@ def find_lora_targets(model: nn.Module) -> List[str]:
             targets.update(matches)
             
     if not targets:
-        return ["q", "v"]
+        # Fallback defaults
+        start = ["q", "v"]
+        if include_mlp:
+             start.extend(["wi_0", "wi_1", "wo"]) 
+        return start
         
-    final = [t for t in targets if any(x in t.lower() for x in ('q', 'v'))]
-    if not final:
-         final = list(targets)
-    return list(final)
+    # Clean up mixed hits if needed, but usually we just return what we found matches for
+    # Filter to ensure we don't grab random stuff?
+    # For now, trust the regex.
+    return list(targets)
 
 def infer_priors(
     model: nn.Module,

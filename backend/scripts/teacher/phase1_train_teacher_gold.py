@@ -103,7 +103,8 @@ def load_config(args) -> Phase1Config:
     lora_config = {
         "rank": int(os.getenv("LORA_RANK", "16")),
         "alpha": int(os.getenv("LORA_ALPHA", "32")),
-        "dropout": float(os.getenv("LORA_DROPOUT", "0.05"))
+        "dropout": float(os.getenv("LORA_DROPOUT", "0.05")),
+        "target_modules": os.getenv("LORA_TARGET_MODULES", None) # "all", "q,v", or None (auto)
     }
 
     target_col = os.getenv("CHRONOS2_TARGET_COL", "ret_1d")
@@ -126,7 +127,7 @@ def load_config(args) -> Phase1Config:
         gold_glob=gold_glob,
         required_cols=required_cols,
         context=int(os.getenv("GOLD_CONTEXT", "180")),
-        pred=int(os.getenv("GOLD_PRED", "20")),
+        pred=int(os.getenv("GOLD_PRED", "10")),
         stride_rows=int(os.getenv("GOLD_STRIDE", "120")),
         max_files=int(os.getenv("GOLD_MAX_FILES", "50")),
         max_windows=int(os.getenv("GOLD_MAX_WINDOWS_PER_FILE", "500")),
@@ -147,7 +148,9 @@ def load_config(args) -> Phase1Config:
         target_col=target_col,
         covariate_cols=covariate_cols,
         future_covariate_cols=future_covariate_cols,
-        max_files_limit=int(os.getenv("GOLD_MAX_FILES", "1000"))
+        max_files_limit=int(os.getenv("GOLD_MAX_FILES", "1000")),
+        unfreeze_layernorms=os.getenv("UNFREEZE_LAYERNORMS", "0") == "1",
+        unfreeze_last_blocks=int(os.getenv("UNFREEZE_LAST_BLOCKS", "0"))
     )
 
 @dataclass
@@ -181,6 +184,8 @@ class Phase1Config:
     covariate_cols: tuple
     future_covariate_cols: tuple
     max_files_limit: int = 1000
+    unfreeze_layernorms: bool = False
+    unfreeze_last_blocks: int = 0
 
 class GoldFuturesWindowDataset(Dataset):
     def __init__(self, files: List[Path], required_cols: Tuple[str, ...],
@@ -309,25 +314,10 @@ class GoldFuturesWindowDataset(Dataset):
         # Subset deals with it. 'idx' here is into self.index
         
         fi, s, _ = self.index[idx]
-        fp = self.files[fi]
         
-        # Cache access
-        arr = self.cache.get(fi)
-        if arr is None:
-            # Flexible read: Only read columns that exist
-            schema = pl.scan_parquet(fp).schema
-            missing = [c for c in self.required_cols if c not in schema]
-            if missing:
-                raise ValueError(f"Missing required columns {missing} in file {fp}")
-            actual_cols = list(self.required_cols)
-            
-            # Limit memory spike by using scan
-            df = pl.scan_parquet(fp).select(actual_cols).collect()
-            arr = df.to_numpy().astype(np.float32)
-            del df
-            gc.collect() 
-            self.cache.put(fi, arr)
-            
+        # Direct RAM access (Prefetched)
+        arr = self.data[fi]
+        
         # Slicing
         ts_idx = self.col_map.get("timestamp")
         if ts_idx is None:
@@ -371,16 +361,28 @@ class GoldFuturesWindowDataset(Dataset):
         # Phase 2: Log-Return Transform
         if target_feat_idx >= 0:
             target_series = feats[:, target_feat_idx]
-            ref_idx = self.context - 1
-            if ref_idx < len(target_series):
-                ref_val = target_series[ref_idx]
-                if ref_val > 1e-6:
-                     # r_t = log(p_t / p_ref)
-                     feats[:, target_feat_idx] = np.log(target_series / ref_val)
-                else:
-                     feats[:, target_feat_idx] = 0.0
+            
+            if not self.target_col.startswith("ret"):
+                 # Log-Return Transform for Prices
+                 ref_idx = self.context - 1
+                 if ref_idx < len(target_series):
+                     ref_val = target_series[ref_idx]
+                     if ref_val > 1e-6:
+                          feats[:, target_feat_idx] = np.log(target_series / ref_val)
+                     else:
+                          feats[:, target_feat_idx] = 0.0
+            else:
+                 # Standardize Returns (Percent -> Decimal)
+                 # Data is in percent (e.g. 1.0 = 1%), we want decimal (0.01)
+                 feats[:, target_feat_idx] *= 0.01
+                 
+                 # Outlier Clipping (+/- 50%)
+                 np.clip(feats[:, target_feat_idx], -0.5, 0.5, out=feats[:, target_feat_idx])
         else:
              pass
+
+        # Sanitize NaNs/Infs final check
+        feats = np.nan_to_num(feats, nan=0.0, posinf=0.0, neginf=0.0)
 
         return {
             "x_float": feats[:self.context],
@@ -496,11 +498,22 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     # Validation uses uniform weights (1.0) for stability
     quantile_weights = torch.ones(len(quantiles), device=device)
     
+    # Trackers for 10-Day Derived Metrics
+    total_10d_pinball = 0.0
+    total_10d_direction_acc = 0.0
+    total_10d_q10_hit = 0.0
+    total_samples = 0
+    
+    # Standard metrics
+    total_pinball_loss = 0.0
+    total_internal_loss = 0.0
+    steps = 0
+    
     with torch.no_grad():
         for batch in dl:
             context = batch["context"].to(device)
             context_mask = batch["context_mask"].to(device)
-            future_target = batch["future_target"].to(device)
+            future_target = batch["future_target"].to(device) # [B, Pred] (Log Returns)
             future_target_mask = batch["future_target_mask"].to(device)
             past_covariates = batch["past_covariates"]
             future_covariates = batch["future_covariates"]
@@ -508,46 +521,186 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
             if future_covariates is not None: future_covariates = future_covariates.to(device)
             
             pred_len = future_target.shape[1]
+            batch_size = context.shape[0]
             
-            # 1. Generate quantile predictions using Chronos2Pipeline
+            # --- 1. Standard Quantile Prediction (Daily) ---
             if pipeline is not None:
-                # Pipeline.predict expects [B, 1, context_len] and returns list of [1, num_quantiles, pred_len]
-                batch_size = context.shape[0]
-                context_np = context.cpu().unsqueeze(1).numpy()  # [B, 1, context_len]
+                context_np = context.cpu().unsqueeze(1).numpy()
+                predictions = pipeline.predict(inputs=context_np, prediction_length=pred_len) 
+                qp = torch.stack([pred.squeeze(0) for pred in predictions], dim=0).to(device) # [B, Q, Pred]
                 
-                # Predict returns list of [1, Q, H] tensors
-                predictions = pipeline.predict(
-                    inputs=context_np,
-                    prediction_length=pred_len
-                )  # List of B elements, each [1, Q, H]
-                
-                # Stack predictions into [B, Q, H]
-                qp = torch.stack([pred.squeeze(0) for pred in predictions], dim=0).to(device)
-                
-                # DEBUG: Check values
-                if steps == 0:
-                     print(f"[Val Debug] Target Mean: {future_target.mean().item():.6f} | Pred Mean: {qp.mean().item():.6f}")
-                     print(f"[Val Debug] Target Range: [{future_target.min().item():.6f}, {future_target.max().item():.6f}]")
-                     print(f"[Val Debug] Pred Range: [{qp.min().item():.6f}, {qp.max().item():.6f}]")
-
-                # Compute pinball loss
+                # Daily Pinball
                 p_loss = compute_pinball_loss(
                     future_target.squeeze(-1) if future_target.ndim == 3 else future_target,
-                    qp,
-                    quantiles,
-                    quantile_weights=quantile_weights
+                    qp, quantiles, quantile_weights=quantile_weights
                 )
                 total_pinball_loss += p_loss.item()
                 
-                # 2. Monitor Spreads (Day 10 / Index 9)
+                # --- 2. 10-Day Derived Metrics (Sample-Based) ---
+                # --- 2. 10-Day Derived Metrics (Interpolated C3) ---
+                # Strategy: Mix Independent (Student-t) and Comonotonic (Direct Sum) distributions.
+                # Lambda=0 -> Independent (Optimistic Tails). Lambda=1 -> Comonotonic (Pessimistic Tails).
+                # We grid search Lambda to find the true dependence structure.
+                
+                if pred_len >= 10:
+                    # A. Actual 10-Day Component (Compounded Simple Returns)
+                    safe_targets = torch.clamp(future_target[:, :10], min=-0.99) 
+                    actual_10d = (1 + safe_targets).prod(dim=1) - 1 # [B]
+                    
+                    try:
+                        # Lazy import scipy
+                        from scipy.stats import t as t_dist
+                        
+                        # --- Shared Pre-calculation (Log-Space) ---
+                        qp_safe = torch.clamp(qp[:, :, :10], min=-0.99)
+                        lp = torch.log1p(qp_safe) # [B, Q, 10]
+                        
+                        # Indices
+                        idx_10 = quantiles.index(0.1)
+                        # idx_50 = quantiles.index(0.5) 
+                        
+                        # --- Method B: Independent (Student-t Approx) ---
+                        # 1. Daily Statistics in Log-Space
+                        idx_50 = quantiles.index(0.5)
+                        idx_90 = quantiles.index(0.9)
+                        
+                        mu_daily_L = lp[:, idx_50, :] 
+                        q90_daily_L = lp[:, idx_90, :]
+                        q10_daily_L = lp[:, idx_10, :]
+                        sigma_daily_L = (q90_daily_L - q10_daily_L) / 2.563
+                        
+                        # 2. Aggregate Moments
+                        mu_10d_L = mu_daily_L.sum(dim=1) # [B]
+                        var_10d_L = (sigma_daily_L ** 2).sum(dim=1)
+                        sigma_10d_L = torch.sqrt(var_10d_L) # [B]
+                        
+                        # 3. Reconstruct
+                        pred_B_10d_list = []
+                        for q in quantiles:
+                            t_score = t_dist.ppf(q, df=7)
+                            t_tensor = torch.tensor(t_score, device=device, dtype=mu_10d_L.dtype)
+                            l_val = mu_10d_L + t_tensor * sigma_10d_L
+                            pred_B_10d_list.append(torch.expm1(l_val))
+                        pred_dist_B = torch.stack(pred_B_10d_list, dim=1) # [B, Q]
+                        
+                        # --- Method C2: Comonotonic (Direct Sum) ---
+                        l_10d_C = lp.sum(dim=2) # [B, Q]
+                        pred_dist_C = torch.expm1(l_10d_C) # [B, Q]
+                        
+                        # --- Grid Search Lambda ---
+                        # We track metrics for a grid of lambdas
+                        lambdas = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
+                        
+                        # For the singular "Primary" metric reported to the loop, we pick Lambda=0.5 as distinct default
+                        # But we print the full table.
+                        
+                        metrics_grid = {}
+                        
+                        for lam in lambdas:
+                            # Mix Quantiles (Linear Interpolation in Return Space)
+                            # Q_mix = (1-lam)*Q_B + lam*Q_C
+                            pred_dist_mix = (1 - lam) * pred_dist_B + lam * pred_dist_C
+                            
+                            # 1. Pinball
+                            loss_mix = compute_pinball_loss(
+                                actual_10d.unsqueeze(1),
+                                pred_dist_mix.unsqueeze(2),
+                                quantiles
+                            ).item()
+                            
+                            # 2. Q10 Calibration
+                            q10_mix = pred_dist_mix[:, idx_10]
+                            hit = (actual_10d < q10_mix).float().sum().item()
+                            q10_rate = hit / batch_size
+                            
+                            metrics_grid[lam] = {
+                                'pinball': loss_mix,
+                                'q10': q10_rate
+                            }
+                            
+                        # Store grid for reporting (accumulate weighted by batch size)
+                        # Quick hack: we'll just sum them up and divide by total_samples later
+                        # For now, let's just accumulate the raw sums for the "primary" (Lambda=0.5)
+                        # and maybe store the grid in a specialized accumulator if we want perfection.
+                        # Given this runs inside a loop, we need a way to aggregate the grid across batches.
+                        # We will attach the grid to the running totals using a temporary attribute on the model or similar?
+                        # Or simpler: just track Lambda=0.5 (middle ground) for the "total_10d_pinball" variable
+                        # and print the snapshot of the *last batch* grid in the full validation log?
+                        # Actually: The user wants to see the table.
+                        # Let's aggregate the grid in a new dict variable passed in or global?
+                        # Since 'run_validation' is self-contained...
+                        # We will use 'total_10d_pinball' for Lambda=0.5
+                        
+                        lam_primary = 0.5
+                        pred_dist_primary = (1 - lam_primary) * pred_dist_B + lam_primary * pred_dist_C
+                        
+                        # Pinball (Primary)
+                        loss_primary = compute_pinball_loss(
+                             actual_10d.unsqueeze(1),
+                             pred_dist_primary.unsqueeze(2),
+                             quantiles
+                        )
+                        total_10d_pinball += loss_primary.item()
+                        
+                        # Direction Acc (Primary) - Median likely similar across Lambdas for symmetric updates, but C2 median is robust
+                        idx_50 = quantiles.index(0.5)
+                        pred_median_primary = pred_dist_primary[:, idx_50]
+                        same_sign = (torch.sign(pred_median_primary) == torch.sign(actual_10d)).float()
+                        total_10d_direction_acc += same_sign.sum().item()
+                        
+                        # Q10 (Primary)
+                        hit_primary = (actual_10d < pred_dist_primary[:, idx_10]).float()
+                        total_10d_q10_hit += hit_primary.sum().item()
+                        
+                        total_samples += batch_size
+                        
+                        # Spot Check Grid (Last Batch)
+                        if steps % 100 == 0:
+                             print(f"\n[Validation Spot Check Step {steps}] Lambda Grid:")
+                             print(f"Lambda | Pinball | Q10 Calib")
+                             for lam, m in metrics_grid.items():
+                                 print(f"{lam:^6.1f} | {m['pinball']:.6f} | {m['q10']:.2%}")
+                             print("-" * 30)
+
+                    except ValueError:
+                         pass
+                
+                # Monitor Spreads (Day 10 Marginal)
                 if qp.shape[2] >= 10:
                     day_10_preds = qp[:, :, 9] 
-                    s90 = (day_10_preds[:, 18] - day_10_preds[:, 2]).mean().item()
-                    s99 = (day_10_preds[:, 20] - day_10_preds[:, 0]).mean().item()
-                    total_s90 += s90
-                    total_s99 += s99
-            
-            # 3. Also compute internal loss for comparison (forward pass)
+                    if len(quantiles) >= 21:
+                         try:
+                             i90 = quantiles.index(0.9)
+                             i10 = quantiles.index(0.1)
+                             s90 = (day_10_preds[:, i90] - day_10_preds[:, i10]).mean().item()
+                             total_s90 += s90
+                             
+                             i99 = quantiles.index(0.99)
+                             i01 = quantiles.index(0.01)
+                             s99 = (day_10_preds[:, i99] - day_10_preds[:, i01]).mean().item()
+                             total_s99 += s99
+                         except ValueError:
+                             pass                
+                # Monitor Spreads (Day 10 Marginal)
+                if qp.shape[2] >= 10:
+                    day_10_preds = qp[:, :, 9] 
+                    if len(quantiles) >= 21:
+                         # Indexes for 0.90/0.10 and 0.99/0.01 assuming dense grid
+                         # Robust lookup if possible, else fixed indices
+                         try:
+                             i90 = quantiles.index(0.9)
+                             i10 = quantiles.index(0.1)
+                             s90 = (day_10_preds[:, i90] - day_10_preds[:, i10]).mean().item()
+                             total_s90 += s90
+                             
+                             i99 = quantiles.index(0.99)
+                             i01 = quantiles.index(0.01)
+                             s99 = (day_10_preds[:, i99] - day_10_preds[:, i01]).mean().item()
+                             total_s99 += s99
+                         except ValueError:
+                             pass
+
+            # 3. Internal Loss
             out = model(
                 context, 
                 context_mask=context_mask, 
@@ -563,14 +716,26 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
             steps += 1
             
     model.train()
+    
     avg_pinball_loss = total_pinball_loss / steps if steps > 0 else 0.0
     avg_internal_loss = total_internal_loss / steps if steps > 0 else 0.0
+    
+    # 10-Day Metrics Aggregation
+    avg_10d_pinball = total_10d_pinball / steps if steps > 0 else 0.0
+    avg_10d_direction = total_10d_direction_acc / total_samples if total_samples > 0 else 0.0
+    avg_10d_q10 = total_10d_q10_hit / total_samples if total_samples > 0 else 0.0
+    
+    # Spreads
     avg_s90 = total_s90 / steps if steps > 0 else 0.0
     avg_s99 = total_s99 / steps if steps > 0 else 0.0
     
+    # Standardize output keys (Safe Return)
     return {
         "pinball_loss": avg_pinball_loss, 
         "internal_loss": avg_internal_loss,
+        "val_10d_pinball": avg_10d_pinball,
+        "direction_10d": avg_10d_direction,
+        "q10_10d": avg_10d_q10,
         "s90": avg_s90,
         "s99": avg_s99
     }
@@ -664,6 +829,7 @@ def main():
 
         if cfg.probe_only:
             print("[Probe] Success.")
+            return 0
         files_to_use = sorted(cfg.gold_parquet_dir.glob(cfg.gold_glob))
         if cfg.max_files_limit:
             files_to_use = files_to_use[:cfg.max_files_limit]
@@ -764,14 +930,106 @@ def main():
              pipeline = None
 
         # 4. Training Setup
+        
+        # --- Partial Unfreeze Logic ---
+        if cfg.unfreeze_layernorms:
+            print("[Unfreeze] Unfreezing LayerNorm parameters...")
+            count_ln = 0
+            for name, param in model_wrapper.model.named_parameters():
+                if "layer_norm" in name or "layernorm" in name:
+                     param.requires_grad = True
+                     count_ln += 1
+            print(f"[Unfreeze] Unfroze {count_ln} LayerNorm params.")
+
+        if cfg.unfreeze_last_blocks > 0:
+            print(f"[Unfreeze] Unfreezing last {cfg.unfreeze_last_blocks} transformer blocks...")
+            # Detect model type and block structure
+            # For T5: encoder.block.N
+            
+            # Find max block index
+            max_block_idx = -1
+            for name, _ in model_wrapper.model.named_parameters():
+                # T5 pattern: encoder.block.11.layer...
+                parts = name.split('.')
+                if "block" in parts:
+                    try:
+                        idx = int(parts[parts.index("block") + 1])
+                        max_block_idx = max(max_block_idx, idx)
+                    except (ValueError, IndexError):
+                        pass
+            
+            if max_block_idx >= 0:
+                start_unsqueezed_idx = max_block_idx - cfg.unfreeze_last_blocks + 1
+                if start_unsqueezed_idx < 0: start_unsqueezed_idx = 0
+                
+                print(f"[Unfreeze] Targeting blocks {start_unsqueezed_idx} to {max_block_idx}")
+                
+                count_blk = 0
+                for name, param in model_wrapper.model.named_parameters():
+                    parts = name.split('.')
+                    if "block" in parts:
+                        try:
+                            idx = int(parts[parts.index("block") + 1])
+                            if idx >= start_unsqueezed_idx:
+                                param.requires_grad = True
+                                count_blk += 1
+                        except:
+                            pass
+                print(f"[Unfreeze] Unfroze {count_blk} params in last {cfg.unfreeze_last_blocks} blocks.")
+            else:
+                print("[Unfreeze] WARN: Could not detect block structure (no 'block' in param names).")
+
         trainable_params = [p for p in model_wrapper.parameters() if p.requires_grad]
+        
+        # Track Unfrozen Base Params (Non-LoRA)
+        unfrozen_param_names = []
+        for name, param in model_wrapper.model.named_parameters():
+            if param.requires_grad and "lora" not in name.lower():
+                unfrozen_param_names.append(name)
+        print(f"[Checkpoint] Tracking {len(unfrozen_param_names)} base parameters for 'base_delta.pt'")
+
         opt = torch.optim.AdamW(trainable_params, lr=cfg.lr)
         scheduler = get_linear_schedule_with_warmup(
             opt, num_warmup_steps=cfg.warmup_steps, num_training_steps=cfg.max_steps
         )
         
+        # Helper: Robust Checkpointer
+        def save_checkpoint_extended(target_dir: Path, step_meta: dict):
+            target_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 1. Save LoRA Adapter (Standard)
+            model_wrapper.model.save_pretrained(target_dir)
+            
+            # 2. Save Unfrozen Base Weights (Base Delta)
+            if unfrozen_param_names:
+                base_delta = {}
+                state_dict = model_wrapper.model.state_dict()
+                for name in unfrozen_param_names:
+                    if name in state_dict:
+                        base_delta[name] = state_dict[name].cpu()
+                
+                torch.save(base_delta, target_dir / "base_delta.pt")
+            
+            # 3. Save Manifest
+            with open(target_dir / "manifest.json", "w") as f:
+                json.dump(step_meta, f, indent=2)
+
         print(f"Starting Training: {cfg.run_id}")
         
+        # --- RESUME BASE DELTA IF EXISTS (Post-Unfreeze) ---
+        # If we resumed an adapter, we MUST also look for base_delta in that same folder
+        if args.resume_adapter:
+            resume_path = Path(args.resume_adapter)
+            base_delta_path = resume_path / "base_delta.pt"
+            if base_delta_path.exists():
+                print(f"[Resume] Loading Base Delta from {base_delta_path}...")
+                base_delta = torch.load(base_delta_path, map_location=device)
+                model_wrapper.model.load_state_dict(base_delta, strict=False)
+                print(f"[Resume] Applied {len(base_delta)} base param updates.")
+            else:
+                if len(unfrozen_param_names) > 0:
+                    print(f"[Resume] WARN: Unfrozen params detected but no 'base_delta.pt' found in {resume_path}!")
+
         # Prepare Validation Subsets
         val_quick_ds = dataset.get_quick_val_subset(val_ds, size=50, output_dir=cfg.out_dir)
         val_quick_dl = DataLoader(val_quick_ds, batch_size=cfg.batch_size, shuffle=False, 
@@ -892,10 +1150,12 @@ def main():
                 if curr_global_step % 500 == 0: 
                     print(f"--- QuickVal (Step {curr_global_step}) ---")
                     qv_metrics = run_validation(model_wrapper, val_quick_dl, device, quantiles, desc="QuickVal", pipeline=pipeline)
-                    qv_loss = qv_metrics['pinball_loss']
-                    qv_internal = qv_metrics['internal_loss']
-                    qv_s90 = qv_metrics['s90']
-                    qv_s99 = qv_metrics['s99']
+                    
+                    # Safe Unpack
+                    qv_loss = qv_metrics.get('pinball_loss', float('inf'))
+                    qv_internal = qv_metrics.get('internal_loss', 0.0)
+                    qv_s90 = qv_metrics.get('s90', 0.0)
+                    qv_s99 = qv_metrics.get('s99', 0.0)
                     
                     print(f"QuickVal Pinball: {qv_loss:.4f} | Internal: {qv_internal:.4f} | S90: {qv_s90:.4f} | S99: {qv_s99:.4f}")
                     
@@ -906,19 +1166,20 @@ def main():
                         quick_val_ema = ema_alpha * qv_loss + (1 - ema_alpha) * quick_val_ema
                     print(f"QuickVal EMA: {quick_val_ema:.4f}")
 
-                    # Save LAST checkpoint every 500 steps (for recovery)
-                    save_path = cfg.out_dir / f"checkpoint-{curr_global_step}" # Optional: rolling logic to save space?
-                    # Actually, let's just save "last" always to save space, and numbered only if needed.
-                    # Plan says: "Save last every N steps (crash recovery)"
-                    # We will overwrite 'last' frequently, and keep numbered checkpoints sparingly?
-                    # The user request implies keeping history: "out_dir/checkpoint-{step}/"
-                    save_path.mkdir(exist_ok=True)
-                    model_wrapper.model.save_pretrained(save_path)
+                    # Save LAST checkpoint
+                    save_path = cfg.out_dir / f"checkpoint-{curr_global_step}" 
+                    save_checkpoint_extended(save_path, {
+                        "step": curr_global_step,
+                        "type": "checkpoint",
+                        "metrics": qv_metrics
+                    })
                     
                     # Also update 'last' pointer
-                    last_path = cfg.out_dir / "last"
-                    last_path.mkdir(exist_ok=True)
-                    model_wrapper.model.save_pretrained(last_path)
+                    save_checkpoint_extended(cfg.out_dir / "last", {
+                        "step": curr_global_step,
+                        "type": "last",
+                        "metrics": qv_metrics
+                    })
 
                 # Full Validation (Every 1000 steps initially as per Plan Phase 5)
                 # Plan says: "Full-val: every 2500 steps OR every 1000" -> User said "keep full-val every 1000"
@@ -926,38 +1187,47 @@ def main():
                      print(f"--- FullVal (Step {curr_global_step}) ---")
                      fv_metrics = run_validation(model_wrapper, val_dl, device, quantiles, pipeline=pipeline)
                      
-                     # 3. Canonical Selection: Pinball Loss
-                     val_loss = fv_metrics['pinball_loss']
-                     val_internal = fv_metrics['internal_loss']
-                     val_s90 = fv_metrics['s90']
-                     val_s99 = fv_metrics['s99']
+                     # Extract Metrics (Safe)
+                     val_loss = fv_metrics.get('pinball_loss', float('inf'))
+                     val_internal = fv_metrics.get('internal_loss', 0.0)
+                     val_10d_pinball = fv_metrics.get('val_10d_pinball', 0.0)
+                     val_10d_dir = fv_metrics.get('direction_10d', 0.0)
+                     val_10d_q10 = fv_metrics.get('q10_10d', 0.0)
+                     val_s90 = fv_metrics.get('s90', 0.0)
+                     val_s99 = fv_metrics.get('s99', 0.0)
                      
-                     print(f"Full Val Pinball: {val_loss:.4f} | Internal: {val_internal:.4f} | S90: {val_s90:.4f} | S99: {val_s99:.4f}")
+                     print(f"Full Val Pinball (Daily): {val_loss:.6f}")
+                     print(f"Full Val 10-Day Derived (Interpolated C3, Lambda=0.5):")
+                     print(f"  Note: Check logs for Lambda Grid Search (Spot Check)")
+                     print(f"  Pinball: {val_10d_pinball:.6f} (Primary)")
+                     print(f"  Direction Acc: {val_10d_dir:.2%}")
+                     print(f"  Q10 Calibration: {val_10d_q10:.2%} (Target 10%)")
+                     
+                     # 3. Canary Selection: 10-Day Cumulative Pinball Loss
+                     # Re-enabling 10-day metric selection as we now have stable proxy
+                     primary_metric = val_10d_pinball
                      
                      # Best Checkpoint Logic
-                     if val_loss < (best_val_loss - min_delta):
-                         print(f"[Best] Improvement found: {best_val_loss:.4f} -> {val_loss:.4f}")
-                         best_val_loss = val_loss
+                     if primary_metric < (best_val_loss - min_delta):
+                         print(f"[Best] Improvement found: {best_val_loss:.6f} -> {primary_metric:.6f}")
+                         best_val_loss = primary_metric
                          stall_count = 0
                          
-                         best_path = cfg.out_dir / "best"
-                         best_path.mkdir(exist_ok=True)
-                         model_wrapper.model.save_pretrained(best_path)
-                         
-                         # Save manifest
-                         with open(best_path / "best_manifest.json", "w") as f:
-                             json.dump({
+                         save_checkpoint_extended(cfg.out_dir / "best", {
                                  "step": curr_global_step,
-                                 "val_loss": val_loss,
-                                 "val_internal_loss": val_internal,
+                                 "metric_primary": "val_10d_pinball",
+                                 "val_10d_pinball": val_10d_pinball,
+                                 "val_daily_pinball": val_loss,
+                                 "val_10d_direction": val_10d_dir,
+                                 "val_10d_q10": val_10d_q10,
                                  "s90": val_s90,
                                  "s99": val_s99,
                                  "config": str(cfg),
                                  "timestamp": str(datetime.datetime.now())
-                             }, f, indent=2)
+                         })
                      else:
                          stall_count += 1
-                         print(f"[Stall] No improvement (Best: {best_val_loss:.4f}). Stall count: {stall_count}/{early_stop_patience}")
+                         print(f"[Stall] No improvement (Best: {best_val_loss:.6f}). Stall count: {stall_count}/{early_stop_patience}")
                          
                      # Early Stopping Logic (Phase 1 Gate)
                      if stall_count >= early_stop_patience:
@@ -968,7 +1238,11 @@ def main():
             step += 1
                     
         # Final save
-        model_wrapper.model.save_pretrained(cfg.out_dir / "last")
+        save_checkpoint_extended(cfg.out_dir / "last", {
+            "step": step,
+            "type": "final",
+            "metrics": {"last_loss": avg_loss}
+        })
         print("Training Complete.")
         return 0
     except KeyboardInterrupt:
