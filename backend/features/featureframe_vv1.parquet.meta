@@ -1,0 +1,46 @@
+{
+  "version": "f1cdf9bf02e7",
+  "spec": {
+    "returns": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "volatility": 20,
+    "volume_z": 20
+  },
+  "rows": 7354288,
+  "columns": [
+    "date",
+    "symbol",
+    "ret_1d",
+    "ret_3d",
+    "ret_5d",
+    "ret_10d",
+    "ret_20d",
+    "vol_20d",
+    "vol_chg_1d",
+    "ewma_vol_10d",
+    "ewma_vol_20d",
+    "parkinson_vol_10d",
+    "parkinson_vol_20d",
+    "range_pct_1d",
+    "dollar_vol_20d",
+    "adv_dollars_20d",
+    "volume_z_20d",
+    "volume_stability_20d",
+    "gap_freq_20d",
+    "spy_ret_1d",
+    "qqq_ret_1d",
+    "iwm_ret_1d",
+    "vix_level",
+    "rate_proxy",
+    "rel_ret_1d",
+    "beta_spy_20d",
+    "market_breadth_ad",
+    "xsec_disp_ret_1d",
+    "feature_version",
+    "data_version"
+  ]
+}

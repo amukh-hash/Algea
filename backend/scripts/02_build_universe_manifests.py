@@ -31,60 +31,33 @@ def main():
         date_str = current.strftime("%Y-%m-%d")
         logger.info(f"Building Manifest for {date_str}...")
         
-        # In a real run, we'd load metrics efficiently.
-        # For this script (backfill), we might have to mock or scan.
-        # Scanning 5000+ parquet files is SLOW.
+        # Real Calculation using universe.py logic
+        # Optimize: Pass only active symbols?
+        # For now, pass all master symbols, the function loads OHLCV per symbol.
+        # This allows accurate Point-in-Time calculation.
         
-        # Optimization: Use legacy 'universe_YYYY-MM-DD.parquet' if available to speed up?
-        # Check pathmap legacy root
-        pm = pathmap.get_paths()
-        legacy_path = os.path.join(pm.legacy_artifacts_root, f"universe/universe_{date_str}.parquet")
-        
-        metrics = []
-        if os.path.exists(legacy_path) and config.ALLOW_LEGACY_READ:
-            # Load legacy snapshot to get eligible tickers + basic metrics
-            logger.info("  Loading legacy snapshot to hydrate metrics...")
-            leg_df = pd.read_parquet(legacy_path)
-            # Legacy cols: ticker, dollar_vol (approx adv?), close
-            # We need: symbol, asset_type, close_adj, adv20, vol20, ipo_date, sector
-            
-            # Merge with Security Master for static fields
-            merged = leg_df.merge(sec_master, left_on="ticker", right_on="symbol", how="left")
-            
-            # Map legacy metrics
-            # legacy 'dollar_vol' is median 20d dollar vol usually
-            # we need adv20 (shares). adv20 = dollar_vol / close (approx)
-            
-            merged["adv20"] = merged["dollar_vol"] / merged["close"]
-            merged["close_adj"] = merged["close"] # Assuming legacy was adjusted
-            merged["vol20"] = 0.02 # Dummy vol if missing? Or calculated?
-            # Legacy didn't store vol? Feature frame does. 
-            # We'll set dummy for manifest backfill unless we recalc.
-            
-            metrics_df = merged[[
-                "symbol", "asset_type", "close_adj", "adv20", "vol20", "ipo_date", "sector"
-            ]].copy()
-            
-        else:
-             # Full recalc (Heavy)
-             # Skip for now or implement slow loop?
-             # We'll assert legacy exists for this migration plan step.
-             logger.warning("  Legacy snapshot not found. Skipping date (Heavy recalc not implemented).")
-             current += relativedelta(months=1)
-             continue
-
-        # Apply Rules (Strict B5)
+        # Define base rules
         rules = {
             "min_price": 5.0,
             "min_adv": 25e6, # $25M
-            "min_ipo_days": 252
+            "min_ipo_days": 252,
+            "top_n": 1000  # Broad universe
         }
         
-        manifest = universe.apply_universe_rules(metrics_df, rules)
+        base_symbols = sec_master["symbol"].tolist()
+        
+        # Build Manifest
+        # usage: build_universe_manifest(asof_date, base_symbols, rules)
+        # Note: This loads OHLCV for every symbol. It might be slow.
+        # But it's the correct "functional" path.
+        manifest = universe.build_universe_manifest(date_str, base_symbols, rules)
         
         # Write
-        out = universe.write_universe_manifest(current, manifest, rules)
-        logger.info(f"  Written {out}")
+        if not manifest.empty:
+            out = universe.write_universe_manifest(current, manifest, rules)
+            logger.info(f"  Written {out} | Eligible: {manifest['eligible'].sum()}")
+        else:
+            logger.warning(f"  Empty manifest for {date_str}")
         
         current += relativedelta(months=1)
 

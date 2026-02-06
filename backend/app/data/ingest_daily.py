@@ -12,25 +12,32 @@ def ingest_raw_daily(source_cfg: dict, start_date, end_date) -> pd.DataFrame:
     Ingests raw data from source (e.g. Alpaca).
     Returns DataFrame matching minimal raw schema.
     """
-    # Logic to fetch from Alpaca (similar to fetch_data.py but return DF)
-    # For now, we assume fetch_data.py does the heavy lifting or we call a provider class
-    # Stub for migration - returning valid mock data structure to unblock pipeline
-    dates = pd.date_range(start=start_date, end=end_date, freq='B')
-    data = []
-    # Mock for a few symbols
-    for s in ['AAPL', 'MSFT', 'GOOGL']:
-        for d in dates:
-            data.append({
-                'symbol': s,
-                'date': d,
-                'open': 150.0,
-                'high': 155.0,
-                'low': 149.0,
-                'close': 152.0,
-                'volume': 1000000,
-                'vwap': 151.0
-            })
-    return pd.DataFrame(data)
+    if not source_cfg:
+        raise ValueError("source_cfg is required to ingest raw daily data.")
+
+    parquet_path = source_cfg.get("parquet_path")
+    csv_path = source_cfg.get("csv_path")
+    if parquet_path:
+        df = pd.read_parquet(parquet_path)
+    elif csv_path:
+        df = pd.read_csv(csv_path)
+    else:
+        raise ValueError("source_cfg must include parquet_path or csv_path.")
+
+    if "symbol" not in df.columns and "ticker" in df.columns:
+        df = df.rename(columns={"ticker": "symbol"})
+
+    if "date" not in df.columns:
+        raise ValueError("Input data must include a 'date' column.")
+
+    df["date"] = pd.to_datetime(df["date"])
+
+    if start_date:
+        df = df[df["date"] >= pd.Timestamp(start_date)]
+    if end_date:
+        df = df[df["date"] <= pd.Timestamp(end_date)]
+
+    return df
 
 def write_ohlcv_partition(symbol: str, df: pd.DataFrame) -> None:
     """

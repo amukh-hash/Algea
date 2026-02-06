@@ -53,7 +53,10 @@ def main():
         
         # Write Partition
         # Filter date range
-        mask = (adj_df['date'] >= pd.Timestamp(args.start)) & (adj_df['date'] <= pd.Timestamp(args.end))
+        start_ts = pd.Timestamp(args.start).tz_localize("UTC") if adj_df['date'].dt.tz is not None else pd.Timestamp(args.start)
+        end_ts = pd.Timestamp(args.end).tz_localize("UTC") if adj_df['date'].dt.tz is not None else pd.Timestamp(args.end)
+        
+        mask = (adj_df['date'] >= start_ts) & (adj_df['date'] <= end_ts)
         final_df = adj_df[mask].copy()
         
         if not final_df.empty:

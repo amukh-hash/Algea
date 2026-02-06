@@ -14,9 +14,18 @@ class StudentRunner:
         state_dict, self.metadata = model_io.load_model(model_path, device=device)
         model_io.verify_preproc_compatibility(self.metadata, self.preproc.version_hash)
         
-        # Hardcoded dims for Phase 1
-        input_dim = 4
+        feature_cols = [
+            "log_return_1d",
+            "log_return_5d",
+            "log_return_20d",
+            "volatility_20d",
+            "volume_log_change_5d",
+            "ad_line_trend_5d",
+            "bpi_level",
+        ]
+        input_dim = len(feature_cols)
         lookback = 128
+        self.feature_cols = feature_cols
         
         self.model = model_class(input_dim=input_dim, lookback=lookback)
         self.model.load_state_dict(state_dict)
@@ -25,8 +34,7 @@ class StudentRunner:
         
     def infer(self, df_window: pl.DataFrame) -> ModelSignal:
         df_trans = self.preproc.transform(df_window)
-        cols = ["log_ret", "volume_norm", "ad_line_norm", "bpi_norm"]
-        data = df_trans.select(cols).to_numpy().astype(np.float32)
+        data = df_trans.select(self.feature_cols).to_numpy().astype(np.float32)
         x = torch.from_numpy(data).unsqueeze(0).to(self.device)
         
         with torch.no_grad():
