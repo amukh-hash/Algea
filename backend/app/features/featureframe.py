@@ -58,11 +58,18 @@ def build_featureframe(
         except Exception:
             paths = pathmap.get_paths()
             ohlcv_root = os.path.join(paths.data_canonical, "ohlcv_adj")
-            if not os.path.exists(ohlcv_root):
+            daily_root = os.path.join(paths.data_canonical, "daily_parquet")
+            if os.path.exists(ohlcv_root):
+                symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
+            elif os.path.exists(daily_root):
+                symbols = []
+                for fname in os.listdir(daily_root):
+                    if fname.endswith(".parquet"):
+                        symbols.append(fname.replace("_daily.parquet", "").replace(".parquet", ""))
+                    elif fname.startswith("ticker="):
+                        symbols.append(fname.split("ticker=")[-1])
+            else:
                 raise FileNotFoundError("No canonical OHLCV partitions found.")
-            symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
-            
-    print(f"DEBUG: Processing {len(symbols)} symbols.")
 
     cov_path = pathmap.resolve("covariates")
     breadth_path = pathmap.resolve("breadth")
@@ -151,47 +158,29 @@ def build_featureframe(
                 ohlcv["data_version"].dropna().astype(str).unique().tolist()
             )
 
-        if ohlcv["close_adj"].isnull().all():
+        if "close_adj" not in ohlcv.columns or ohlcv["close_adj"].isnull().all():
+            if "ret_1d" not in ohlcv.columns:
+                continue
+        else:
+            if "ret_1d" not in ohlcv.columns:
+                ohlcv["ret_1d"] = ohlcv["close_adj"].pct_change()
+            if "ret_3d" not in ohlcv.columns:
+                ohlcv["ret_3d"] = ohlcv["close_adj"].pct_change(3)
+            if "ret_5d" not in ohlcv.columns:
+                ohlcv["ret_5d"] = ohlcv["close_adj"].pct_change(5)
+            if "ret_10d" not in ohlcv.columns:
+                ohlcv["ret_10d"] = ohlcv["close_adj"].pct_change(10)
+
+        if "ret_3d" not in ohlcv.columns or "ret_5d" not in ohlcv.columns or "ret_10d" not in ohlcv.columns:
             continue
-
-        # --- 3.1 Returns ---
-        ohlcv["ret_1d"] = ohlcv["close_adj"].pct_change()
-        ohlcv["ret_3d"] = ohlcv["close_adj"].pct_change(3)
-        ohlcv["ret_5d"] = ohlcv["close_adj"].pct_change(5)
-        ohlcv["ret_10d"] = ohlcv["close_adj"].pct_change(10)
-        ohlcv["ret_20d"] = ohlcv["close_adj"].pct_change(20)
-
-        # --- 3.2 EWMA Volatility ---
-        ohlcv["ewma_vol_10d"] = ohlcv["ret_1d"].ewm(span=10, adjust=False).std()
-        ohlcv["ewma_vol_20d"] = ohlcv["ret_1d"].ewm(span=20, adjust=False).std()
-        
-        # --- Standard Volatility (for reference) ---
         ohlcv["vol_20d"] = ohlcv["ret_1d"].rolling(20).std()
         ohlcv["vol_chg_1d"] = ohlcv["vol_20d"].pct_change()
-
-        # --- 3.3 Parkinson Volatility ---
-        # Prefer adjusted if available; fallback to raw
-        hi = ohlcv["high_adj"] if "high_adj" in ohlcv.columns else ohlcv["high"]
-        lo = ohlcv["low_adj"]  if "low_adj"  in ohlcv.columns else ohlcv["low"]
-        # Handle zeros/errors
-        hl = (hi / lo).replace([np.inf, -np.inf, 0], np.nan)
-        
-        ohlcv["parkinson_var_10d"] = (np.log(hl) ** 2).rolling(10).mean() / (4 * np.log(2))
-        ohlcv["parkinson_vol_10d"] = np.sqrt(ohlcv["parkinson_var_10d"])
-
-        ohlcv["parkinson_var_20d"] = (np.log(hl) ** 2).rolling(20).mean() / (4 * np.log(2))
-        ohlcv["parkinson_vol_20d"] = np.sqrt(ohlcv["parkinson_var_20d"])
-
-        # --- 3.4 Range % ---
-        ohlcv["range_pct_1d"] = (hi - lo) / ohlcv["close_adj"]
-
-        # --- 3.5 Liquidity ---
         if "dollar_volume" not in ohlcv.columns:
-            ohlcv["dollar_volume"] = ohlcv["close_adj"] * ohlcv["volume"]
-
-        ohlcv["adv_dollars_20d"] = ohlcv["dollar_volume"].rolling(20).mean()
-        ohlcv["dollar_vol_20d"] = ohlcv["adv_dollars_20d"] # Alias/Legacy
-
+            if "close_adj" in ohlcv.columns and "volume" in ohlcv.columns:
+                ohlcv["dollar_volume"] = ohlcv["close_adj"] * ohlcv["volume"]
+            elif "volume" in ohlcv.columns:
+                ohlcv["dollar_volume"] = ohlcv["volume"]
+        ohlcv["dollar_vol_20d"] = ohlcv["dollar_volume"].rolling(20).mean()
         vol_mean = ohlcv["volume"].rolling(20).mean()
         vol_std  = ohlcv["volume"].rolling(20).std()
         # Avoid div by zero
