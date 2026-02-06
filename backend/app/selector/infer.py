@@ -5,6 +5,7 @@ import pandas as pd
 import logging
 from typing import Dict, List, Optional
 import torch
+import numpy as np
 from backend.app.ops import pathmap, artifact_registry, config
 from backend.app.features import schemas, validators
 from backend.app.models.rank_transformer import RankTransformer
@@ -74,29 +75,27 @@ class SelectorInference:
         prior_cols = self.prior_cols or ["drift", "vol_forecast", "tail_risk", "trend_conf"]
         priors_map = priors_df.set_index("symbol")
 
-        sequences = []
+        tokens = []
         keep_symbols = []
         for symbol in symbols:
-            sym_df = features_df[features_df["symbol"] == symbol].sort_values("date")
-            sym_df = sym_df[sym_df["date"] <= asof_date].tail(sequence_len)
-            if len(sym_df) < sequence_len:
+            sym_df = features_df[(features_df["symbol"] == symbol) & (features_df["date"] == asof_date)]
+            if sym_df.empty:
                 continue
-            feat = sym_df[feature_cols].values.astype("float32")
+            feat = sym_df[feature_cols].values.astype("float32")[0]
 
             if symbol in priors_map.index:
                 prior_vec = priors_map.loc[symbol, prior_cols].values.astype("float32")
             else:
-                prior_vec = [0.0] * len(prior_cols)
-            priors_seq = torch.tensor(prior_vec, dtype=torch.float32).unsqueeze(0).repeat(sequence_len, 1)
-            seq = torch.tensor(feat, dtype=torch.float32)
-            seq = torch.cat([seq, priors_seq], dim=-1)
-            sequences.append(seq)
+                prior_vec = np.zeros(len(prior_cols), dtype="float32")
+
+            token = np.concatenate([feat, prior_vec], axis=0)
+            tokens.append(token)
             keep_symbols.append(symbol)
 
-        if not sequences:
-            raise ValueError("No valid sequences for inference.")
+        if not tokens:
+            raise ValueError("No valid tokens for inference.")
 
-        X = torch.stack(sequences, dim=0)
+        X = torch.tensor(np.stack(tokens), dtype=torch.float32)
         return {"X": X, "symbols": keep_symbols}
 
     def predict(self, date: str, symbols: List[str], features_df: pd.DataFrame, priors_df: pd.DataFrame) -> pd.DataFrame:
@@ -121,9 +120,9 @@ class SelectorInference:
         )
 
         X = seq["X"]
-        X_scaled = self.scaler.transform(X)
+        X_scaled = self.scaler.transform(X).unsqueeze(0)
         with torch.no_grad():
-            scores_tensor = self.model(X_scaled)["score"].squeeze(-1)
+            scores_tensor = self.model(X_scaled)["score"].squeeze(0).squeeze(-1)
         scores = scores_tensor.numpy().tolist()
         calibrated_scores = self.calibrator.predict(scores)
         ranks = pd.Series(scores).rank(ascending=False, method="first").astype(int).tolist()

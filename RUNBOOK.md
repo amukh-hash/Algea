@@ -211,14 +211,39 @@ Chronos is **not** your trade signal. It produces **distributional features** (�
 * Optional: rolling z-scores (causal)
 * Optional: market covariates as past-only covariates
 
-### 6.2 Light LoRA tuning (on initial historic data, not nightly)
+### 6.2 Phase 1 (Gold) teacher training pipeline (operational checklist)
+
+Use this sequence to make the Phase 1 gold pipeline reproducible and debuggable before moving to selector training:
+
+1. **Preflight the gold daily parquet + codec inputs**  
+   Run the Phase 0 preflight to validate schemas, timestamps, and input mode expectations (token vs tensor).  
+   `python backend/scripts/teacher/phase0_preflight.py`
+2. **Confirm Chronos-2 auth/model access**  
+   Verify that `amazon/chronos-2` resolves in your environment.  
+   `python backend/scripts/teacher/verify_auth.py`
+3. **List available Chronos checkpoints (optional sanity)**  
+   `python backend/scripts/teacher/list_models.py`
+4. **Inspect Chronos-2 I/O contract**  
+   Saves a local report with forward signature + config metadata for the active model.  
+   `python backend/scripts/teacher/inspect_chronos2_io.py`
+5. **Fit the codec for token mode (if using token inputs)**  
+   Produces the quantile codec used by Phase 1 training.  
+   `python backend/scripts/teacher/fit_codec_gold.py --k_files 10`
+6. **Debug model load + LoRA/QLoRA plumbing (only if needed)**  
+   `python backend/scripts/teacher/debug_model_load.py`
+7. **Run Phase 1 gold training**  
+   `python backend/scripts/teacher/phase1_train_teacher_gold.py`
+
+If you skip silver training, this gold checkpoint + priors output become the direct teacher features for the selector dataset builder.
+
+### 6.3 Light LoRA tuning (on initial historic data, not nightly)
 
 * cadence: monthly/quarterly
 * context: 60–250 daily bars (or 120–240 4H bars)
 * horizon: 10–30 trading days (daily equivalent for 4H)
 * objective: calibration/stability of priors, not “alpha”
 
-### 6.3 Priors generation (historical + nightly)
+### 6.4 Priors generation (historical + nightly)
 
 **Outputs**
 
