@@ -88,7 +88,7 @@ def load_config() -> PreflightConfig:
         v = os.getenv(k, default)
         return [x.strip() for x in v.split(",") if x.strip()]
 
-    gold_cols = parse_list("GOLD_REQUIRED_COLS", "close,volume")
+    gold_cols = parse_list("GOLD_REQUIRED_COLS", "ret_1d,ret_3d,ret_5d,ret_10d,volume")
     silver_cols = parse_list("SILVER_REQUIRED_COLS", "open,high,low,close,volume")
     
     tickers_str = os.getenv("SILVER_EXAMPLE_TICKERS", "")

@@ -59,21 +59,13 @@ class SelectorRunner:
         tickers = []
 
         for ticker, df in features_dict.items():
-            # Check length
-            if len(df) < lookback:
-                continue
-
-            # Take last lookback
-            # Ensure columns order
             try:
-                # Convert to numpy
-                # Check for missing cols
+                if df.is_empty():
+                    continue
                 missing = [c for c in self.feature_cols if c not in df.columns]
                 if missing:
-                    # Log warning?
                     continue
-
-                x_vals = df.tail(lookback).select(self.feature_cols).to_numpy()
+                x_vals = df.tail(1).select(self.feature_cols).to_numpy()[0]
                 batch_X.append(x_vals)
                 tickers.append(ticker)
             except Exception as e:
@@ -83,17 +75,17 @@ class SelectorRunner:
         if not batch_X:
             return pl.DataFrame()
 
-        # Stack: [B, T, F]
+        # Stack: [N, F] -> [1, N, F]
         X_tensor = torch.tensor(np.stack(batch_X), dtype=torch.float32).to(self.device)
 
         # Scale
         # Note: Scaler handles tensor on device
-        X_scaled = self.scaler.transform(X_tensor)
+        X_scaled = self.scaler.transform(X_tensor).unsqueeze(0)
 
         # Forward
         with torch.no_grad():
             out = self.model(X_scaled)
-            scores = out["score"].cpu().numpy().ravel() # [B]
+            scores = out["score"].squeeze(0).cpu().numpy().ravel() # [N]
             # Optional aux heads
             # p_up = out["p_up"].cpu().numpy().ravel()
 

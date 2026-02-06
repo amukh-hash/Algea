@@ -52,7 +52,7 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, collate_fn=ranking_collate_fn)
     
     # 2. Load Model & Calibrator
-    model = RankTransformer(input_dim=9).to(device)
+    model = RankTransformer(input_dim=9, pooling="none").to(device)
     model.load_state_dict(torch.load("backend/data/artifacts/models/ranker_v1.pt", map_location=device))
     model.eval()
     

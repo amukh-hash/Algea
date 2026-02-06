@@ -35,9 +35,18 @@ def build_featureframe(
         except Exception:
             paths = pathmap.get_paths()
             ohlcv_root = os.path.join(paths.data_canonical, "ohlcv_adj")
-            if not os.path.exists(ohlcv_root):
+            daily_root = os.path.join(paths.data_canonical, "daily_parquet")
+            if os.path.exists(ohlcv_root):
+                symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
+            elif os.path.exists(daily_root):
+                symbols = []
+                for fname in os.listdir(daily_root):
+                    if fname.endswith(".parquet"):
+                        symbols.append(fname.replace("_daily.parquet", "").replace(".parquet", ""))
+                    elif fname.startswith("ticker="):
+                        symbols.append(fname.split("ticker=")[-1])
+            else:
                 raise FileNotFoundError("No canonical OHLCV partitions found.")
-            symbols = [p.split("ticker=")[-1] for p in os.listdir(ohlcv_root) if p.startswith("ticker=")]
 
     cov_path = pathmap.resolve("covariates")
     breadth_path = pathmap.resolve("breadth")
@@ -70,8 +79,15 @@ def build_featureframe(
     if "data_version" in breadth_df.columns:
         source_versions["breadth"].extend(breadth_df["data_version"].dropna().astype(str).unique().tolist())
 
+    required_ohlcv_cols = ["date", "ret_1d", "ret_3d", "ret_5d", "ret_10d", "volume"]
     for symbol in symbols:
-        ohlcv = ingest_daily.load_ohlcv(symbol, start_date=start_date, end_date=end_date)
+        ohlcv = ingest_daily.load_ohlcv(
+            symbol,
+            start_date=start_date,
+            end_date=end_date,
+            required_cols=required_ohlcv_cols,
+            target_col="ret_1d",
+        )
         if ohlcv.empty:
             continue
 
@@ -85,15 +101,15 @@ def build_featureframe(
                 ohlcv["data_version"].dropna().astype(str).unique().tolist()
             )
 
-        if ohlcv["close_adj"].isnull().all():
-            continue
-
-        ohlcv["ret_1d"] = ohlcv["close_adj"].pct_change()
-        ohlcv["ret_3d"] = ohlcv["close_adj"].pct_change(3)
-        ohlcv["ret_5d"] = ohlcv["close_adj"].pct_change(5)
-        ohlcv["ret_10d"] = ohlcv["close_adj"].pct_change(10)
+        if "ret_3d" not in ohlcv.columns or "ret_5d" not in ohlcv.columns or "ret_10d" not in ohlcv.columns:
+            raise ValueError(f"Missing return columns for {symbol}")
         ohlcv["vol_20d"] = ohlcv["ret_1d"].rolling(20).std()
         ohlcv["vol_chg_1d"] = ohlcv["vol_20d"].pct_change()
+        if "dollar_volume" not in ohlcv.columns:
+            if "close_adj" in ohlcv.columns and "volume" in ohlcv.columns:
+                ohlcv["dollar_volume"] = ohlcv["close_adj"] * ohlcv["volume"]
+            elif "volume" in ohlcv.columns:
+                ohlcv["dollar_volume"] = ohlcv["volume"]
         ohlcv["dollar_vol_20d"] = ohlcv["dollar_volume"].rolling(20).mean()
         vol_mean = ohlcv["volume"].rolling(20).mean()
         vol_std = ohlcv["volume"].rolling(20).std()
