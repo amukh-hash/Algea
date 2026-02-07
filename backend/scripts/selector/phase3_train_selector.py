@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List
 import joblib
 
@@ -25,6 +26,8 @@ from backend.app.models.selector_scaler import SelectorFeatureScaler
 from backend.app.models.calibration import ScoreCalibrator
 from backend.app.data.windows import make_cross_sectional_batch
 from backend.app.models.schema import FeatureContract
+from backend.app.core import config
+from backend.app.ops import run_recorder
 
 # Configuration
 VERSION = "v1"
@@ -79,8 +82,35 @@ def train():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
 
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-    os.makedirs(LOG_DIR, exist_ok=True)
+    run_id = run_recorder.init_run(
+        pipeline_type="selector",
+        trigger="manual",
+        config={"epochs": args.epochs, "batch_size": args.batch_size, "lr": args.lr, "device": args.device},
+        data_versions={"gold": "unknown", "silver": "unknown", "macro": "unknown", "universe": "unknown"},
+        tags=["selector", "training"],
+    )
+    run_dir = run_recorder.run_paths.get_run_dir(run_id)
+    checkpoint_dir = run_dir / "checkpoints"
+    log_dir = run_dir / "outputs"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    run_recorder.set_status(run_id, "RUNNING", stage="train", step="init")
+
+    priors_dir = Path(config.PRIORS_DIR) / "chronos2" / "v1"
+    if not priors_dir.exists() or not list(priors_dir.glob("*.parquet")):
+        run_recorder.set_status(
+            run_id,
+            "FAILED",
+            stage="train",
+            step="priors_check",
+            error={
+                "type": "MissingPriors",
+                "message": "No priors artifact found in backend/data/priors/chronos2/v1.",
+                "traceback": "Run nightly_build_priors.",
+            },
+        )
+        run_recorder.finalize_run(run_id, "FAILED")
+        return
 
     # 1. Setup Data
     # Assume we have a list of dates
@@ -111,7 +141,15 @@ def train():
         # Stack: [Total, T, F]
         all_X = np.concatenate(sample_X, axis=0)
         scaler.fit(all_X)
-        scaler.save(os.path.join(CHECKPOINT_DIR, "scaler.joblib"))
+        scaler_path = checkpoint_dir / "scaler.joblib"
+        scaler.save(str(scaler_path))
+        run_recorder.register_artifact(
+            run_id,
+            name="selector_scaler",
+            type="model_checkpoint",
+            path=str(scaler_path),
+            tags=["scaler"],
+        )
     else:
         print("Warning: No data found to fit scaler. Using unfitted (no-op or error).")
 
@@ -193,11 +231,27 @@ def train():
 
         avg_val_loss = val_loss / max(val_steps, 1)
         print(f"Epoch {epoch+1}: Train Loss {avg_train_loss:.4f}, Val Loss {avg_val_loss:.4f}")
+        run_recorder.emit_metric(
+            run_id,
+            step=epoch + 1,
+            epoch=float(epoch + 1),
+            metrics={"train_loss": avg_train_loss, "val_loss": avg_val_loss},
+        )
+        run_recorder.set_status(run_id, "RUNNING", stage="train", step=f"epoch_{epoch + 1}")
 
         # Checkpoint
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "best.pt"))
+            best_path = checkpoint_dir / "best.pt"
+            torch.save(model.state_dict(), best_path)
+            run_recorder.register_checkpoint(
+                run_id,
+                checkpoint_path=str(best_path),
+                step=epoch + 1,
+                epoch=float(epoch + 1),
+                component="selector",
+                meta={"val_loss": avg_val_loss},
+            )
 
             # Fit Calibrator on Val set
             if all_scores:
@@ -205,9 +259,18 @@ def train():
                 flat_scores = np.concatenate(all_scores).ravel()
                 flat_targets = np.concatenate(all_targets).ravel()
                 calibrator.fit(flat_scores, flat_targets)
-                calibrator.save(os.path.join(CHECKPOINT_DIR, "calibration.joblib"))
+                calibrator_path = checkpoint_dir / "calibration.joblib"
+                calibrator.save(str(calibrator_path))
+                run_recorder.register_artifact(
+                    run_id,
+                    name="selector_calibration",
+                    type="model_checkpoint",
+                    path=str(calibrator_path),
+                    tags=["calibration"],
+                )
 
     print("Training Complete.")
+    run_recorder.finalize_run(run_id, "PASSED")
 
 if __name__ == "__main__":
     train()

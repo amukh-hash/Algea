@@ -37,6 +37,7 @@ except ImportError:
 # Import Artifacts resolver
 sys.path.append(os.getcwd())
 from backend.app.core import artifacts, config
+from backend.app.ops import run_recorder
 from backend.app.models.signal_types import LEADERBOARD_SCHEMA
 
 # ----------------- Config -----------------
@@ -423,7 +424,14 @@ def check_selector(cfg: PreflightConfig) -> Dict[str, Any]:
 
 def main():
     cfg = load_config()
-    cfg.report_path.parent.mkdir(parents=True, exist_ok=True)
+    run_id = run_recorder.init_run(
+        pipeline_type="teacher_gold",
+        trigger="manual",
+        config=asdict(cfg, dict_factory=lambda x: {k: str(v) if isinstance(v, Path) else v for k, v in x}),
+        data_versions={"gold": "unknown", "silver": "unknown", "macro": "unknown", "universe": "unknown"},
+        tags=["preflight"],
+    )
+    run_recorder.set_status(run_id, "RUNNING", stage="preflight", step="start")
     
     report = {
         "timestamp": datetime.datetime.now().isoformat(),
@@ -456,14 +464,25 @@ def main():
     report["recommendations"] = recs
     report["next_command"] = "python backend/scripts/selector/nightly_run_selector.py" if all_ok else "Fix errors first"
 
-    with open(cfg.report_path, "w") as f:
-        json.dump(report, f, indent=2)
+    run_recorder.write_report(run_id, "preflight", report)
         
     print("-" * 40)
     print(f"Preflight Complete. Global OK: {all_ok}")
-    print(f"Report saved to: {cfg.report_path}")
+    print(f"Report saved to run {run_id}")
     
-    return 0 if all_ok else 1
+    if all_ok:
+        run_recorder.finalize_run(run_id, "PASSED")
+        return 0
+    recommendation = "Run nightly_build_priors"
+    run_recorder.set_status(
+        run_id,
+        "FAILED",
+        stage="preflight",
+        step="checks_failed",
+        error={"type": "PreflightFailed", "message": "Preflight checks failed.", "traceback": recommendation},
+    )
+    run_recorder.finalize_run(run_id, "FAILED")
+    return 1
 
 if __name__ == "__main__":
     sys.exit(main())

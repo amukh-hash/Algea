@@ -42,7 +42,8 @@ except Exception:
 # Imports from backend
 sys.path.append(os.getcwd())
 try:
-    from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
+from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
+from backend.app.ops import run_recorder
 except ImportError as e:
     print(f"ERROR: Backend imports failed: {e}", file=sys.stderr)
     sys.exit(1)
@@ -668,6 +669,20 @@ def main():
         args = parser.parse_args()
 
         cfg = load_config(args)
+        run_id = run_recorder.init_run(
+            pipeline_type="teacher_gold",
+            trigger="manual",
+            config={k: str(v) if isinstance(v, Path) else v for k, v in asdict(cfg).items()},
+            data_versions={"gold": "unknown", "silver": "unknown", "macro": "unknown", "universe": "unknown"},
+            tags=["training", "teacher_gold"],
+        )
+        run_dir = run_recorder.run_paths.get_run_dir(run_id)
+        outputs_dir = run_dir / "outputs"
+        checkpoints_dir = run_dir / "checkpoints"
+        outputs_dir.mkdir(parents=True, exist_ok=True)
+        checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        cfg.out_dir = checkpoints_dir
+        run_recorder.set_status(run_id, "RUNNING", stage="train", step="init")
         print(f"[Debug] Output Directory: {cfg.out_dir}")
         cfg.out_dir.mkdir(parents=True, exist_ok=True)
         
@@ -676,7 +691,7 @@ def main():
         
         # 1. Model
         # Setup Logging
-        log_path = cfg.out_dir / "training.log"
+        log_path = outputs_dir / "training.log"
         import logging
         
         # Configure root logger to write to file and stdout
@@ -931,6 +946,14 @@ def main():
             # 3. Save Manifest
             with open(target_dir / "manifest.json", "w") as f:
                 json.dump(step_meta, f, indent=2)
+            run_recorder.register_checkpoint(
+                run_id,
+                checkpoint_path=str(target_dir),
+                step=int(step_meta.get("step", 0)),
+                epoch=float(step_meta.get("epoch", 0.0) or 0.0),
+                component="chronos_lora",
+                meta=step_meta,
+            )
 
         print(f"Starting Training: {cfg.run_id}")
         
@@ -1078,28 +1101,20 @@ def main():
                     
                     current_lr = scheduler.get_last_lr()[0]
                     
-                    q10_mean = None
-                    q50_mean = None
-                    q90_mean = None
-                    if hasattr(out, "q_10d") and out.q_10d is not None:
-                        idx_10 = quantiles.index(0.1)
-                        idx_50 = quantiles.index(0.5)
-                        idx_90 = quantiles.index(0.9)
-                        q10_mean = out.q_10d[:, idx_10].mean().item()
-                        q50_mean = out.q_10d[:, idx_50].mean().item()
-                        q90_mean = out.q_10d[:, idx_90].mean().item()
-
-                    loss_parts = []
-                    if loss_10d_value is not None:
-                        loss_parts.append(f"Loss10d: {loss_10d_value:.4f}")
-                    if loss_1d_value is not None:
-                        loss_parts.append(f"Loss1d: {loss_1d_value:.4f}")
-                    if q10_mean is not None:
-                        loss_parts.append(f"Q10: {q10_mean:.4f}")
-                        loss_parts.append(f"Q50: {q50_mean:.4f}")
-                        loss_parts.append(f"Q90: {q90_mean:.4f}")
-                    extras = " | " + " | ".join(loss_parts) if loss_parts else ""
-                    print(f"Step {curr_global_step} | Loss: {avg_loss:.4f} | LR: {current_lr:.2e}{extras}")
+                    # Log extras removed to reduce noise (training batch spreads are volatile)
+                    print(f"Step {curr_global_step} | Loss: {avg_loss:.4f} | LR: {current_lr:.2e}")
+                    run_recorder.emit_metric(
+                        run_id,
+                        step=curr_global_step,
+                        epoch=None,
+                        metrics={"train_loss": avg_loss, "lr": current_lr},
+                    )
+                    run_recorder.set_status(
+                        run_id,
+                        "RUNNING",
+                        stage="train",
+                        step=f"step_{curr_global_step}",
+                    )
                     running_loss = 0.0
                     
                 # Quick Val (Every 500 steps)
@@ -1114,6 +1129,17 @@ def main():
                     qv_s99 = qv_metrics.get('s99', 0.0)
                     
                     print(f"QuickVal Pinball: {qv_loss:.4f} | Internal: {qv_internal:.4f} | S90: {qv_s90:.4f} | S99: {qv_s99:.4f}")
+                    run_recorder.emit_metric(
+                        run_id,
+                        step=curr_global_step,
+                        epoch=None,
+                        metrics={
+                            "quickval_pinball": qv_loss,
+                            "quickval_internal": qv_internal,
+                            "quickval_s90": qv_s90,
+                            "quickval_s99": qv_s99,
+                        },
+                    )
                     
                     # Update EMA
                     if quick_val_ema is None:
@@ -1157,6 +1183,20 @@ def main():
                      print(f"  Pinball: {val_10d_pinball:.6f} (Primary)")
                      print(f"  Direction Acc: {val_10d_dir:.2%}")
                      print(f"  Q10 Calibration: {val_10d_q10:.2%} (Target 10%)")
+                     run_recorder.emit_metric(
+                         run_id,
+                         step=curr_global_step,
+                         epoch=None,
+                         metrics={
+                             "val_pinball": val_loss,
+                             "val_internal": val_internal,
+                             "val_10d_pinball": val_10d_pinball,
+                             "val_10d_direction": val_10d_dir,
+                             "val_10d_q10": val_10d_q10,
+                             "val_s90": val_s90,
+                             "val_s99": val_s99,
+                         },
+                     )
                      
                      # 3. Canary Selection: 10-Day Cumulative Pinball Loss
                      # Re-enabling 10-day metric selection as we now have stable proxy
@@ -1199,31 +1239,38 @@ def main():
             "metrics": {"last_loss": avg_loss}
         })
         print("Training Complete.")
+        run_recorder.register_artifact(
+            run_id,
+            name="training_log",
+            type="log",
+            path=str(log_path),
+            tags=["training"],
+        )
+        run_recorder.finalize_run(run_id, "PASSED")
         return 0
     except KeyboardInterrupt:
         print("Training interrupted.")
+        run_recorder.set_status(
+            run_id,
+            "ABORTED",
+            stage="train",
+            step="interrupt",
+            error={"type": "KeyboardInterrupt", "message": "Training interrupted.", "traceback": ""},
+        )
+        run_recorder.finalize_run(run_id, "ABORTED")
         return 0
     except Exception as e:
         print(f"Training failed: {e}")
         import traceback
         traceback.print_exc()
-        return 1
-        
-        # Manifest
-        manifest = {
-            "run_id": cfg.run_id,
-            "timestamp": datetime.datetime.now().isoformat(),
-            "final_step": step,
-            "config": asdict(cfg, dict_factory=lambda x: {k: str(v) if isinstance(v, Path) else v for k, v in x.items()})
-        }
-        with open(cfg.out_dir / "run_manifest.json", "w") as f:
-            json.dump(manifest, f, indent=2)
-
-        print(f"Done. Saved to {cfg.out_dir}")
-        return 0
-    except Exception:
-        import traceback
-        traceback.print_exc()
+        run_recorder.set_status(
+            run_id,
+            "FAILED",
+            stage="train",
+            step="error",
+            error={"type": type(e).__name__, "message": str(e), "traceback": traceback.format_exc()},
+        )
+        run_recorder.finalize_run(run_id, "FAILED")
         return 1
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import logging
 from typing import List, Dict
-from backend.app.ops import pathmap, config, artifact_registry
+from backend.app.ops import pathmap, config, artifact_registry, run_recorder
 from backend.app.features import schemas, validators
 from backend.app.data.ingest import ohlcv_daily as ingest_daily
 from backend.app.data import security_master
@@ -71,7 +71,7 @@ def apply_universe_rules(metrics_df: pd.DataFrame, rules: Dict) -> pd.DataFrame:
         df.loc[mask_cut & (df["reason_code"] == "OK"), "reason_code"] = "ADV_RANK_CUTOFF"
     return df
 
-def write_universe_manifest(asof_date, df: pd.DataFrame, rules: Dict) -> str:
+def write_universe_manifest(asof_date, df: pd.DataFrame, rules: Dict, run_id: str | None = None) -> str:
     path = pathmap.resolve("manifest", date=asof_date)
     code_version = "v1"
     uv = artifact_registry.compute_universe_version(rules, code_version)
@@ -81,6 +81,15 @@ def write_universe_manifest(asof_date, df: pd.DataFrame, rules: Dict) -> str:
     validators.validate_df(df, schemas.SCHEMA_UNIVERSE_MANIFEST, context="Universe Write")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_parquet(path)
+    if run_id:
+        run_recorder.register_artifact(
+            run_id,
+            name=f"universe_manifest_{str(asof_date)}",
+            type="parquet",
+            path=path,
+            tags=["universe", "manifest"],
+            meta={"universe_version": uv},
+        )
     return path
 
 class UniverseSelector:

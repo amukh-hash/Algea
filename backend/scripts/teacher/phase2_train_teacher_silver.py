@@ -42,7 +42,8 @@ except Exception:
 # Imports
 sys.path.append(os.getcwd())
 try:
-    from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
+from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
+from backend.app.ops import run_recorder
 except ImportError as e:
     print(f"ERROR: Backend imports failed: {e}")
     sys.exit(1)
@@ -439,115 +440,162 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--allow_fallback", action="store_true")
     args = parser.parse_args()
-
     cfg = load_config(args)
+    run_id = run_recorder.init_run(
+        pipeline_type="teacher_silver",
+        trigger="manual",
+        config={k: str(v) if isinstance(v, Path) else v for k, v in asdict(cfg).items()},
+        data_versions={"gold": "unknown", "silver": "unknown", "macro": "unknown", "universe": "unknown"},
+        tags=["training", "teacher_silver"],
+    )
+    run_dir = run_recorder.run_paths.get_run_dir(run_id)
+    outputs_dir = run_dir / "outputs"
+    checkpoints_dir = run_dir / "checkpoints"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+    cfg.out_dir = checkpoints_dir
+    run_recorder.set_status(run_id, "RUNNING", stage="train", step="init")
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # 1. Model (Resume Gold)
-    print(f"[Phase2] Loading from Gold: {cfg.load_gold_dir}")
-    model_wrapper, info = load_chronos_adapter(
-        model_id=cfg.model_id,
-        use_qlora=cfg.use_qlora,
-        device=device,
-        adapter_path=cfg.load_gold_dir,
-        lora_config=cfg.lora_config # Fallback if no path
-    )
+    try:
+        # 1. Model (Resume Gold)
+        print(f"[Phase2] Loading from Gold: {cfg.load_gold_dir}")
+        model_wrapper, info = load_chronos_adapter(
+            model_id=cfg.model_id,
+            use_qlora=cfg.use_qlora,
+            device=device,
+            adapter_path=cfg.load_gold_dir,
+            lora_config=cfg.lora_config # Fallback if no path
+        )
 
-    if not isinstance(model_wrapper, Chronos2NativeWrapper):
-        print("ERROR: Loaded model does not expose Chronos native API.")
-        return 1
+        if not isinstance(model_wrapper, Chronos2NativeWrapper):
+            raise RuntimeError("Loaded model does not expose Chronos native API.")
 
-    # 2. Data
-    tickers = load_tickers(cfg)
-    ds = SilverMarketFrameDataset(
-        marketframe_dir=cfg.marketframe_dir,
-        tickers=tickers,
-        required_cols=cfg.required_cols,
-        context=cfg.context, pred=cfg.pred, stride_rows=cfg.stride_rows,
-        max_windows_per_ticker=cfg.max_windows_per_ticker,
-        seed=cfg.seed, byte_limit=cfg.byte_cache_limit
-    )
-    
-    # Feature Names alignment (exclude TS)
-    feat_names = [c for c in cfg.required_cols if c not in ("timestamp", "date")]
-    target_names = [c for c in cfg.target_cols if c not in ("timestamp", "date")]
-    covariate_cols = [c for c in cfg.covariate_cols if c != cfg.target_col]
-    future_covariate_cols = list(cfg.future_covariate_cols)
-    
-    collate = get_collate_fn(
-        feat_names,
-        target_names,
-        cfg.target_col,
-        covariate_cols,
-        future_covariate_cols,
-    )
-    dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate, num_workers=0)
-    
-    # 4. Train
-    opt = torch.optim.AdamW(model_wrapper.parameters(), lr=cfg.lr)
-    scheduler = get_linear_schedule_with_warmup(opt, cfg.warmup_steps, cfg.max_steps)
-    
-    print(f"Starting Silver Training: {cfg.run_id}")
-    step = 0
-    
-    while step < cfg.max_steps:
-        for batch in dl:
-            context = batch["context"].to(device)
-            context_mask = batch["context_mask"].to(device)
-            future_target = batch["future_target"].to(device)
-            future_target_mask = batch["future_target_mask"].to(device)
-            past_covariates = batch["past_covariates"]
-            future_covariates = batch["future_covariates"]
-            if past_covariates is not None:
-                past_covariates = past_covariates.to(device)
-            if future_covariates is not None:
-                future_covariates = future_covariates.to(device)
-            
-            out = model_wrapper(
-                context,
-                context_mask=context_mask,
-                future_target=future_target,
-                future_target_mask=future_target_mask,
-                past_covariates=past_covariates,
-                future_covariates=future_covariates,
-            )
-            loss = out.loss if hasattr(out, "loss") else None
-            if loss is None:
-                pred = getattr(out, "prediction", None) or getattr(out, "predictions", None)
-                if pred is None:
-                    raise RuntimeError("Chronos native forward did not return loss or predictions.")
-                pred = torch.as_tensor(pred)
-                if pred.ndim == 2:
-                    pred = pred.unsqueeze(1).unsqueeze(-1)
-                elif pred.ndim == 3:
-                    pred = pred.unsqueeze(-1)
-                loss = torch.mean((pred - future_target) ** 2)
-            
-            loss = loss / cfg.grad_accum
-            loss.backward()
-            
-            if (step + 1) % cfg.grad_accum == 0:
-                torch.nn.utils.clip_grad_norm_(model_wrapper.parameters(), 1.0)
-                opt.step()
-                scheduler.step()
-                opt.zero_grad()
+        # 2. Data
+        tickers = load_tickers(cfg)
+        ds = SilverMarketFrameDataset(
+            marketframe_dir=cfg.marketframe_dir,
+            tickers=tickers,
+            required_cols=cfg.required_cols,
+            context=cfg.context, pred=cfg.pred, stride_rows=cfg.stride_rows,
+            max_windows_per_ticker=cfg.max_windows_per_ticker,
+            seed=cfg.seed, byte_limit=cfg.byte_cache_limit
+        )
+        
+        # Feature Names alignment (exclude TS)
+        feat_names = [c for c in cfg.required_cols if c not in ("timestamp", "date")]
+        target_names = [c for c in cfg.target_cols if c not in ("timestamp", "date")]
+        covariate_cols = [c for c in cfg.covariate_cols if c != cfg.target_col]
+        future_covariate_cols = list(cfg.future_covariate_cols)
+        
+        collate = get_collate_fn(
+            feat_names,
+            target_names,
+            cfg.target_col,
+            covariate_cols,
+            future_covariate_cols,
+        )
+        dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate, num_workers=0)
+        
+        # 4. Train
+        opt = torch.optim.AdamW(model_wrapper.parameters(), lr=cfg.lr)
+        scheduler = get_linear_schedule_with_warmup(opt, cfg.warmup_steps, cfg.max_steps)
+        
+        print(f"Starting Silver Training: {cfg.run_id}")
+        step = 0
+        
+        while step < cfg.max_steps:
+            for batch in dl:
+                context = batch["context"].to(device)
+                context_mask = batch["context_mask"].to(device)
+                future_target = batch["future_target"].to(device)
+                future_target_mask = batch["future_target_mask"].to(device)
+                past_covariates = batch["past_covariates"]
+                future_covariates = batch["future_covariates"]
+                if past_covariates is not None:
+                    past_covariates = past_covariates.to(device)
+                if future_covariates is not None:
+                    future_covariates = future_covariates.to(device)
                 
-                if step % cfg.log_every == 0:
-                     print(f"Step {step} | Loss {loss.item()*cfg.grad_accum:.4f}")
-                     
-                if step % cfg.checkpoint_every == 0:
-                     path = cfg.out_dir / f"checkpoint-{step}"
-                     path.mkdir(parents=True, exist_ok=True)
-                     model_wrapper.save_pretrained(path)
-                     print(f"Ckpt saved: {path}")
+                out = model_wrapper(
+                    context,
+                    context_mask=context_mask,
+                    future_target=future_target,
+                    future_target_mask=future_target_mask,
+                    past_covariates=past_covariates,
+                    future_covariates=future_covariates,
+                )
+                loss = out.loss if hasattr(out, "loss") else None
+                if loss is None:
+                    pred = getattr(out, "prediction", None) or getattr(out, "predictions", None)
+                    if pred is None:
+                        raise RuntimeError("Chronos native forward did not return loss or predictions.")
+                    pred = torch.as_tensor(pred)
+                    if pred.ndim == 2:
+                        pred = pred.unsqueeze(1).unsqueeze(-1)
+                    elif pred.ndim == 3:
+                        pred = pred.unsqueeze(-1)
+                    loss = torch.mean((pred - future_target) ** 2)
+                
+                loss = loss / cfg.grad_accum
+                loss.backward()
+                
+                if (step + 1) % cfg.grad_accum == 0:
+                    torch.nn.utils.clip_grad_norm_(model_wrapper.parameters(), 1.0)
+                    opt.step()
+                    scheduler.step()
+                    opt.zero_grad()
+                    
+                    if step % cfg.log_every == 0:
+                        loss_val = loss.item() * cfg.grad_accum
+                        print(f"Step {step} | Loss {loss_val:.4f}")
+                        run_recorder.emit_metric(
+                            run_id,
+                            step=step,
+                            epoch=None,
+                            metrics={"train_loss": loss_val},
+                        )
+                        run_recorder.set_status(run_id, "RUNNING", stage="train", step=f"step_{step}")
+                        
+                    if step % cfg.checkpoint_every == 0:
+                        path = cfg.out_dir / f"checkpoint-{step}"
+                        path.mkdir(parents=True, exist_ok=True)
+                        model_wrapper.save_pretrained(path)
+                        print(f"Ckpt saved: {path}")
+                        run_recorder.register_checkpoint(
+                            run_id,
+                            checkpoint_path=str(path),
+                            step=step,
+                            epoch=0.0,
+                            component="chronos_lora",
+                        )
 
-            step += 1
-            if step >= cfg.max_steps: break
+                step += 1
+                if step >= cfg.max_steps:
+                    break
 
-    model_wrapper.save_pretrained(cfg.out_dir)
-    print(f"Done. {cfg.out_dir}")
+        model_wrapper.save_pretrained(cfg.out_dir)
+        print(f"Done. {cfg.out_dir}")
+        run_recorder.register_artifact(
+            run_id,
+            name="teacher_silver_model",
+            type="model_checkpoint",
+            path=str(cfg.out_dir),
+            tags=["teacher_silver"],
+        )
+        run_recorder.finalize_run(run_id, "PASSED")
+        return 0
+    except Exception as exc:
+        run_recorder.set_status(
+            run_id,
+            "FAILED",
+            stage="train",
+            step="error",
+            error={"type": type(exc).__name__, "message": str(exc), "traceback": ""},
+        )
+        run_recorder.finalize_run(run_id, "FAILED")
+        raise
 
 if __name__ == "__main__":
     raise SystemExit(main())
