@@ -96,7 +96,8 @@ def main():
         predictor = None
 
     model = None
-    if predictor is None:
+    use_native_head = os.getenv("CHRONOS2_USE_NATIVE_HEAD", "1") == "1"
+    if predictor is None or use_native_head:
         model, model_info = chronos2_teacher.load_chronos_adapter(
             model_id=model_id,
             use_qlora=False, # Teacher usually full precision or loaded as-is
@@ -125,7 +126,24 @@ def main():
                 failed.append(ticker)
                 continue
 
-            if predictor is not None:
+            if model is not None and hasattr(model, "predict_quantiles_10d"):
+                target_col = args.target_col
+                if target_col not in context.columns:
+                    target_col = "close"
+                context_values = context[target_col].to_numpy()
+                context_tensor = torch.tensor(context_values, dtype=torch.float32).unsqueeze(0)
+                priors_list = chronos2_teacher.infer_priors(
+                    model,
+                    context_tensor.unsqueeze(-1),
+                    horizon_days=10,
+                    n_samples=args.n_samples,
+                )
+                priors = priors_list[0]
+                drift = priors.drift
+                vol = priors.vol_forecast
+                downside_q10 = priors.tail_risk
+                trend_conf = priors.trend_conf
+            elif predictor is not None:
                 context_df = context.rename({"timestamp": "timestamp"}).with_columns(
                     pl.lit(ticker).alias("symbol")
                 ).to_pandas()

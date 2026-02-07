@@ -23,6 +23,18 @@ from transformers import (
 from peft import get_peft_model, LoraConfig, PeftModel, prepare_model_for_kbit_training, TaskType
 from backend.app.models.signal_types import ChronosPriors
 
+class Chronos2QuantileHead(nn.Module):
+    def __init__(self, quantiles_count: int = 21, hidden_size: int = 128):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.LazyLinear(hidden_size),
+            nn.GELU(),
+            nn.Linear(hidden_size, quantiles_count),
+        )
+
+    def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
+        return self.net(embeddings)
+
 class Chronos2ModelWrapper(nn.Module):
     """
     Wraps the HF Model to handle input shape adaptation (Multivariate -> Univariate).
@@ -112,7 +124,10 @@ class Chronos2ModelWrapper(nn.Module):
              print(f"[Wrapper] Calling with keys: {list(call_kwargs.keys())}")
              self._probed = True
              
-        return self.model(**call_kwargs)
+        outputs = self.model(**call_kwargs)
+        rep = self._pool_context_representation(context, outputs)
+        q_10d = self.quantile_head(rep)
+        return self._attach_q10d(outputs, q_10d)
     
     def generate(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                  prediction_length: int = 10, num_samples: int = 20, **kwargs) -> torch.Tensor:
@@ -187,11 +202,27 @@ class Chronos2NativeWrapper(nn.Module):
     Wraps Chronos-2 native patch-based models.
     Expected forward signature includes context/context_mask/future_target/num_output_patches.
     """
-    def __init__(self, model: nn.Module, model_type: str, forward_params: List[str]):
+    def __init__(
+        self,
+        model: nn.Module,
+        model_type: str,
+        forward_params: List[str],
+        quantiles_count: int = 21,
+        head_hidden_size: int = 128,
+    ):
         super().__init__()
         self.model = model
         self.model_type = model_type
         self.forward_params = forward_params
+        self.quantile_head = Chronos2QuantileHead(
+            quantiles_count=quantiles_count,
+            hidden_size=head_hidden_size,
+        )
+        try:
+            head_device = next(model.parameters()).device
+            self.quantile_head.to(head_device)
+        except StopIteration:
+            pass
 
     def _build_mask(self, tensor: torch.Tensor) -> torch.Tensor:
         if tensor.ndim == 3:
@@ -204,6 +235,76 @@ class Chronos2NativeWrapper(nn.Module):
         if tensor is None:
             return None
         return torch.nan_to_num(tensor, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def _pool_context_representation(
+        self,
+        context: torch.Tensor,
+        outputs: Optional[Any] = None,
+    ) -> torch.Tensor:
+        hidden = None
+        if outputs is not None:
+            if hasattr(outputs, "encoder_last_hidden_state"):
+                hidden = outputs.encoder_last_hidden_state
+            elif hasattr(outputs, "last_hidden_state"):
+                hidden = outputs.last_hidden_state
+            elif hasattr(outputs, "hidden_states") and outputs.hidden_states:
+                hidden = outputs.hidden_states[-1]
+            elif isinstance(outputs, dict):
+                hidden = outputs.get("encoder_last_hidden_state") or outputs.get("last_hidden_state")
+        if hidden is not None:
+            return hidden.mean(dim=1)
+        if context.ndim == 3:
+            return context.mean(dim=1)
+        return context
+
+    def _attach_q10d(self, outputs: Any, q_10d: torch.Tensor) -> Any:
+        if hasattr(outputs, "__dict__"):
+            outputs.q_10d = q_10d
+            return outputs
+        return {"outputs": outputs, "q_10d": q_10d}
+
+    def predict_quantiles_10d(
+        self,
+        context: torch.Tensor,
+        context_mask: Optional[torch.Tensor] = None,
+        past_covariates: Optional[torch.Tensor] = None,
+        future_covariates: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        context = self._sanitize(context)
+        past_covariates = self._sanitize(past_covariates)
+        future_covariates = self._sanitize(future_covariates)
+        if context_mask is None:
+            context_mask = self._build_mask(context)
+
+        outputs = None
+        arg_map = {
+            "context": context,
+            "context_mask": context_mask,
+            "past_covariates": past_covariates,
+            "future_covariates": future_covariates,
+            "past_dynamic_feat": past_covariates,
+            "future_dynamic_feat": future_covariates,
+            "known_covariates": future_covariates,
+        }
+        call_kwargs = {}
+        for k in self.forward_params:
+            if k in arg_map and arg_map[k] is not None:
+                call_kwargs[k] = arg_map[k]
+        if "use_cache" in self.forward_params:
+            call_kwargs["use_cache"] = False
+        if "output_hidden_states" in self.forward_params:
+            call_kwargs["output_hidden_states"] = True
+        if hasattr(self.model, "config"):
+            self.model.config.use_cache = False
+
+        if call_kwargs:
+            try:
+                outputs = self.model(**call_kwargs)
+            except Exception:
+                outputs = None
+
+        rep = self._pool_context_representation(context, outputs)
+        return self.quantile_head(rep)
 
     def _infer_num_output_patches(self, pred_len: int) -> Optional[int]:
         if pred_len <= 0:
@@ -642,6 +743,52 @@ def infer_priors(
     """
     if input_tensor.ndim == 2:
         input_tensor = input_tensor.unsqueeze(-1)
+
+    if isinstance(model, Chronos2NativeWrapper) and hasattr(model, "predict_quantiles_10d"):
+        quantiles = [
+            0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+            0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.99,
+        ]
+        q_10d = model.predict_quantiles_10d(
+            input_tensor,
+            past_covariates=past_covariates,
+            future_covariates=future_covariates,
+        )
+        idx_50 = quantiles.index(0.5)
+        idx_10 = quantiles.index(0.1)
+        idx_90 = quantiles.index(0.9)
+
+        def _prob_up_from_quantiles(values: torch.Tensor) -> float:
+            if torch.all(values > 0):
+                return 1.0
+            if torch.all(values < 0):
+                return 0.0
+            for i in range(len(values) - 1):
+                if values[i] <= 0 <= values[i + 1]:
+                    q_low = quantiles[i]
+                    q_high = quantiles[i + 1]
+                    denom = values[i + 1] - values[i]
+                    if denom == 0:
+                        return 1 - q_high
+                    frac = (0 - values[i]) / denom
+                    return 1 - (q_low + frac * (q_high - q_low))
+            return 0.5
+
+        priors_list = []
+        for b in range(q_10d.shape[0]):
+            q_vals = q_10d[b]
+            drift = float(q_vals[idx_50])
+            tail_risk = float(q_vals[idx_10])
+            spread = float(q_vals[idx_90] - q_vals[idx_10])
+            trend_conf = float(_prob_up_from_quantiles(q_vals))
+            priors_list.append(ChronosPriors(
+                drift=drift,
+                vol_forecast=spread,
+                tail_risk=tail_risk,
+                trend_conf=trend_conf,
+                metadata={"quantiles": quantiles, "horizon": 10}
+            ))
+        return priors_list
 
     if isinstance(model, Chronos2NativeWrapper):
         values = model.generate(
