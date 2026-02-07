@@ -4,7 +4,8 @@ import pandas as pd
 import logging
 from typing import Optional, List
 from backend.app.ops import pathmap, config
-from backend.app.data import ingest_daily, calendar, security_master
+from backend.app.data import calendar, security_master
+from backend.app.data.ingest import ohlcv_daily as ingest_daily
 
 logger = logging.getLogger(__name__)
 

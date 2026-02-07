@@ -4,7 +4,12 @@ Purpose: Partition values in FeatureFrame into per-ticker parquet files for sequ
 Input: backend/features/featureframe_vv1.parquet
 Output: backend/data_canonical/daily_parquet/{ticker}.parquet
 """
+import sys
 import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
+import logging
 import argparse
 import logging
 import pandas as pd

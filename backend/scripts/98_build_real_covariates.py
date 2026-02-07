@@ -4,7 +4,7 @@ import numpy as np
 import logging
 import os
 from backend.app.ops import bootstrap, pathmap
-from backend.app.data import ingest_daily
+from backend.app.data.ingest import ohlcv_daily as ingest_daily
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

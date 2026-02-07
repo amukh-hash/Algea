@@ -1,3 +1,8 @@
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 import logging
 import argparse
 import pandas as pd
@@ -5,7 +10,8 @@ import os
 from typing import List
 from backend.app.ops import bootstrap, pathmap, config
 from backend.app.teacher import priors, chronos_runner
-from backend.app.data import security_master, calendar, ingest_daily
+from backend.app.data import security_master, calendar
+from backend.app.data.ingest import ohlcv_daily as ingest_daily
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,4 +1,9 @@
 
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 import logging
 import argparse
 import pandas as pd
@@ -6,7 +11,7 @@ import numpy as np
 import os
 from dateutil.relativedelta import relativedelta
 from backend.app.ops import bootstrap, pathmap, config
-from backend.app.features import featureframe
+from backend.app.features import build_featureframe as featureframe
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

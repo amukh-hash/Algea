@@ -8,7 +8,8 @@ import hashlib
 from typing import Dict
 
 # Ensure backend in path
-sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 from backend.app.data import calendar
 

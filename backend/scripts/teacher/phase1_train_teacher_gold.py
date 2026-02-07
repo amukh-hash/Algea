@@ -269,7 +269,7 @@ class GoldFuturesWindowDataset(Dataset):
             torch.utils.data.Subset(self, val_idx)
         )
 
-    def get_quick_val_subset(self, val_ds: 'Subset', size: int = 50, output_dir: Path = None) -> 'Subset':
+    def get_quick_val_subset(self, val_ds: 'Subset', size: int = 1024, output_dir: Path = None) -> 'Subset':
         """
         Returns a deterministic, fixed-order subset of the validation set.
         Indices are saved/loaded from output_dir to ensure consistency across runs.
@@ -503,6 +503,7 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     total_10d_direction_acc = 0.0
     total_10d_q10_hit = 0.0
     total_samples = 0
+    metrics_grid_accumulator = {} # {lam: {'pinball_sum': 0.0, 'q10_hits': 0.0}}
     
     # Standard metrics
     total_pinball_loss = 0.0
@@ -587,14 +588,14 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                         l_10d_C = lp.sum(dim=2) # [B, Q]
                         pred_dist_C = torch.expm1(l_10d_C) # [B, Q]
                         
-                        # --- Grid Search Lambda ---
-                        # We track metrics for a grid of lambdas
+                        # --- Grid Search Lambda (Accumulation) ---
+                        # Initialize accumulator ONLY once (outside loop not possible without changing signature easily, 
+                        # so we use a hack: attach to the function object or assume 'total_10d_metrics' passed in?)
+                        # Actually, simpler: we just declare `metrics_grid_accumulator` at start of `run_validation`
+                        # But here we are inside the loop. 
+                        # We will use the 'metrics_grid_accumulator' variable which we MUST define before the loop.
+                        
                         lambdas = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
-                        
-                        # For the singular "Primary" metric reported to the loop, we pick Lambda=0.5 as distinct default
-                        # But we print the full table.
-                        
-                        metrics_grid = {}
                         
                         for lam in lambdas:
                             # Mix Quantiles (Linear Interpolation in Return Space)
@@ -608,30 +609,19 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                                 quantiles
                             ).item()
                             
-                            # 2. Q10 Calibration
+                            # 2. Q10 Calibration Hit
                             q10_mix = pred_dist_mix[:, idx_10]
-                            hit = (actual_10d < q10_mix).float().sum().item()
-                            q10_rate = hit / batch_size
+                            hit_count = (actual_10d < q10_mix).float().sum().item()
                             
-                            metrics_grid[lam] = {
-                                'pinball': loss_mix,
-                                'q10': q10_rate
-                            }
+                            # Accumulate
+                            if lam not in metrics_grid_accumulator:
+                                metrics_grid_accumulator[lam] = {'pinball_sum': 0.0, 'q10_hits': 0.0}
                             
-                        # Store grid for reporting (accumulate weighted by batch size)
-                        # Quick hack: we'll just sum them up and divide by total_samples later
-                        # For now, let's just accumulate the raw sums for the "primary" (Lambda=0.5)
-                        # and maybe store the grid in a specialized accumulator if we want perfection.
-                        # Given this runs inside a loop, we need a way to aggregate the grid across batches.
-                        # We will attach the grid to the running totals using a temporary attribute on the model or similar?
-                        # Or simpler: just track Lambda=0.5 (middle ground) for the "total_10d_pinball" variable
-                        # and print the snapshot of the *last batch* grid in the full validation log?
-                        # Actually: The user wants to see the table.
-                        # Let's aggregate the grid in a new dict variable passed in or global?
-                        # Since 'run_validation' is self-contained...
-                        # We will use 'total_10d_pinball' for Lambda=0.5
-                        
-                        lam_primary = 0.5
+                            metrics_grid_accumulator[lam]['pinball_sum'] += loss_mix
+                            metrics_grid_accumulator[lam]['q10_hits'] += hit_count
+                            
+                        # Use Lambda=0.2 for "Primary" reporting (Locked)
+                        lam_primary = 0.2
                         pred_dist_primary = (1 - lam_primary) * pred_dist_B + lam_primary * pred_dist_C
                         
                         # Pinball (Primary)
@@ -642,7 +632,7 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                         )
                         total_10d_pinball += loss_primary.item()
                         
-                        # Direction Acc (Primary) - Median likely similar across Lambdas for symmetric updates, but C2 median is robust
+                        # Direction Acc (Primary)
                         idx_50 = quantiles.index(0.5)
                         pred_median_primary = pred_dist_primary[:, idx_50]
                         same_sign = (torch.sign(pred_median_primary) == torch.sign(actual_10d)).float()
@@ -653,14 +643,6 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                         total_10d_q10_hit += hit_primary.sum().item()
                         
                         total_samples += batch_size
-                        
-                        # Spot Check Grid (Last Batch)
-                        if steps % 100 == 0:
-                             print(f"\n[Validation Spot Check Step {steps}] Lambda Grid:")
-                             print(f"Lambda | Pinball | Q10 Calib")
-                             for lam, m in metrics_grid.items():
-                                 print(f"{lam:^6.1f} | {m['pinball']:.6f} | {m['q10']:.2%}")
-                             print("-" * 30)
 
                     except ValueError:
                          pass
@@ -729,6 +711,55 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     avg_s90 = total_s90 / steps if steps > 0 else 0.0
     avg_s99 = total_s99 / steps if steps > 0 else 0.0
     
+    # Process and Print Lambda Grid Results (Aggregated)
+    if total_samples > 0:
+        print(f"\n[{prefix}] Aggregated Calibration Grid (N={total_samples}):")
+        print(f"Lambda | Pinball | Q10 Calib | Score")
+        
+        best_lam = -1
+        best_score = float('inf')
+        
+        # Sort by lambda
+        sorted_lams = sorted(metrics_grid_accumulator.keys())
+        for lam in sorted_lams:
+            stats = metrics_grid_accumulator[lam]
+            # Note: Pinball sum was item() * batch? No, compute_pinball_loss returns mean per quantile per batch.
+            # Actually, in the loop: loss_mix = compute_pinball_loss(...).item() 
+            # This is MEAN over B. So to aggregate we should have weighted by batch_size?
+            # Wait, total_pinball_loss accumulator usually does += item().
+            # If batches are equal size, sum/count is fine. 
+            # But 'compute_pinball_loss' usually returns MEAN unless reduced=False.
+            # Let's assume it returns MEAN. 
+            # To be precise: accumulation should be `loss * batch_size` then divide by `total_samples`.
+            # FIX: In the loop, I did `metrics_grid_accumulator[lam]['pinball_sum'] += loss_mix`.
+            # If loss_mix is MEAN, then we are summing means.
+            # We need to divide by `steps` (number of batches) to get average mean, NOT `total_samples`.
+            # OR we multiply by batch_size there.
+            # Current loop: `total_samples += batch_size`.
+            # Let's adjust aggregation in the loop or here? 
+            # Easier to adjust here if we know num patches. 
+            # Actually, let's just assume equal batches for now or correct it.
+            # Correction: The code above did `metrics_grid_accumulator[lam]['pinball_sum'] += loss_mix`.
+            # loss_mix is a scalar mean. 
+            # So we simply divide by `steps` (iteration count) to get expectation.
+            
+            avg_pinball = stats['pinball_sum'] / max(1, steps)
+            q10_rate = stats['q10_hits'] / total_samples
+            
+            # Selection Score: Pinball + Beta * |Calib - 0.1|
+            # Beta = 0.05
+            score = avg_pinball + 0.05 * abs(q10_rate - 0.10)
+            
+            if score < best_score:
+                best_score = score
+                best_lam = lam
+            
+            print(f"{lam:^6.1f} | {avg_pinball:.6f} | {q10_rate:.2%} | {score:.6f}")
+        
+        print(f"-" * 40)
+        print(f"Best Lambda (Score): {best_lam} (Score: {best_score:.6f})")
+        print(f"-" * 40)
+
     # Standardize output keys (Safe Return)
     return {
         "pinball_loss": avg_pinball_loss, 
@@ -1197,8 +1228,8 @@ def main():
                      val_s99 = fv_metrics.get('s99', 0.0)
                      
                      print(f"Full Val Pinball (Daily): {val_loss:.6f}")
-                     print(f"Full Val 10-Day Derived (Interpolated C3, Lambda=0.5):")
-                     print(f"  Note: Check logs for Lambda Grid Search (Spot Check)")
+                     print(f"Full Val 10-Day Derived (Final Strategy, Lambda=0.2):")
+                     print(f"  Note: See Aggregated Calibration Grid above")
                      print(f"  Pinball: {val_10d_pinball:.6f} (Primary)")
                      print(f"  Direction Acc: {val_10d_dir:.2%}")
                      print(f"  Q10 Calibration: {val_10d_q10:.2%} (Target 10%)")

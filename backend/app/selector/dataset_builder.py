@@ -7,7 +7,8 @@ from typing import Dict, List
 import torch
 from backend.app.ops import pathmap, artifact_registry, config
 from backend.app.features import schemas, validators
-from backend.app.data import calendar, ingest_daily
+from backend.app.data import calendar
+from backend.app.data.ingest import ohlcv_daily as ingest_daily
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Any, Union
 from datetime import date, datetime
 import os
 
-from backend.app.models.student_runner import StudentRunner
+from backend.app.models.student_inference import StudentRunner
 from backend.app.risk.risk_manager import RiskManager
 from backend.app.risk.types import RiskDecision, ActionType
 from backend.app.portfolio.state import PortfolioState

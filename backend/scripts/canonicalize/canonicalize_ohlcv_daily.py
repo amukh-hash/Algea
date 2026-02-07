@@ -1,11 +1,16 @@
 
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 import logging
 import argparse
 import pandas as pd
 import os
 from tqdm import tqdm
 from backend.app.ops import bootstrap, pathmap, config
-from backend.app.data.ingest_daily import write_ohlcv_partition
+from backend.app.data.ingest.ohlcv_daily import write_ohlcv_partition
 from backend.app.data.adjustments import adjust_daily_bars
 
 logging.basicConfig(level=logging.INFO)

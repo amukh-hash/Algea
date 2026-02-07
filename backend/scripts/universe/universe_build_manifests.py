@@ -1,12 +1,17 @@
 
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 import logging
 import argparse
 import pandas as pd
 import os
 from dateutil.relativedelta import relativedelta
 from backend.app.ops import bootstrap, pathmap, config
-from backend.app.data import universe, security_master
-from backend.app.data.ingest_daily import load_ohlcv
+from backend.app.data import universe_selector as universe, security_master
+from backend.app.data.ingest.ohlcv_daily import load_ohlcv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

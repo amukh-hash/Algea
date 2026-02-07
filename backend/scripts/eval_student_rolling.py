@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 # Ensure backend in path
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
-from backend.app.models.student_runner import StudentRunner
+from backend.app.models.student_inference import StudentRunner
 from backend.app.models.baseline import BaselineMLP # or dynamic import
 from backend.app.data import windows, splits
 from backend.app.eval import metrics, promotion_gate, reporting

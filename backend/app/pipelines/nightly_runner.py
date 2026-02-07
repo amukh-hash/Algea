@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 from backend.app.core import config
 from backend.app.ops import pathmap
-from backend.app.data.universe import UniverseSelector
+from backend.app.data.universe_selector import UniverseSelector
 from backend.app.data.preproc import FeatureEngineer
 from backend.app.models.schema import FeatureContract
 
@@ -90,7 +90,7 @@ def run_nightly_cycle(as_of_date: str):
 
     # 4. RANKER FEATURE PREP
     print(">> Engineering Ranker Features...")
-    from backend.app.features import featureframe
+    from backend.app.features import build_featureframe as featureframe
     
     # Mocking final input for continuity
     final_input = pd.DataFrame({

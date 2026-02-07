@@ -1,12 +1,19 @@
 
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 import logging
 import argparse
 import pandas as pd
 import os
 from datetime import datetime, timedelta
 from backend.app.ops import bootstrap, pathmap, config, promotion_gate
-from backend.app.data import ingest_daily, universe, security_master, calendar
-from backend.app.features import featureframe
+from backend.app.data import security_master, calendar
+from backend.app.data.ingest import ohlcv_daily as ingest_daily
+from backend.app.data import universe_selector as universe
+from backend.app.features import build_featureframe as featureframe
 from backend.app.teacher import priors, chronos_runner
 from backend.app.selector import infer
 
