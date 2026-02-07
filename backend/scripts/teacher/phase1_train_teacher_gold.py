@@ -384,9 +384,22 @@ class GoldFuturesWindowDataset(Dataset):
         # Sanitize NaNs/Infs final check
         feats = np.nan_to_num(feats, nan=0.0, posinf=0.0, neginf=0.0)
 
+        future_target_1d = None
+        target_10d = None
+        if target_feat_idx >= 0:
+            future_target_1d = feats[self.context:self.context + self.pred, target_feat_idx].astype(np.float32)
+            if self.target_col.startswith("ret"):
+                if np.any(future_target_1d[:10] < -0.5) or np.any(future_target_1d[:10] > 0.5):
+                    raise ValueError("future_target_1d must be decimal and clipped before compounding.")
+                if np.any(1 + future_target_1d[:10] <= 0):
+                    raise ValueError("Invalid return encountered: 1 + r must be > 0.")
+                target_10d = np.prod(1 + future_target_1d[:10]) - 1
+
         return {
             "x_float": feats[:self.context],
-            "y_float": feats[self.context:]
+            "y_float": feats[self.context:],
+            "future_target_1d": future_target_1d,
+            "target_10d": target_10d,
         }
 
 def _build_mask(tensor: torch.Tensor) -> torch.Tensor:
@@ -416,6 +429,12 @@ class CollateFn:
 
         context_target = x_pt[:, :, self.target_idx]  # [B, T]
         future_target = y_pt[:, :, self.target_idx]    # [B, Pred]
+        future_target_1d = future_target.clone()
+        target_10d = None
+        if future_target_1d.shape[1] >= 10:
+            if torch.any(1 + future_target_1d[:, :10] <= 0):
+                raise ValueError("Invalid return encountered: 1 + r must be > 0.")
+            target_10d = (1 + future_target_1d[:, :10]).prod(dim=1) - 1
         past_covariates = x_pt[:, :, self.covariate_indices] if self.covariate_indices else None
         future_covariates = y_pt[:, :, self.future_covariate_indices] if self.future_covariate_indices else None
 
@@ -436,6 +455,8 @@ class CollateFn:
             "context_mask": context_mask,
             "future_target": future_target,
             "future_target_mask": future_mask,
+            "future_target_1d": future_target_1d,
+            "target_10d": target_10d,
             "past_covariates": past_covariates,
             "future_covariates": future_covariates,
         }
@@ -446,15 +467,19 @@ def get_collate_fn(feature_names: List[str], target_col: str,
 
 def compute_pinball_loss(y_true, quantile_preds, quantiles, quantile_weights=None):
     """
-    y_true: [B, H]
-    quantile_preds: [B, Q, H'] where H' may be >= H (Chronos 2 outputs 32 steps)
+    y_true: [B] or [B, H]
+    quantile_preds: [B, Q] or [B, Q, H'] where H' may be >= H (Chronos 2 outputs 32 steps)
     quantiles: List[float]
     quantile_weights: Optional[Tensor] [Q] - per-quantile weights (for curriculum)
     Returns: scalar mean loss
     """
     # Ensure correct shapes
+    if y_true.ndim == 1:
+        y_true = y_true.unsqueeze(1)
     if y_true.ndim == 2:
         y_true = y_true.unsqueeze(1) # [B, 1, H]
+    if quantile_preds.ndim == 2:
+        quantile_preds = quantile_preds.unsqueeze(-1)
     
     horizon = y_true.shape[-1] # Target horizon
     
@@ -498,12 +523,11 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     # Validation uses uniform weights (1.0) for stability
     quantile_weights = torch.ones(len(quantiles), device=device)
     
-    # Trackers for 10-Day Derived Metrics
+    # Trackers for 10-Day Metrics
     total_10d_pinball = 0.0
     total_10d_direction_acc = 0.0
     total_10d_q10_hit = 0.0
     total_samples = 0
-    metrics_grid_accumulator = {} # {lam: {'pinball_sum': 0.0, 'q10_hits': 0.0}}
     
     # Standard metrics
     total_pinball_loss = 0.0
@@ -514,8 +538,11 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
         for batch in dl:
             context = batch["context"].to(device)
             context_mask = batch["context_mask"].to(device)
-            future_target = batch["future_target"].to(device) # [B, Pred] (Log Returns)
+            future_target = batch["future_target"].to(device) # [B, Pred] (Decimal Returns)
             future_target_mask = batch["future_target_mask"].to(device)
+            target_10d = batch["target_10d"]
+            if target_10d is not None:
+                target_10d = target_10d.to(device)
             past_covariates = batch["past_covariates"]
             future_covariates = batch["future_covariates"]
             if past_covariates is not None: past_covariates = past_covariates.to(device)
@@ -536,116 +563,25 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                     qp, quantiles, quantile_weights=quantile_weights
                 )
                 total_pinball_loss += p_loss.item()
-                
-                # --- 2. 10-Day Derived Metrics (Sample-Based) ---
-                # --- 2. 10-Day Derived Metrics (Interpolated C3) ---
-                # Strategy: Mix Independent (Student-t) and Comonotonic (Direct Sum) distributions.
-                # Lambda=0 -> Independent (Optimistic Tails). Lambda=1 -> Comonotonic (Pessimistic Tails).
-                # We grid search Lambda to find the true dependence structure.
-                
-                if pred_len >= 10:
-                    # A. Actual 10-Day Component (Compounded Simple Returns)
-                    safe_targets = torch.clamp(future_target[:, :10], min=-0.99) 
-                    actual_10d = (1 + safe_targets).prod(dim=1) - 1 # [B]
-                    
-                    try:
-                        # Lazy import scipy
-                        from scipy.stats import t as t_dist
-                        
-                        # --- Shared Pre-calculation (Log-Space) ---
-                        qp_safe = torch.clamp(qp[:, :, :10], min=-0.99)
-                        lp = torch.log1p(qp_safe) # [B, Q, 10]
-                        
-                        # Indices
-                        idx_10 = quantiles.index(0.1)
-                        # idx_50 = quantiles.index(0.5) 
-                        
-                        # --- Method B: Independent (Student-t Approx) ---
-                        # 1. Daily Statistics in Log-Space
-                        idx_50 = quantiles.index(0.5)
-                        idx_90 = quantiles.index(0.9)
-                        
-                        mu_daily_L = lp[:, idx_50, :] 
-                        q90_daily_L = lp[:, idx_90, :]
-                        q10_daily_L = lp[:, idx_10, :]
-                        sigma_daily_L = (q90_daily_L - q10_daily_L) / 2.563
-                        
-                        # 2. Aggregate Moments
-                        mu_10d_L = mu_daily_L.sum(dim=1) # [B]
-                        var_10d_L = (sigma_daily_L ** 2).sum(dim=1)
-                        sigma_10d_L = torch.sqrt(var_10d_L) # [B]
-                        
-                        # 3. Reconstruct
-                        pred_B_10d_list = []
-                        for q in quantiles:
-                            t_score = t_dist.ppf(q, df=7)
-                            t_tensor = torch.tensor(t_score, device=device, dtype=mu_10d_L.dtype)
-                            l_val = mu_10d_L + t_tensor * sigma_10d_L
-                            pred_B_10d_list.append(torch.expm1(l_val))
-                        pred_dist_B = torch.stack(pred_B_10d_list, dim=1) # [B, Q]
-                        
-                        # --- Method C2: Comonotonic (Direct Sum) ---
-                        l_10d_C = lp.sum(dim=2) # [B, Q]
-                        pred_dist_C = torch.expm1(l_10d_C) # [B, Q]
-                        
-                        # --- Grid Search Lambda (Accumulation) ---
-                        # Initialize accumulator ONLY once (outside loop not possible without changing signature easily, 
-                        # so we use a hack: attach to the function object or assume 'total_10d_metrics' passed in?)
-                        # Actually, simpler: we just declare `metrics_grid_accumulator` at start of `run_validation`
-                        # But here we are inside the loop. 
-                        # We will use the 'metrics_grid_accumulator' variable which we MUST define before the loop.
-                        
-                        lambdas = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
-                        
-                        for lam in lambdas:
-                            # Mix Quantiles (Linear Interpolation in Return Space)
-                            # Q_mix = (1-lam)*Q_B + lam*Q_C
-                            pred_dist_mix = (1 - lam) * pred_dist_B + lam * pred_dist_C
-                            
-                            # 1. Pinball
-                            loss_mix = compute_pinball_loss(
-                                actual_10d.unsqueeze(1),
-                                pred_dist_mix.unsqueeze(2),
-                                quantiles
-                            ).item()
-                            
-                            # 2. Q10 Calibration Hit
-                            q10_mix = pred_dist_mix[:, idx_10]
-                            hit_count = (actual_10d < q10_mix).float().sum().item()
-                            
-                            # Accumulate
-                            if lam not in metrics_grid_accumulator:
-                                metrics_grid_accumulator[lam] = {'pinball_sum': 0.0, 'q10_hits': 0.0}
-                            
-                            metrics_grid_accumulator[lam]['pinball_sum'] += loss_mix
-                            metrics_grid_accumulator[lam]['q10_hits'] += hit_count
-                            
-                        # Use Lambda=0.2 for "Primary" reporting (Locked)
-                        lam_primary = 0.2
-                        pred_dist_primary = (1 - lam_primary) * pred_dist_B + lam_primary * pred_dist_C
-                        
-                        # Pinball (Primary)
-                        loss_primary = compute_pinball_loss(
-                             actual_10d.unsqueeze(1),
-                             pred_dist_primary.unsqueeze(2),
-                             quantiles
-                        )
-                        total_10d_pinball += loss_primary.item()
-                        
-                        # Direction Acc (Primary)
-                        idx_50 = quantiles.index(0.5)
-                        pred_median_primary = pred_dist_primary[:, idx_50]
-                        same_sign = (torch.sign(pred_median_primary) == torch.sign(actual_10d)).float()
-                        total_10d_direction_acc += same_sign.sum().item()
-                        
-                        # Q10 (Primary)
-                        hit_primary = (actual_10d < pred_dist_primary[:, idx_10]).float()
-                        total_10d_q10_hit += hit_primary.sum().item()
-                        
-                        total_samples += batch_size
 
-                    except ValueError:
-                         pass
+            if hasattr(model, "predict_quantiles_10d") and target_10d is not None:
+                q_10d = model.predict_quantiles_10d(
+                    context,
+                    context_mask=context_mask,
+                    past_covariates=past_covariates,
+                    future_covariates=future_covariates,
+                )
+                loss_primary = compute_pinball_loss(target_10d, q_10d, quantiles)
+                total_10d_pinball += loss_primary.item()
+
+                idx_50 = quantiles.index(0.5)
+                idx_10 = quantiles.index(0.1)
+                q50_10d = q_10d[:, idx_50]
+                dir_correct = ((q50_10d > 0) == (target_10d > 0)).float().sum().item()
+                total_10d_direction_acc += dir_correct
+                q10_10d = q_10d[:, idx_10]
+                total_10d_q10_hit += (target_10d < q10_10d).float().sum().item()
+                total_samples += batch_size
                 
                 # Monitor Spreads (Day 10 Marginal)
                 if qp.shape[2] >= 10:
@@ -711,55 +647,6 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     avg_s90 = total_s90 / steps if steps > 0 else 0.0
     avg_s99 = total_s99 / steps if steps > 0 else 0.0
     
-    # Process and Print Lambda Grid Results (Aggregated)
-    if total_samples > 0:
-        print(f"\n[{prefix}] Aggregated Calibration Grid (N={total_samples}):")
-        print(f"Lambda | Pinball | Q10 Calib | Score")
-        
-        best_lam = -1
-        best_score = float('inf')
-        
-        # Sort by lambda
-        sorted_lams = sorted(metrics_grid_accumulator.keys())
-        for lam in sorted_lams:
-            stats = metrics_grid_accumulator[lam]
-            # Note: Pinball sum was item() * batch? No, compute_pinball_loss returns mean per quantile per batch.
-            # Actually, in the loop: loss_mix = compute_pinball_loss(...).item() 
-            # This is MEAN over B. So to aggregate we should have weighted by batch_size?
-            # Wait, total_pinball_loss accumulator usually does += item().
-            # If batches are equal size, sum/count is fine. 
-            # But 'compute_pinball_loss' usually returns MEAN unless reduced=False.
-            # Let's assume it returns MEAN. 
-            # To be precise: accumulation should be `loss * batch_size` then divide by `total_samples`.
-            # FIX: In the loop, I did `metrics_grid_accumulator[lam]['pinball_sum'] += loss_mix`.
-            # If loss_mix is MEAN, then we are summing means.
-            # We need to divide by `steps` (number of batches) to get average mean, NOT `total_samples`.
-            # OR we multiply by batch_size there.
-            # Current loop: `total_samples += batch_size`.
-            # Let's adjust aggregation in the loop or here? 
-            # Easier to adjust here if we know num patches. 
-            # Actually, let's just assume equal batches for now or correct it.
-            # Correction: The code above did `metrics_grid_accumulator[lam]['pinball_sum'] += loss_mix`.
-            # loss_mix is a scalar mean. 
-            # So we simply divide by `steps` (iteration count) to get expectation.
-            
-            avg_pinball = stats['pinball_sum'] / max(1, steps)
-            q10_rate = stats['q10_hits'] / total_samples
-            
-            # Selection Score: Pinball + Beta * |Calib - 0.1|
-            # Beta = 0.05
-            score = avg_pinball + 0.05 * abs(q10_rate - 0.10)
-            
-            if score < best_score:
-                best_score = score
-                best_lam = lam
-            
-            print(f"{lam:^6.1f} | {avg_pinball:.6f} | {q10_rate:.2%} | {score:.6f}")
-        
-        print(f"-" * 40)
-        print(f"Best Lambda (Score): {best_lam} (Score: {best_score:.6f})")
-        print(f"-" * 40)
-
     # Standardize output keys (Safe Return)
     return {
         "pinball_loss": avg_pinball_loss, 
@@ -1093,6 +980,9 @@ def main():
             context_mask = batch["context_mask"].to(device)
             future_target = batch["future_target"].to(device)
             future_target_mask = batch["future_target_mask"].to(device)
+            target_10d = batch["target_10d"]
+            if target_10d is not None:
+                target_10d = target_10d.to(device)
             past_covariates = batch["past_covariates"]
             future_covariates = batch["future_covariates"]
             if past_covariates is not None: past_covariates = past_covariates.to(device)
@@ -1136,21 +1026,36 @@ def main():
                         quantile_weights[i] = tail_weight
             # Stage B (>= threshold): Uniform weights (already initialized to 1.0)
             
-            # Check if model output has quantile_preds
+            loss_1d = None
             if hasattr(out, 'quantile_preds') and out.quantile_preds is not None:
-                # Manual Pinball Loss with weights
-                loss = compute_pinball_loss(
+                loss_1d = compute_pinball_loss(
                     future_target.squeeze(-1) if future_target.ndim == 3 else future_target,
                     out.quantile_preds,
                     quantiles,
                     quantile_weights=quantile_weights
                 )
+
+            loss_10d = None
+            if hasattr(out, "q_10d") and out.q_10d is not None and target_10d is not None:
+                loss_10d = compute_pinball_loss(
+                    target_10d,
+                    out.q_10d,
+                    quantiles,
+                    quantile_weights=quantile_weights
+                )
+
+            if loss_10d is not None and loss_1d is not None:
+                loss = loss_10d + 0.25 * loss_1d
+            elif loss_10d is not None:
+                loss = loss_10d
             else:
-                # Fallback to model's internal loss (Phase 1: Canonical)
                 loss = out.loss if hasattr(out, "loss") else None
                 if loss is None:
                     print("[Warn] Model returned no loss, skipping batch.")
                     loss = torch.tensor(0.0, device=device, requires_grad=True)
+
+            loss_10d_value = loss_10d.item() if loss_10d is not None else None
+            loss_1d_value = loss_1d.item() if loss_1d is not None else None
             
             # Accumulate
             loss_scaled = loss / cfg.grad_accum
@@ -1173,8 +1078,28 @@ def main():
                     
                     current_lr = scheduler.get_last_lr()[0]
                     
-                    # Log extras removed to reduce noise (training batch spreads are volatile)
-                    print(f"Step {curr_global_step} | Loss: {avg_loss:.4f} | LR: {current_lr:.2e}")
+                    q10_mean = None
+                    q50_mean = None
+                    q90_mean = None
+                    if hasattr(out, "q_10d") and out.q_10d is not None:
+                        idx_10 = quantiles.index(0.1)
+                        idx_50 = quantiles.index(0.5)
+                        idx_90 = quantiles.index(0.9)
+                        q10_mean = out.q_10d[:, idx_10].mean().item()
+                        q50_mean = out.q_10d[:, idx_50].mean().item()
+                        q90_mean = out.q_10d[:, idx_90].mean().item()
+
+                    loss_parts = []
+                    if loss_10d_value is not None:
+                        loss_parts.append(f"Loss10d: {loss_10d_value:.4f}")
+                    if loss_1d_value is not None:
+                        loss_parts.append(f"Loss1d: {loss_1d_value:.4f}")
+                    if q10_mean is not None:
+                        loss_parts.append(f"Q10: {q10_mean:.4f}")
+                        loss_parts.append(f"Q50: {q50_mean:.4f}")
+                        loss_parts.append(f"Q90: {q90_mean:.4f}")
+                    extras = " | " + " | ".join(loss_parts) if loss_parts else ""
+                    print(f"Step {curr_global_step} | Loss: {avg_loss:.4f} | LR: {current_lr:.2e}{extras}")
                     running_loss = 0.0
                     
                 # Quick Val (Every 500 steps)
@@ -1228,8 +1153,7 @@ def main():
                      val_s99 = fv_metrics.get('s99', 0.0)
                      
                      print(f"Full Val Pinball (Daily): {val_loss:.6f}")
-                     print(f"Full Val 10-Day Derived (Final Strategy, Lambda=0.2):")
-                     print(f"  Note: See Aggregated Calibration Grid above")
+                     print(f"Full Val 10-Day (Native Head):")
                      print(f"  Pinball: {val_10d_pinball:.6f} (Primary)")
                      print(f"  Direction Acc: {val_10d_dir:.2%}")
                      print(f"  Q10 Calibration: {val_10d_q10:.2%} (Target 10%)")

@@ -195,7 +195,20 @@ class GoldFuturesWindowDataset(Dataset):
                      # Zeroing out implies 0 return (flat)
                      feats[:, target_feat_idx] = 0.0
 
+        future_target_1d = None
+        target_10d = None
+        if target_feat_idx >= 0:
+            future_target_1d = feats[self.context:self.context + self.pred, target_feat_idx].astype(np.float32)
+            if self.target_col.startswith("ret"):
+                if np.any(future_target_1d[:10] < -0.5) or np.any(future_target_1d[:10] > 0.5):
+                    raise ValueError("future_target_1d must be decimal and clipped before compounding.")
+                if np.any(1 + future_target_1d[:10] <= 0):
+                    raise ValueError("Invalid return encountered: 1 + r must be > 0.")
+                target_10d = np.prod(1 + future_target_1d[:10]) - 1
+
         return {
             "x_float": feats[:self.context],
-            "y_float": feats[self.context:]
+            "y_float": feats[self.context:],
+            "future_target_1d": future_target_1d,
+            "target_10d": target_10d,
         }
