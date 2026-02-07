@@ -36,3 +36,5 @@ npm run dev
 ```
 
 The frontend proxies API requests to `http://localhost:8000` by default.
+
+You can also set `VITE_API_BASE` to override the API base URL if the backend runs elsewhere.
