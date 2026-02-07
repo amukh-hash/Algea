@@ -8,6 +8,7 @@ import argparse
 import os
 import sys
 import logging
+from pathlib import Path
 from datetime import datetime, timedelta
 import polars as pl
 import torch
@@ -21,6 +22,7 @@ from backend.app.data import marketframe
 from backend.app.models import chronos2_teacher
 from backend.app.models.chronos2_hf_pipeline import Chronos2HFPredictor, ChronosPredictConfig
 from backend.app.models.signal_types import ChronosPriors
+from backend.app.ops import run_recorder
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("build_priors")
@@ -43,7 +45,24 @@ def main():
     args = parser.parse_args()
 
     as_of_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+    run_id = run_recorder.init_run(
+        pipeline_type="priors",
+        trigger="schedule",
+        config={
+            "date": args.date,
+            "lookback": args.lookback,
+            "horizon": args.horizon,
+            "n_samples": args.n_samples,
+            "min_coverage": args.min_coverage,
+        },
+        data_versions={"gold": "unknown", "silver": "unknown", "macro": "unknown", "universe": "unknown"},
+        tags=["priors", "chronos2"],
+    )
+    run_dir = run_recorder.run_paths.get_run_dir(run_id)
+    outputs_dir = run_dir / "outputs"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Building priors for {as_of_date}")
+    run_recorder.set_status(run_id, "RUNNING", stage="priors", step="build")
 
     # 1. Load Universe
     # Assume simple list of tickers
@@ -162,8 +181,28 @@ def main():
     success_rate = len(results) / len(universe)
     logger.info(f"Success Rate: {success_rate:.2%} ({len(results)}/{len(universe)})")
 
+    run_recorder.emit_event(
+        run_id,
+        stage="priors",
+        step="coverage",
+        level="INFO",
+        message="Coverage computed",
+        payload={"coverage": success_rate, "required": args.min_coverage},
+    )
     if success_rate < args.min_coverage:
         logger.error(f"Coverage below threshold {args.min_coverage}. Aborting.")
+        run_recorder.set_status(
+            run_id,
+            "FAILED",
+            stage="priors",
+            step="coverage",
+            error={
+                "type": "CoverageError",
+                "message": f"Coverage {success_rate:.2%} below threshold {args.min_coverage}.",
+                "traceback": "Increase universe coverage or reduce threshold.",
+            },
+        )
+        run_recorder.finalize_run(run_id, "FAILED")
         sys.exit(1)
 
     # 5. Save Artifact
@@ -179,6 +218,17 @@ def main():
 
     df.write_parquet(out_path)
     logger.info(f"Saved priors to {out_path}")
+    run_copy = outputs_dir / f"priors_{args.date}.parquet"
+    run_copy.write_bytes(Path(out_path).read_bytes())
+    run_recorder.register_artifact(
+        run_id,
+        name=f"priors_{args.date}",
+        type="parquet",
+        path=str(run_copy),
+        tags=["priors"],
+        meta={"date": args.date, "horizon": args.horizon},
+    )
+    run_recorder.finalize_run(run_id, "PASSED")
 
 if __name__ == "__main__":
     main()

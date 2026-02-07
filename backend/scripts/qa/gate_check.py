@@ -1,5 +1,6 @@
 import os
 import shutil
+from datetime import datetime
 import torch
 import pandas as pd
 import numpy as np
@@ -9,6 +10,7 @@ from backend.app.core import config
 from backend.app.training.dataset import RankingDataset, ranking_collate_fn
 from backend.app.models.rank_transformer import RankTransformer
 from backend.app.models.calibration import ScoreCalibrator
+from backend.app.ops import run_recorder
 
 def calculate_max_drawdown(cumulative_returns):
     peak = np.maximum.accumulate(cumulative_returns)
@@ -20,6 +22,14 @@ def calculate_max_drawdown(cumulative_returns):
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    run_id = run_recorder.init_run(
+        pipeline_type="gate",
+        trigger="manual",
+        config={},
+        data_versions={"gold": "unknown", "silver": "unknown", "macro": "unknown", "universe": "unknown"},
+        tags=["gate"],
+    )
+    run_recorder.set_status(run_id, "RUNNING", stage="gate", step="start")
     
     # 1. Load Test Data (2024+)
     print(f"Loading Test Data ({config.TEST_SPLIT_DATE}+)...")
@@ -47,6 +57,14 @@ def main():
 
     if len(test_dataset) == 0:
         print("No test data found.")
+        run_recorder.set_status(
+            run_id,
+            "FAILED",
+            stage="gate",
+            step="data",
+            error={"type": "NoData", "message": "No test data found.", "traceback": ""},
+        )
+        run_recorder.finalize_run(run_id, "FAILED")
         return
 
     test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, collate_fn=ranking_collate_fn)
@@ -103,6 +121,14 @@ def main():
     # 4. Metrics
     if not daily_returns:
         print("No returns generated.")
+        run_recorder.set_status(
+            run_id,
+            "FAILED",
+            stage="gate",
+            step="backtest",
+            error={"type": "NoReturns", "message": "No returns generated.", "traceback": ""},
+        )
+        run_recorder.finalize_run(run_id, "FAILED")
         return
         
     daily_returns = np.array(daily_returns)
@@ -125,6 +151,18 @@ def main():
     # Criteria: Sharpe > 1.2, MaxDD > -0.15 (-15%), HitRate > 0.52
     pass_gate = (sharpe > 1.2) and (max_dd > -0.15) and (hit_rate > 0.52)
     
+    report = {
+        "timestamp": datetime.now().isoformat(),
+        "metrics": {
+            "total_return": total_ret,
+            "sharpe": sharpe,
+            "max_drawdown": max_dd,
+            "hit_rate": hit_rate,
+        },
+        "thresholds": {"sharpe": 1.2, "max_drawdown": -0.15, "hit_rate": 0.52},
+        "passed": pass_gate,
+    }
+    run_recorder.write_report(run_id, "gate", report)
     if pass_gate:
         print("PASS: Model promoted to production.")
         prod_dir = "backend/data/artifacts/production"
@@ -136,8 +174,17 @@ def main():
         shutil.copy("backend/data/artifacts/scalers/selector_v1.joblib", os.path.join(prod_dir, "selector_v1.joblib"))
         
         print(f"Artifacts copied to {prod_dir}.")
+        run_recorder.emit_event(
+            run_id,
+            stage="gate",
+            step="promotion",
+            level="INFO",
+            message="Artifacts promoted to production",
+            payload={"production_dir": prod_dir},
+        )
     else:
         print("FAIL: Model did not meet criteria.")
+    run_recorder.finalize_run(run_id, "PASSED" if pass_gate else "FAILED")
 
 if __name__ == "__main__":
     main()

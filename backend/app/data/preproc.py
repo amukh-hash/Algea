@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from backend.app.ops import run_recorder
 
 class FeatureEngineer:
     """
@@ -11,7 +12,8 @@ class FeatureEngineer:
     def process_features(self, 
                          universe_df: pd.DataFrame, 
                          market_df: pd.DataFrame,
-                         mode: str = 'inference') -> pd.DataFrame:
+                         mode: str = 'inference',
+                         run_id: str | None = None) -> pd.DataFrame:
         """
         Generates the standard scalar features for the Ranking Model.
         """
@@ -57,6 +59,15 @@ class FeatureEngineer:
         # Remove rows where features are NaN (first 20 days)
         df.dropna(subset=['log_return_20d', 'volatility_20d'], inplace=True)
         
+        if run_id:
+            run_recorder.emit_event(
+                run_id,
+                stage="preproc",
+                step="process_features",
+                level="INFO",
+                message="Feature engineering completed",
+                payload={"rows": len(df), "mode": mode},
+            )
         return df
 
     def get_chronos_sequences(self, 

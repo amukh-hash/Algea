@@ -1,7 +1,7 @@
 
 import os
 import logging
-from backend.app.ops import pathmap, config
+from backend.app.ops import pathmap, config, run_paths
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,8 @@ def ensure_dirs() -> None:
         paths.outputs,
         paths.logs,
         # Legacy
-        paths.legacy_artifacts_root
+        paths.legacy_artifacts_root,
+        str(run_paths.get_runs_root())
     ]
     
     # Subdirs implied by pathmap?
