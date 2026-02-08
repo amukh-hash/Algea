@@ -1,82 +1,86 @@
+from __future__ import annotations
 
-import sys
-import os
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[3]))
-
-import logging
 import argparse
+import json
+from datetime import date
+from pathlib import Path
+
 import pandas as pd
-import os
-from datetime import datetime, timedelta
-from backend.app.ops import bootstrap, pathmap, config, promotion_gate
-from backend.app.data import security_master, calendar
-from backend.app.data.ingest import ohlcv_daily as ingest_daily
-from backend.app.data import universe_selector as universe
-from backend.app.features import build_featureframe as featureframe
-from backend.app.teacher import priors, chronos_runner
-from backend.app.selector import infer
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from algaie.data.eligibility.build import build_eligibility
+from algaie.data.features.build import build_features
+from algaie.data.priors.build import build_priors
+from algaie.data.signals.build import build_signals
+from algaie.execution.equity_strategy import EquityStrategy
+from algaie.execution.interfaces import ExecutionContext, SignalFrame
+from algaie.execution.options.executor import NoopExecutor
+from algaie.execution.options.strategy import StrikeSelector
+from algaie.execution.options_strategy import OptionsStrategy
+from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
-def main():
+
+def run(config_path: str, input_paths: list[Path], asof: date) -> None:
+    config = load_pipeline_config(config_path)
+    paths, registry, run_dir = prepare_run(config)
+    canonical = pd.concat([pd.read_parquet(path) for path in input_paths], ignore_index=True)
+
+    eligibility = build_eligibility(canonical, asof)
+    eligibility_path = paths.eligibility / f"asof={asof}" / "eligibility.parquet"
+    eligibility_path.parent.mkdir(parents=True, exist_ok=True)
+    eligibility.to_parquet(eligibility_path, index=False)
+    registry.register("eligibility", eligibility_path, "v1")
+
+    features = build_features(canonical)
+    features_path = paths.features / "features.parquet"
+    features_path.parent.mkdir(parents=True, exist_ok=True)
+    features.to_parquet(features_path, index=False)
+    registry.register("features", features_path, "v1")
+
+    priors = build_priors(canonical, asof)
+    priors_path = paths.priors / f"date={asof}" / "priors.parquet"
+    priors_path.parent.mkdir(parents=True, exist_ok=True)
+    priors.to_parquet(priors_path, index=False)
+    registry.register("priors", priors_path, "v1")
+
+    signals = build_signals(features, priors)
+    signals_path = paths.signals / f"date={asof}" / "signals.parquet"
+    signals_path.parent.mkdir(parents=True, exist_ok=True)
+    signals.to_parquet(signals_path, index=False)
+    registry.register("signals", signals_path, "v1")
+
+    equity_strategy = EquityStrategy()
+    options_strategy = OptionsStrategy(selector=StrikeSelector(), executor=NoopExecutor())
+    signal_frame = SignalFrame(signals)
+    context = ExecutionContext(asof=asof, prices=canonical)
+    equity_decisions = equity_strategy.run(signal_frame)
+    options_decisions = options_strategy.run(signal_frame, context)
+
+    summary = {
+        "asof": str(asof),
+        "signals": len(signals),
+        "equity_decisions": len(equity_decisions),
+        "options_decisions": len(options_decisions),
+    }
+    report_path = paths.reports / "nightly" / str(asof) / "summary.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    registry.register("nightly_summary", report_path, "v1")
+    write_artifact_log(registry, run_dir)
+
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--asof", default=None, help="YYYY-MM-DD")
-    args = parser.parse_args()
-    
-    bootstrap.ensure_dirs()
-    
-    # Date determination
-    if args.asof:
-        asof_date = pd.to_datetime(args.asof)
-    else:
-        asof_date = pd.Timestamp.now().normalize() - pd.Timedelta(days=1)
-        
-    date_str = asof_date.strftime('%Y-%m-%d')
-    logger.info(f"Nightly Run for {date_str}...")
-    
-    # Load PROD Pointer for version consistency
-    prod_cfg = promotion_gate.load_prod_pointer()
-    logger.info(f"PROD Configuration: {prod_cfg}")
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--inputs", required=True)
+    parser.add_argument("--asof", required=True)
+    return parser.parse_args()
 
-    # 1. Ingest Latest (no-op placeholder if data already present)
-    logger.info("1. Ingesting Daily Bars and Updating Factors...")
 
-    # 2. Load FeatureFrame for Today (using PROD feature spec)
-    logger.info("2. Handling Features...")
-    feature_path = pathmap.resolve("featureframe", version=prod_cfg.get("feature_version", "v1"))
-    if not os.path.exists(feature_path):
-        raise FileNotFoundError(f"Missing featureframe: {feature_path}")
-    df_features = pd.read_parquet(feature_path)
-    df_features["date"] = pd.to_datetime(df_features["date"])
+def main() -> None:
+    args = parse_args()
+    input_paths = [Path(path.strip()) for path in args.inputs.split(",")]
+    run(args.config, input_paths, date.fromisoformat(args.asof))
 
-    # 3. Load Priors for Today (using PROD prior spec)
-    logger.info("3. Generating Priors...")
-    prior_version = prod_cfg.get("prior_version", "v1")
-    df_priors = priors.load_priors(asof_date, prior_version=prior_version)
-    df_priors["date"] = pd.to_datetime(df_priors["date"])
-    
-    # 4. Selector Inference
-    logger.info("4. Running Selector Inference...")
-    predictor = infer.SelectorInference(model_version=prod_cfg['model_version'])
-    
-    # Get Universe
-    manifest_path = pathmap.resolve("manifest", date=asof_date)
-    if os.path.exists(manifest_path):
-        manifest = pd.read_parquet(manifest_path)
-        symbols = manifest.loc[manifest["eligible"] == True, "symbol"].astype(str).tolist()
-    else:
-        sec_master = security_master.load_security_master()
-        symbols = sec_master["symbol"].dropna().astype(str).unique().tolist()
-    
-    leaderboard = predictor.predict(date_str, symbols, df_features, df_priors)
-    
-    # 5. Write Leaderboard
-    out_path = infer.write_leaderboard(asof_date, leaderboard)
-    logger.info(f"5. Written Leaderboard to {out_path}")
-    
-    logger.info("Nightly Run Complete and Verified.")
 
 if __name__ == "__main__":
     main()
