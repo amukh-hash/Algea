@@ -29,7 +29,21 @@ def _atomic_write_json(path: Path, obj: Dict[str, Any]) -> None:
     with tempfile.NamedTemporaryFile("w", delete=False, dir=str(path.parent)) as tmp:
         json.dump(obj, tmp, indent=2)
         tmp_path = Path(tmp.name)
-    tmp_path.replace(path)
+    import time
+    max_retries = 5
+    for i in range(max_retries):
+        try:
+            tmp_path.replace(path)
+            return
+        except PermissionError:
+            if i == max_retries - 1:
+                raise
+            time.sleep(0.1)
+        except OSError:
+            # Handle other OS errors if needed, but PermissionError is the main Windows locking one
+            if i == max_retries - 1:
+                raise
+            time.sleep(0.1)
 
 
 def _read_json(path: Path) -> Dict[str, Any]:

@@ -44,25 +44,103 @@ class GoldFuturesWindowDataset(Dataset):
         self.cache = SimpleLRUCache(cache_size)
         self.index = [] # List[(file_idx, start_row, timestamp_val)]
         
+        # Load UniverseFrame (Observable Mask)
+        from backend.app.data.universe_api import load_universe_frame
+        print("[Dataset] Loading UniverseFrame (Observable)...")
+        # Load only what we need: date, ticker, is_observable
+        # We need efficient lookup: (ticker, date) -> bool
+        # Use Polars for join? Or convert to dict?
+        # Since files are processed iteratively, maybe a dict is best?
+        # (ticker, date_str) -> bool
+        
+        uframe = load_universe_frame(columns=["is_observable"])
+        if uframe.height > 0:
+            # Convert to pandas for fast indexing if needed, or dict
+            # Ticker -> Set(Dates) might be faster?
+            # Filter where is_observable=True
+            obs_df = uframe.filter(pl.col("is_observable")).select(["date", "ticker"])
+            
+            # Build lookup: ticker -> set of valid dates
+            # This is memory efficient? 2000 tickers * 2500 dates = 5M. 
+            # Set of dates per ticker.
+            self.obs_lookup = {}
+            # Group by ticker
+            # This might be slow in pure python loop. 
+            # Polars group_by -> agg list
+            obs_grouped = obs_df.group_by("ticker").agg(pl.col("date"))
+            for row in obs_grouped.iter_rows():
+                t, dates = row
+                self.obs_lookup[t] = set(dates) # dates are date objects
+            print(f"[Dataset] Observation masks loaded for {len(self.obs_lookup)} tickers.")
+        else:
+            print("[Dataset] WARN: UniverseFrame empty or missing. defaulting to ALL observable.")
+            self.obs_lookup = None
+
         print(f"[Dataset] Indexing {len(files)} files...")
         
         for fi, fp in enumerate(self.files):
             try:
                 # Use scan to get height without loading data
-                n = pl.scan_parquet(fp).select(pl.len()).collect().item()
+                # We need ticker name to check universe?
+                # Filename is usually ticker.parquet
+                ticker = fp.stem
+                
+                # If we have a universe lookup, check if ticker is ever observable?
+                if self.obs_lookup is not None and ticker not in self.obs_lookup:
+                    continue 
+
+                # We need DATES to check specific windows.
+                # Scanning for 'date' column is fast?
+                # We need (row_idx, date).
+                # Scan select date?
+                
+                df_dates = pl.scan_parquet(fp).select(["date"]).collect()
+                n = df_dates.height
+                dates = df_dates["date"].to_list() # List of date objects
                 
                 max_start = n - (context + pred)
                 if max_start <= 0: continue
                 
                 starts = list(range(0, max_start, stride_rows))
                 
-                # Filter caps
-                if len(starts) > max_windows:
-                     starts = self.rng.choice(starts, size=max_windows, replace=False).tolist()
+                # Check eligibility for each start
+                # A window is observable if the anchor date (end of context) is observable?
+                # "Observable mask at time t" means we can trade/observe at t.
+                # Context ends at t. Prediction is t+1...t+pred.
+                # So we check universe status at index (start + context - 1).
                 
-                for s in starts:
-                    # Use row index as t_val for stable sorting if timestamp missing
-                    self.index.append((fi, int(s), int(s)))
+                valid_starts = []
+                if self.obs_lookup is not None:
+                     valid_dates = self.obs_lookup.get(ticker, set())
+                     for s in starts:
+                         anchor_idx = s + context - 1
+                         if anchor_idx < n:
+                             anchor_date = dates[anchor_idx]
+                             if anchor_date in valid_dates:
+                                 valid_starts.append(s)
+                else:
+                    valid_starts = starts
+
+                # Filter caps
+                if len(valid_starts) > max_windows:
+                     valid_starts = self.rng.choice(valid_starts, size=max_windows, replace=False).tolist()
+                
+                for s in valid_starts:
+                    # Use row index as t_val for stable sorting
+                    # We can use the anchor date as the sort key for temporal split!
+                    # anchor_idx is s + context - 1
+                    anchor_ts = 0
+                    if 0 <= s + context - 1 < len(dates):
+                        # Convert date to int timestamp?
+                        d = dates[s + context - 1]
+                        if hasattr(d, 'timestamp'):
+                             anchor_ts = int(d.timestamp())
+                        else:
+                             # date object
+                             import datetime
+                             anchor_ts = int(datetime.datetime(d.year, d.month, d.day).timestamp())
+                    
+                    self.index.append((fi, int(s), anchor_ts))
                     
             except Exception as e:
                 print(f"ERR indexing {fp}: {e}")

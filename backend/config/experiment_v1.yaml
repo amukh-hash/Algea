@@ -1,0 +1,275 @@
+# ============================================================================
+# Experiment Configuration v1 — Frozen Config for Reproducibility
+# Created: 2026-02-08
+# Purpose: Single source of truth for the full training pipeline.
+# ============================================================================
+
+experiment:
+  name: "algaie_v1_midlarge_2015_2025"
+  version: "1.0"
+  created: "2026-02-08"
+  description: "Mid+large cap US equities, Chronos-2 teacher + Rank-Transformer selector"
+
+# ---------------------------------------------------------------------------
+# Data & Universe
+# ---------------------------------------------------------------------------
+data:
+  raw_ohlcv_path: "backend/data/artifacts/universe/raw_ohlcv.parquet"
+  security_master_path: "backend/data_canonical/security_master.parquet"
+  daily_parquet_dir: "backend/data_canonical/daily_parquet"
+  date_range:
+    start: "2006-01-03"
+    end: "2025-12-31"
+  n_tickers: 5571
+  n_rows: 10169679
+  sources:
+    - name: "yfinance"
+      range: "2006-01-03 to 2018-07-16"
+      tickers: 809
+    - name: "alpaca_sip_gap"
+      range: "2018-07-01 to 2020-07-01"
+      tickers: 4039
+    - name: "alpaca_sip_daily"
+      range: "2020-07-01 to 2025-12-31"
+      tickers: 5587
+
+universe:
+  version: "v2"
+  root: "backend/data_canonical/universe/universe_frame_v2"
+  observable_rules:
+    min_price: 5.0
+    min_age_days: 126
+    min_adv20: 10_000_000
+    min_adv60: 5_000_000
+    max_missing_60: 2
+    max_zero_volume_60: 2
+  tradable_rules:
+    min_price: 7.0
+    min_age_days: 252
+    min_adv20: 25_000_000
+    min_adv60: 15_000_000
+    max_missing_60: 0
+    max_zero_volume_60: 0
+    max_share20: 0.30
+  tiers:
+    A_min_adv20: 100_000_000
+    B_min_adv20: 40_000_000
+  weighting:
+    min_adv20: 25_000_000
+    max_adv20: 500_000_000
+    method: "log_scale_clipped"
+  exclude_name_patterns:
+    - " ETF"
+    - " TRUST"
+    - " DEPOSITARY"
+    - " ADR"
+    - " ETN"
+    - " WARRANT"
+    - " PREFERRED"
+    - " L.P."
+  stats:
+    n_dates: 5031
+    n_symbols: 5571
+    median_tradable_breadth: 199
+
+# ---------------------------------------------------------------------------
+# Splits (Train / Val / Test)
+# ---------------------------------------------------------------------------
+splits:
+  train:
+    start: "2006-01-03"
+    end: "2023-12-29"
+    description: "All data through end of 2023"
+  validation:
+    start: "2024-01-02"
+    end: "2024-12-31"
+    description: "Full year 2024"
+  test:
+    start: "2025-01-02"
+    end: "2025-12-31"
+    description: "Full year 2025 (held out)"
+  embargo_days: 5
+  scaler_fit: "train_only"
+
+# ---------------------------------------------------------------------------
+# Chronos-2 Teacher (Phase E)
+# ---------------------------------------------------------------------------
+chronos_teacher:
+  model_id: "amazon/chronos-2"
+  phase: "phase1_gold"
+
+  # Data pipeline
+  input_dir: "backend/data_canonical/daily_parquet"
+  target_col: "close"
+  transform: "relative_log_price"   # log(price_t / price_{t-L})
+  universe_exposure: "observable"    # filter by is_observable mask
+
+  # Architecture
+  context_length: 180
+  prediction_horizon: 20
+  stride: 5
+
+  # LoRA fine-tuning
+  use_qlora: false
+  lora:
+    rank: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: null  # auto-detect
+  unfreeze_layernorms: false
+  unfreeze_last_blocks: 0
+
+  # Training
+  batch_size: 16
+  grad_accum: 2
+  learning_rate: 1.0e-4
+  max_steps: 3000
+  warmup_steps: 100
+  val_split_pct: 0.10
+  seed: 42
+
+  # Regularization
+  sigma_band_low: 0.5
+  sigma_band_high: 2.0
+  sigma_reg_weight: 1.0e-4
+
+  # Checkpointing
+  checkpoint_every: 250
+  log_every: 25
+  output_dir: "backend/models/teacher_e/gold"
+
+# ---------------------------------------------------------------------------
+# Priors Generation (Phase F)
+# ---------------------------------------------------------------------------
+priors:
+  source_model: "chronos_teacher"    # references chronos_teacher section above
+  lookback: 60                       # context window for inference
+  horizon: 20                       # forecast horizon
+  n_samples: 20                     # samples for distribution estimation
+  min_coverage: 0.95                # minimum universe coverage per date
+  output_cols:
+    - "teacher_drift"
+    - "teacher_vol_forecast"
+    - "teacher_tail_risk"
+    - "teacher_trend_conf"
+  version_col: "prior_version"
+  output_dir: "backend/priors"
+
+# ---------------------------------------------------------------------------
+# Selector Features (FeatureFrame V2)
+# ---------------------------------------------------------------------------
+selector_features:
+  version: "v2"
+  root: "backend/data_canonical/features/selector_features_v2"
+  horizon_days: 5
+  lookback_window: 20
+  volatility_window: 20
+  relative_vol_window: 20
+  min_breadth_train: 200
+  tie_break_policy: "sort_value_then_symbol"
+  feature_cols:
+    - "x_lr1"        # 1-day log return (rank normalized)
+    - "x_lr5"        # 5-day log return
+    - "x_lr20"       # 20-day log return
+    - "x_vol"        # 20-day volatility
+    - "x_relvol"     # relative volume
+  target_cols:
+    - "y_rank"        # cross-sectional return rank
+    - "y_trade"       # binary trade signal
+  bounds: [-1.0, 1.0]
+  stats:
+    n_dates: 2343
+    n_symbols: 2917
+    n_rows: 2270810
+    median_breadth: 1205
+
+# ---------------------------------------------------------------------------
+# Selector V2 Training (Phase G)
+# ---------------------------------------------------------------------------
+selector:
+  model: "RankTransformer"
+  version: "v2"
+  universe_exposure: "tradable"     # filter by is_tradable mask
+
+  # Features
+  feature_cols:
+    - "x_lr1"
+    - "x_lr5"
+    - "x_lr20"
+    - "x_vol"
+    - "x_relvol"
+  use_priors: true
+  prior_features:
+    - "teacher_drift"
+    - "teacher_vol_forecast"
+    - "teacher_tail_risk"
+    - "teacher_trend_conf"
+
+  # Architecture
+  n_features: 9                     # 5 selector + 4 prior features
+  d_model: 64
+  n_heads: 4
+  n_layers: 2
+  dropout: 0.1
+
+  # Loss
+  loss:
+    listwise_weight: 1.0
+    pairwise_weight: 0.5
+    trade_bce_weight: 0.3
+    use_tier_weights: true
+
+  # Training
+  epochs: 20
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  batch_size: 1                     # 1 date per batch (variable N per day)
+  device: "auto"                    # cuda if available, else cpu
+  seed: 42
+
+  # Scaler
+  scaler:
+    fit_on: "train_only"
+    persist: true
+    path: "backend/models/selector_v2/scaler.pkl"
+
+  # Calibration
+  calibration:
+    method: "isotonic"
+    fit_on: "validation"
+    path: "backend/models/selector_v2/calibrator.pkl"
+
+  # Checkpointing
+  checkpoint_dir: "backend/models/selector_v2/checkpoints"
+  best_model_path: "backend/models/selector_v2/best_model.pt"
+
+# ---------------------------------------------------------------------------
+# Paper-Trade Simulation (Phase H)
+# ---------------------------------------------------------------------------
+simulation:
+  period:
+    start: "2025-01-02"
+    end: "2025-12-31"
+  mode: "historical_replay"
+
+  # Portfolio construction
+  portfolio:
+    max_positions: 20
+    position_size_method: "equal_weight"  # or "weight_proportional"
+    max_sector_exposure: 0.30
+    min_adv20_entry: 25_000_000
+
+  # Risk controls
+  risk:
+    max_drawdown_halt: 0.15         # halt if drawdown exceeds 15%
+    breadth_risk_off_threshold: 100 # risk-off if tradable breadth < 100
+    volatility_scale: true          # scale position size by inverse vol
+
+  # Outputs
+  outputs:
+    equity_curve: true
+    turnover: true
+    max_drawdown: true
+    exposure_by_tier: true
+    crash_regime_analysis: true     # worst 5% market days
+    output_dir: "backend/data/simulation_results"

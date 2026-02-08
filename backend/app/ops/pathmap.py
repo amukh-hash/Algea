@@ -1,5 +1,6 @@
 
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
@@ -117,3 +118,68 @@ def resolve(kind: str, *, legacy_ok: bool = True, **kwargs) -> str:
     
     else:
         raise ValueError(f"Unknown path kind: {kind}")
+
+def get_gold_daily_root(paths: PathSet = None) -> Path:
+    """
+    Canonical location for Gold Daily Parquet files (OHLCV).
+    Env override: GOLD_DAILY_ROOT
+    Default: backend/data_canonical/daily_parquet/
+    """
+    env = os.getenv("GOLD_DAILY_ROOT")
+    if env: return Path(env)
+    p = paths or get_paths()
+    return Path(p.data_canonical) / "daily_parquet"
+
+def get_universe_frame_root(paths: PathSet = None, version: str = "v2") -> Path:
+    """
+    Canonical location for UniverseFrame artifacts (Hive partitioned).
+    Env override: UNIVERSE_FRAME_ROOT
+    Default: backend/data_canonical/universe/universe_frame_v2/
+    """
+    env = os.getenv("UNIVERSE_FRAME_ROOT")
+    if env: return Path(env)
+    p = paths or get_paths()
+    return Path(p.data_canonical) / "universe" / f"universe_frame_{version}"
+
+def get_selector_features_root(paths: PathSet = None, version: str = "v2", horizon: Optional[str] = None) -> Path:
+    """
+    Canonical location for SelectorFeatureFrame artifacts (Hive partitioned).
+    Env override: SELECTOR_FEATURES_ROOT
+    Default: backend/data_canonical/features/selector_features_v2/
+    If horizon is specified, appends /horizon={horizon} (though implementation plan distincts this?)
+    Actually plan says: default: backend/data_canonical/features/selector_features_v2
+    if horizon provided, append f"horizon={horizon}"?
+    Let's follow plan:
+    """
+    env = os.getenv("SELECTOR_FEATURES_ROOT")
+    if env: 
+        root = Path(env)
+    else:
+        p = paths or get_paths()
+        root = Path(p.data_canonical) / "features" / f"selector_features_{version}"
+    
+    if horizon:
+        return root / f"horizon={horizon}"
+    return root
+
+def get_silver_daily_root(paths: PathSet = None) -> Path:
+    """
+    Canonical location for Silver MarketFrame files (daily aligned).
+    Env override: SILVER_DAILY_ROOT
+    Default: backend/data_canonical/marketframe_daily/
+    """
+    env = os.getenv("SILVER_DAILY_ROOT")
+    if env: return Path(env)
+    p = paths or get_paths()
+    return Path(p.data_canonical) / "marketframe_daily"
+
+def get_priors_root(paths: PathSet = None) -> Path:
+    """
+    Canonical location for Priors artifacts.
+    Env override: PRIORS_ROOT
+    Default: backend/priors/
+    """
+    env = os.getenv("PRIORS_ROOT")
+    if env: return Path(env)
+    p = paths or get_paths()
+    return Path(p.priors)

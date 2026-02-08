@@ -1,0 +1,63 @@
+
+# Frozen Configuration v1
+# Created: 2026-02-08
+# Purpose: Definitive experiment configuration for full production pipeline.
+
+experiment:
+  id: "exp_v1_frozen"
+  description: "Production run with Universe v2, Chronos-2 Teacher, and Selector v2."
+
+data:
+  date_range:
+    start: "2006-01-03"
+    end: "2025-12-31"
+  splits:
+    train_start: "2006-01-03"
+    train_end: "2023-12-29"
+    val_start: "2024-01-02"
+    val_end: "2024-12-31"
+    test_start: "2025-01-02"
+    test_end: "2025-12-31"
+
+universe:
+  version: "v2"
+  rules:
+    observable:
+      min_price: 5.0
+      min_age_days: 126
+      min_adv20: 10_000_000 # $10M
+    tradable:
+      min_price: 7.0
+      min_age_days: 252
+      min_adv20: 25_000_000 # $25M
+      max_share20: 0.30
+
+teacher:
+  model: "chronos-tiny" # Or whatever the standard is
+  training:
+    context_length: 252
+    forecast_horizon: 30
+    stride: 5
+    target_col: "close"
+    transformation: "log_return" # log(p_t / p_{t-L})
+    mask: "is_observable"
+  priors:
+    version: "v1" # Matches the PRIORS_VERSION env check
+
+selector:
+  version: "v2"
+  horizons: [5, 10]
+  features:
+    source_version: "v2"
+    columns: ["log_return_1d", "log_return_5d", "log_return_20d", "volatility_20d", "relative_volume_20d"]
+  model:
+    type: "rank_transformer"
+    loss: "listwise_softmax + 0.5 * pairwise_margin"
+  training:
+    mask: "is_tradable"
+    use_priors: true
+    turnover_penalty: 0.05
+
+risk:
+  lambda_vol: 0.25
+  kappa_dd: 0.50

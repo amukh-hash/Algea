@@ -9,6 +9,7 @@ Contains logic for:
 """
 
 import re
+import math
 import inspect
 from typing import Tuple, Dict, Any, List, Optional, Union
 from pathlib import Path
@@ -16,6 +17,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from transformers import (
     AutoConfig, AutoModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM,
     BitsAndBytesConfig, PreTrainedModel
@@ -23,17 +25,165 @@ from transformers import (
 from peft import get_peft_model, LoraConfig, PeftModel, prepare_model_for_kbit_training, TaskType
 from backend.app.models.signal_types import ChronosPriors
 
-class Chronos2QuantileHead(nn.Module):
-    def __init__(self, quantiles_count: int = 21, hidden_size: int = 128):
+def _inverse_softplus(x: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
+    """Numerically stable inverse of softplus: log(exp(x) - 1)."""
+    # For large x, inverse_softplus(x) ≈ x
+    # For small x, use the exact formula
+    return torch.where(x > 20.0, x, torch.log(torch.expm1(x).clamp(min=eps)))
+
+
+def _get_standard_quantile_levels(count: int = 21) -> List[float]:
+    """Return the standard quantile levels used across the system.
+    Must match the quantile list in phase1_train_teacher_gold.py exactly."""
+    levels = [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+              0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.99]
+    return levels[:count]
+
+
+class LearnedQuantileShape(nn.Module):
+    """
+    Learned monotone quantile shape z_τ.
+
+    Produces a strictly nondecreasing tensor z of shape [Q] for Q quantile levels.
+    Initialized to standard normal quantile values.
+    Optionally normalized to mean=0, std=1 to keep σ interpretable.
+
+    Parameterization:
+        - z0: scalar param (first quantile value)
+        - u: [Q-1] raw deltas
+        - d = softplus(u) + eps  (positive gaps)
+        - z_raw[0] = z0, z_raw[i] = z_raw[i-1] + d[i-1]
+        - z = (z_raw - mean) / (std + 1e-6)  if normalize=True
+    """
+    def __init__(self, quantiles_count: int = 21, normalize: bool = True):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.LazyLinear(hidden_size),
+        self.quantiles_count = quantiles_count
+        self.normalize = normalize
+        self.eps = 1e-6
+
+        # Compute standard normal quantile init values
+        from scipy.stats import norm
+        tau_levels = _get_standard_quantile_levels(quantiles_count)
+        z_init = np.array([norm.ppf(tau) for tau in tau_levels], dtype=np.float32)
+        z_init_t = torch.from_numpy(z_init)
+
+        # Store the normalized init as a buffer for regularization
+        if normalize:
+            z_mean = z_init_t.mean()
+            z_std = z_init_t.std() + 1e-6
+            z_init_normalized = (z_init_t - z_mean) / z_std
+        else:
+            z_init_normalized = z_init_t
+        self.register_buffer('z_init_normalized', z_init_normalized)
+
+        # Parameterize: z0 (first value) and u (raw gaps before softplus)
+        self.z0 = nn.Parameter(torch.tensor(z_init[0]))
+
+        # Compute gaps and their inverse-softplus
+        gaps = np.diff(z_init)  # [Q-1], all positive since z_init is increasing
+        gaps_t = torch.from_numpy(gaps)
+        # u = inverse_softplus(gaps - eps), so softplus(u) + eps ≈ gaps
+        u_init = _inverse_softplus(gaps_t - self.eps)
+        self.u = nn.Parameter(u_init)
+
+    def forward(self) -> torch.Tensor:
+        """Return monotone quantile shape z of shape [Q]."""
+        d = F.softplus(self.u) + self.eps  # [Q-1], strictly positive
+        z_raw = torch.cat([self.z0.unsqueeze(0), self.z0 + torch.cumsum(d, dim=0)])  # [Q]
+
+        if self.normalize:
+            z_mean = z_raw.mean()
+            z_std = z_raw.std() + 1e-6
+            z = (z_raw - z_mean) / z_std
+        else:
+            z = z_raw
+        return z
+
+
+class Chronos2QuantileHead(nn.Module):
+    """
+    Location-scale quantile head with learned monotone shape and optional temperature.
+
+    q_τ = μ + (T · σ) · z_τ_learned
+
+    - z_τ is learned via LearnedQuantileShape (monotone, normalized, init from Normal).
+    - T is a global temperature scalar (learned, positive) for quick coverage correction.
+    - μ and σ are sample-dependent via linear projections from encoder features.
+    """
+    def __init__(self, quantiles_count: int = 21, hidden_size: int = 128, input_size: int = 180,
+                 target_mean: float = -0.00088, target_std: float = 0.032):
+        super().__init__()
+        self.quantiles_count = quantiles_count
+        self.sigma_floor = 1e-4
+
+        # Shared encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
             nn.GELU(),
-            nn.Linear(hidden_size, quantiles_count),
         )
 
+        # Location head (μ)
+        self.mu_head = nn.Linear(hidden_size, 1)
+        nn.init.zeros_(self.mu_head.weight)
+        nn.init.constant_(self.mu_head.bias, target_mean)
+
+        # Scale head (σ)
+        self.sigma_head = nn.Linear(hidden_size, 1)
+        sigma_bias_init = math.log(math.exp(target_std) - 1)
+        nn.init.zeros_(self.sigma_head.weight)
+        nn.init.constant_(self.sigma_head.bias, sigma_bias_init)
+
+        # Learned quantile shape z_τ (replaces fixed normal quantiles)
+        self.shape = LearnedQuantileShape(quantiles_count=quantiles_count, normalize=True)
+
+        # Temperature T via clamped exp(logT), clamped to [1/3, 3]
+        # Initialize to T=1.0: logT=0.0
+        self.logT = nn.Parameter(torch.tensor(0.0))
+
+        # Clamp bounds (log-space)
+        self._logT_lo = math.log(1.0 / 3.0)  # ≈ -1.099
+        self._logT_hi = math.log(3.0)          # ≈  1.099
+
+    @property
+    def temperature(self) -> torch.Tensor:
+        """Current temperature value, clamped to [1/3, 3]."""
+        logT_clamped = torch.clamp(self.logT, self._logT_lo, self._logT_hi)
+        return torch.exp(logT_clamped)
+
+    @property
+    def temperature_value(self) -> float:
+        """Current temperature as a Python float (for logging)."""
+        return self.temperature.item()
+
+    def load_state_dict(self, state_dict, strict=True, assign=False):
+        """Override to handle migration from old t_raw (softplus) to new logT (clamped exp)."""
+        if "logT" not in state_dict and "t_raw" in state_dict:
+            # Migration: old checkpoint used softplus-based t_raw
+            t_raw_val = state_dict.pop("t_raw")
+            T_old = F.softplus(t_raw_val) + 1e-4
+            logT_migrated = torch.log(T_old)
+            state_dict["logT"] = logT_migrated
+            print(f"[Migration] Converted t_raw -> logT: T_old={T_old.item():.4f}, logT={logT_migrated.item():.4f}")
+        return super().load_state_dict(state_dict, strict=strict)
+
     def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
-        return self.net(embeddings)
+        """
+        Returns monotonic quantiles via location-scale with learned shape.
+        q_τ = μ + (T · σ) · z_τ
+        Guarantees: q[i] <= q[i+1] (since z_τ is nondecreasing and T·σ > 0)
+        """
+        h = self.encoder(embeddings)  # [B, hidden_size]
+        mu = self.mu_head(h).squeeze(-1)  # [B]
+        raw_sigma = self.sigma_head(h).squeeze(-1)  # [B]
+        sigma = F.softplus(raw_sigma) + self.sigma_floor  # [B]
+
+        z = self.shape()  # [Q], monotone
+        T = self.temperature  # scalar, clamped to [1/3, 3]
+
+        sigma_eff = sigma * T  # [B]
+        quantiles = mu.unsqueeze(1) + sigma_eff.unsqueeze(1) * z.unsqueeze(0)  # [B, Q]
+
+        return quantiles  # [B, Q] with guaranteed monotonicity
 
 class Chronos2ModelWrapper(nn.Module):
     """
@@ -214,9 +364,22 @@ class Chronos2NativeWrapper(nn.Module):
         self.model = model
         self.model_type = model_type
         self.forward_params = forward_params
+        
+        # Disable quantile head until encoder extraction is fixed
+        self._enable_q10d_head = False
+        
+        # Infer input size from model's hidden dimension
+        input_size = 180  # fallback default
+        if hasattr(model, "config"):
+            # Try various config attributes for hidden dimension
+            input_size = getattr(model.config, "d_model", 
+                        getattr(model.config, "hidden_size",
+                        getattr(model.config, "n_embd", 180)))
+        
         self.quantile_head = Chronos2QuantileHead(
             quantiles_count=quantiles_count,
             hidden_size=head_hidden_size,
+            input_size=input_size,
         )
         try:
             head_device = next(model.parameters()).device
@@ -270,40 +433,56 @@ class Chronos2NativeWrapper(nn.Module):
         past_covariates: Optional[torch.Tensor] = None,
         future_covariates: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
+        # HARD GUARD: prevent calls when quantile head disabled
+        if not getattr(self, '_enable_q10d_head', True):
+            raise RuntimeError(
+                "predict_quantiles_10d called but quantile head is disabled. "
+                "Set _enable_q10d_head=True on wrapper or enable in config."
+            )
+        
         context = self._sanitize(context)
         past_covariates = self._sanitize(past_covariates)
         future_covariates = self._sanitize(future_covariates)
         if context_mask is None:
             context_mask = self._build_mask(context)
 
+        # For Chronos-2: explicitly extract encoder hidden states
+        # Call the model and access encoder_outputs directly
         outputs = None
-        arg_map = {
-            "context": context,
-            "context_mask": context_mask,
-            "past_covariates": past_covariates,
-            "future_covariates": future_covariates,
-            "past_dynamic_feat": past_covariates,
-            "future_dynamic_feat": future_covariates,
-            "known_covariates": future_covariates,
-        }
-        call_kwargs = {}
-        for k in self.forward_params:
-            if k in arg_map and arg_map[k] is not None:
-                call_kwargs[k] = arg_map[k]
-        if "use_cache" in self.forward_params:
-            call_kwargs["use_cache"] = False
-        if "output_hidden_states" in self.forward_params:
-            call_kwargs["output_hidden_states"] = True
-        if hasattr(self.model, "config"):
-            self.model.config.use_cache = False
-
-        if call_kwargs:
+        encoder_hidden = None
+        
+        if "num_output_patches" in self.forward_params:
             try:
-                outputs = self.model(**call_kwargs)
+                # Create dummy future_target to satisfy forward signature
+                dummy_target = torch.zeros(context.shape[0], 1, 1, device=context.device, dtype=context.dtype)
+                model_output = self.model(
+                    context=context,
+                    context_mask=context_mask,
+                    future_target=dummy_target,
+                    num_output_patches=1,
+                    return_dict=True,
+                )
+                
+                # For Seq2Seq models, encoder hidden states are in encoder_outputs
+                if hasattr(model_output, 'encoder_outputs') and model_output.encoder_outputs is not None:
+                    # encoder_outputs is a tuple: (last_hidden_state, ...)
+                    if isinstance(model_output.encoder_outputs, tuple) and len(model_output.encoder_outputs) > 0:
+                        encoder_hidden = model_output.encoder_outputs[0]  # [B, SeqLen, d_model]
+                    elif hasattr(model_output.encoder_outputs, 'last_hidden_state'):
+                        encoder_hidden = model_output.encoder_outputs.last_hidden_state
+                elif hasattr(model_output, 'encoder_last_hidden_state'):
+                    encoder_hidden = model_output.encoder_last_hidden_state
+                outputs = model_output
             except Exception:
-                outputs = None
-
-        rep = self._pool_context_representation(context, outputs)
+                pass  # Will use fallback
+        
+        # Pool encoder hidden states: [B, SeqLen, d_model] -> [B, d_model]
+        if encoder_hidden is not None and encoder_hidden.ndim == 3:
+            rep = encoder_hidden.mean(dim=1)  # Average over sequence length
+        else:
+            # Fallback: use original pooling method
+            rep = self._pool_context_representation(context, outputs)
+        
         return self.quantile_head(rep)
 
     def _infer_num_output_patches(self, pred_len: int) -> Optional[int]:
@@ -328,6 +507,8 @@ class Chronos2NativeWrapper(nn.Module):
         future_target_mask: Optional[torch.Tensor] = None,
         past_covariates: Optional[torch.Tensor] = None,
         future_covariates: Optional[torch.Tensor] = None,
+        future_covariates_mask: Optional[torch.Tensor] = None,
+        group_ids: Optional[torch.Tensor] = None,
         num_output_patches: Optional[int] = None,
         **kwargs
     ):
@@ -344,6 +525,15 @@ class Chronos2NativeWrapper(nn.Module):
         if num_output_patches is None and future_target is not None:
             num_output_patches = self._infer_num_output_patches(future_target.shape[1])
 
+        # Chronos2 expects future_covariates as [B, T], not [B, T, F]
+        # If multi-feature covariates, average across features to collapse
+        if future_covariates is not None and future_covariates.ndim == 3:
+            if not hasattr(self, "_cov_warned"):
+                print(f"[Wrapper] Collapsing future_covariates {tuple(future_covariates.shape)} -> [B, T] via mean")
+                self._cov_warned = True
+            future_covariates = future_covariates.mean(dim=-1)  # [B, T, F] -> [B, T]
+            if future_covariates_mask is not None and future_covariates_mask.ndim == 3:
+                future_covariates_mask = future_covariates_mask.all(dim=-1).to(dtype=torch.long)
         arg_map = {
             "context": context,
             "context_mask": context_mask,
@@ -352,9 +542,11 @@ class Chronos2NativeWrapper(nn.Module):
             "future_mask": future_target_mask,
             "past_covariates": past_covariates,
             "future_covariates": future_covariates,
+            "future_covariates_mask": future_covariates_mask,
             "past_dynamic_feat": past_covariates,
             "future_dynamic_feat": future_covariates,
             "known_covariates": future_covariates,
+            "group_ids": group_ids,
             "num_output_patches": num_output_patches,
         }
 
@@ -508,6 +700,15 @@ def load_chronos_adapter(
                 dtype=torch.bfloat16
             )
             model = pipeline.model
+            # Attach pipeline's predict/generate to model so wrapper can detect/use it
+            # This is critical because Chronos2NativeWrapper expects 'predict' on the model
+            # but usually it resides on the pipeline.
+            if hasattr(pipeline, "predict"):
+                # Bind the method
+                model.predict = pipeline.predict
+            if hasattr(pipeline, "generate"):
+                model.generate = pipeline.generate
+
             # Pipeline loads to device automatically?
             # Ensure config is accessible
             if not hasattr(model, "config"):
@@ -549,15 +750,17 @@ def load_chronos_adapter(
             model.to(device)
             print(f"[Load] Model moved to {device}")
             
-        # Debug: Check vocab size vs embeddings
+        # Debug: Check vocab size vs embeddings — skip for Chronos2 (patch-based, not token-based)
         print(f"[Load] Config Vocab: {model.config.vocab_size}")
-        if model.config.vocab_size < 4096:
+        if "chronos-2" not in model_id.lower() and model.config.vocab_size < 4096:
              try:
                  print("[Load] Resizing embeddings to 4096...")
                  model.resize_token_embeddings(4096)
                  print(f"[Load] New Vocab: {model.config.vocab_size}")
              except Exception as e:
                  print(f"[Load] Skipping resize_token_embeddings: {e}")
+        elif "chronos-2" in model_id.lower():
+             print("[Load] Skipping resize_token_embeddings (Chronos2 is patch-based)")
 
         # Fix T5 IDs for training if missing
         if model.config.pad_token_id is None:
@@ -666,8 +869,11 @@ def load_chronos_adapter(
     # Enable gradient checkpointing AFTER PEFT wrapping
     if not eval_mode and use_qlora:
         if hasattr(model, "gradient_checkpointing_enable"):
-             print("[Load] Enabling gradient checkpointing (non-reentrant)...")
-             model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+             try:
+                 print("[Load] Enabling gradient checkpointing (non-reentrant)...")
+                 model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+             except Exception as e:
+                 print(f"[Load] WARN: Gradient checkpointing failed: {e}")
         
     if not use_qlora:
         model.to(device)

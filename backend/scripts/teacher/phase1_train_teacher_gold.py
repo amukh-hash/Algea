@@ -22,12 +22,14 @@ import threading
 import gc
 import psutil
 
+import math
 import numpy as np
 from chronos import Chronos2Pipeline
 
 try:
     import torch
-    from torch.utils.data import Dataset, DataLoader
+    import torch.nn.functional as F
+    from torch.utils.data import Dataset, DataLoader, Subset
     from transformers import get_linear_schedule_with_warmup
 except Exception:
     print("ERROR: torch/transformers is required.", file=sys.stderr)
@@ -42,14 +44,14 @@ except Exception:
 # Imports from backend
 sys.path.append(os.getcwd())
 try:
-from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
-from backend.app.ops import run_recorder
+    from backend.app.models.chronos2_teacher import load_chronos_adapter, Chronos2NativeWrapper
+    from backend.app.ops import run_recorder
 except ImportError as e:
     print(f"ERROR: Backend imports failed: {e}", file=sys.stderr)
     sys.exit(1)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class Phase1Config:
     run_id: str
     seed: int
@@ -84,6 +86,19 @@ class Phase1Config:
     target_col: str
     covariate_cols: Tuple[str, ...]
     future_covariate_cols: Tuple[str, ...]
+    
+    max_files_limit: int = 1000
+    unfreeze_layernorms: bool = False
+    unfreeze_last_blocks: int = 0
+    
+    # Sigma Penalty Config
+    sigma_band_low: float = 0.5
+    sigma_band_high: float = 2.0
+    sigma_reg_weight: float = 1e-4
+    
+    # Quantile Head Flags (bypass until encoder extraction fixed)
+    enable_q10d_head: bool = False
+    calibration_mode: str = "sigma_only"  # or "full" when quantiles enabled
 
 
 def env_path(name: str, default: str) -> Path:
@@ -115,7 +130,7 @@ def load_config(args) -> Phase1Config:
     ).split(",") if c.strip())
     future_covariate_cols = tuple(c.strip() for c in os.getenv(
         "CHRONOS2_FUTURE_COVARIATE_COLS",
-        ""
+        "spy_ret_1d,qqq_ret_1d,iwm_ret_1d,vix_level,rate_proxy,market_breadth_ad"
     ).split(",") if c.strip())
 
     return Phase1Config(
@@ -149,44 +164,17 @@ def load_config(args) -> Phase1Config:
         target_col=target_col,
         covariate_cols=covariate_cols,
         future_covariate_cols=future_covariate_cols,
-        max_files_limit=int(os.getenv("GOLD_MAX_FILES", "1000")),
+        max_files_limit=int(os.getenv("GOLD_MAX_FILES_LIMIT", "1000")),
         unfreeze_layernorms=os.getenv("UNFREEZE_LAYERNORMS", "0") == "1",
-        unfreeze_last_blocks=int(os.getenv("UNFREEZE_LAST_BLOCKS", "0"))
+        unfreeze_last_blocks=int(os.getenv("UNFREEZE_LAST_BLOCKS", "0")),
+        
+        # Sigma Penalty Config
+        sigma_band_low=float(os.getenv("SIGMA_BAND_LOW", "0.5")),
+        sigma_band_high=float(os.getenv("SIGMA_BAND_HIGH", "2.0")),
+        sigma_reg_weight=float(os.getenv("SIGMA_REG_WEIGHT", "1e-4"))
     )
 
-@dataclass
-class Phase1Config:
-    run_id: str
-    seed: int
-    model_id: str
-    use_qlora: bool
-    lora_config: dict
-    gold_parquet_dir: Path
-    gold_glob: str
-    required_cols: list
-    context: int
-    pred: int
-    stride_rows: int
-    max_files: int
-    max_windows: int
-    cache_size: int
-    batch_size: int
-    grad_accum: int
-    lr: float
-    max_steps: int
-    warmup_steps: int
-    checkpoint_every: int
-    log_every: int
-    out_dir: Path
-    probe_only: bool
-    allow_fallback_codec: bool
-    val_split_pct: float
-    target_col: str
-    covariate_cols: tuple
-    future_covariate_cols: tuple
-    max_files_limit: int = 1000
-    unfreeze_layernorms: bool = False
-    unfreeze_last_blocks: int = 0
+
 
 class GoldFuturesWindowDataset(Dataset):
     def __init__(self, files: List[Path], required_cols: Tuple[str, ...],
@@ -401,6 +389,7 @@ class GoldFuturesWindowDataset(Dataset):
             "y_float": feats[self.context:],
             "future_target_1d": future_target_1d,
             "target_10d": target_10d,
+            "group_id": fi,
         }
 
 def _build_mask(tensor: torch.Tensor) -> torch.Tensor:
@@ -451,6 +440,14 @@ class CollateFn:
         if future_target.std() <= 1e-12 or torch.all(future_target == future_target.flatten()[0]):
             raise ValueError("Degenerate future target detected.")
         
+        # Build future_covariates_mask
+        future_covariates_mask = None
+        if future_covariates is not None:
+            future_covariates_mask = _build_mask(future_covariates)
+
+        # Build group_ids from file index
+        group_ids = torch.tensor([b["group_id"] for b in batch], dtype=torch.long)
+
         return {
             "context": context_target,
             "context_mask": context_mask,
@@ -460,6 +457,8 @@ class CollateFn:
             "target_10d": target_10d,
             "past_covariates": past_covariates,
             "future_covariates": future_covariates,
+            "future_covariates_mask": future_covariates_mask,
+            "group_ids": group_ids,
         }
 
 def get_collate_fn(feature_names: List[str], target_col: str,
@@ -504,6 +503,257 @@ def compute_pinball_loss(y_true, quantile_preds, quantiles, quantile_weights=Non
     
     return loss_per_quantile.mean()
 
+
+def _wilson_interval(p: float, n: int, z: float = 1.96) -> tuple:
+    """Wilson score interval for binomial proportion."""
+    if n == 0:
+        return (0.0, 1.0)
+    denom = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    margin = z * math.sqrt((p * (1 - p) + z * z / (4 * n)) / n) / denom
+    lo = max(0.0, centre - margin)
+    hi = min(1.0, centre + margin)
+    return (lo, hi)
+
+
+def create_calibration_indices(val_dataset, size: int, output_dir: Path, seed: int = 137) -> list:
+    """
+    Create or load a persistent calibration index set for stable coverage metrics.
+    Saves to output_dir/calib_indices.json for reproducibility across runs.
+    """
+    indices_path = output_dir / "calib_indices.json"
+    dataset_len = len(val_dataset)
+    requested_size = size
+
+    # Try loading existing
+    if indices_path.exists():
+        print(f"[Calib] Loading calibration indices from {indices_path}")
+        with open(indices_path, 'r') as f:
+            indices = json.load(f)
+        
+        # Integrity check
+        if indices:
+            max_idx = max(indices)
+            if max_idx >= dataset_len:
+                print(f"[Calib] WARN: Saved indices out of bounds (max={max_idx} >= len={dataset_len}). Regenerating.")
+            else:
+                print(f"[Calib] Loaded {len(indices)} calibration indices (valid)")
+                return indices
+        else:
+             print("[Calib] WARN: Empty indices file. Regenerating.")
+
+    # Create new
+    actual_size = min(requested_size, dataset_len)
+    if actual_size < requested_size:
+        print(f"[Calib] WARN: Dataset size ({dataset_len}) smaller than requested calibration slice ({requested_size}). Using all available.")
+
+    rng = np.random.RandomState(seed)
+    indices = rng.choice(dataset_len, size=actual_size, replace=False).tolist()
+    indices.sort()
+    
+    # Final Validation
+    if not indices:
+         print("[Calib] ERROR: Generated empty indices list!")
+         return []
+    if max(indices) >= dataset_len:
+         raise ValueError(f"[Calib] Generated indices out of bounds: max={max(indices)}, len={dataset_len}")
+
+    indices_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(indices_path, 'w') as f:
+        json.dump(indices, f)
+    print(f"[Calib] Created {len(indices)} calibration indices -> {indices_path}")
+    return indices
+
+
+def compute_calib_stats(
+    val_dataset, calib_indices: list, collate_fn, output_dir: Path,
+    batch_size: int = 256
+) -> dict:
+    """
+    Compute sigma0/mu0 from fixed calibration slice and persist to calib_stats.json.
+    On resume: loads from file if present.
+    Returns: {"mu0": float, "sigma0": float, "N_total": int, "N_used": int}
+    """
+    stats_path = output_dir / "calib_stats.json"
+
+    # Try loading existing
+    if stats_path.exists():
+        with open(stats_path, 'r') as f:
+            stats = json.load(f)
+        sigma0 = stats.get("sigma0", 0)
+        mu0 = stats.get("mu0", 0)
+        N_used = stats.get("N_used", stats.get("N", 0)) # Backwards compat
+        
+        if sigma0 > 0 and N_used > 0:
+            print(f"[CalibStats] Loaded from {stats_path}: mu0={mu0:.6f}, sigma0={sigma0:.6f}, N_used={N_used}")
+            # Ensure new fields (if missing) are populated mostly for consistency
+            if "N_total" not in stats: stats["N_total"] = len(calib_indices)
+            if "N_used" not in stats: stats["N_used"] = N_used
+            return stats
+        print("[CalibStats] WARN: Invalid saved stats, recomputing.")
+
+    # Compute from scratch
+    calib_subset = Subset(val_dataset, calib_indices)
+    calib_dl = DataLoader(calib_subset, batch_size=batch_size, shuffle=False,
+                          collate_fn=collate_fn, num_workers=0)
+
+    all_targets = []
+    for batch in calib_dl:
+        t10d = batch.get("target_10d")
+        if t10d is not None:
+            # Filter NaNs/Infs
+            valid_mask = torch.isfinite(t10d)
+            if valid_mask.any():
+                all_targets.append(t10d[valid_mask])
+    
+    N_total = len(calib_indices)
+    
+    if not all_targets:
+        print("[CalibStats] WARN: No valid target_10d in calib slice, using fallback sigma0=0.032")
+        stats = {"mu0": -0.00088, "sigma0": 0.032, "N_total": N_total, "N_used": 0}
+    else:
+        all_t = torch.cat(all_targets).float()
+        mu0 = all_t.mean().item()
+        sigma0 = all_t.std().item()  # population std (PyTorch default is sample std, close enough)
+        N_used = int(all_t.numel())
+        stats = {"mu0": mu0, "sigma0": sigma0, "N_total": N_total, "N_used": N_used}
+
+    # Validation
+    if stats["N_used"] < 0.8 * stats["N_total"]:
+        print(f"[CalibStats] WARN: Low valid target count: {stats['N_used']}/{stats['N_total']} ({(stats['N_used']/stats['N_total']):.1%})")
+    if stats["N_used"] < 512 and stats["N_total"] >= 512:
+        print(f"[CalibStats] WARN: Very few valid samples ({stats['N_used']}) for calibration!")
+
+    # Sanity check
+    if stats["sigma0"] <= 0 or stats["sigma0"] > 0.5:
+        print(f"[CalibStats] WARN: sigma0={stats['sigma0']:.6f} looks suspicious (expected 0.01-0.1). "
+              f"Falling back to 0.032.")
+        stats["sigma0"] = 0.032
+
+    stats_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(stats_path, 'w') as f:
+        json.dump(stats, f, indent=2)
+    print(f"[CalibStats] Computed and saved: mu0={stats['mu0']:.6f}, sigma0={stats['sigma0']:.6f}, N_used={stats['N_used']}/{stats['N_total']}")
+    return stats
+
+
+def compute_calibration_metrics(
+    model, val_dataset, calib_indices: list, quantiles: list, device: torch.device,
+    collate_fn, batch_size: int = 64
+) -> dict:
+    """
+    Compute stable calibration metrics over a fixed calibration slice.
+
+    Returns dict with:
+        - coverage_q01..q99: empirical coverage for key quantile levels
+        - wilson_q01..q99_lo/hi: Wilson confidence intervals + half_width
+        - avg_pinball: average pinball loss on calib slice
+        - direction_acc: fraction where sign(mu) == sign(target)
+        - pred_up_rate: fraction of predictions with mu > 0
+        - true_up_rate: fraction of targets > 0
+        - n_samples: total samples evaluated
+    """
+    model.eval()
+    calib_subset = Subset(val_dataset, calib_indices)
+    calib_dl = DataLoader(calib_subset, batch_size=batch_size, shuffle=False,
+                          collate_fn=collate_fn, num_workers=0)
+
+    # Key quantile indices
+    key_quantiles = {'q01': 0.01, 'q10': 0.1, 'q50': 0.5, 'q90': 0.9, 'q99': 0.99}
+    key_indices = {}
+    for name, q_val in key_quantiles.items():
+        try:
+            key_indices[name] = quantiles.index(q_val)
+        except ValueError:
+            pass
+
+    # Accumulators
+    coverage_counts = {name: 0 for name in key_indices}
+    total_samples = 0
+    total_pinball = 0.0
+    direction_correct = 0
+    pred_up_count = 0
+    true_up_count = 0
+    n_batches = 0
+
+    with torch.no_grad():
+        for batch in calib_dl:
+            context = batch["context"].to(device)
+            context_mask = batch["context_mask"].to(device)
+            target_10d = batch["target_10d"]
+            if target_10d is None:
+                continue
+            target_10d = target_10d.to(device)
+            past_covariates = batch.get("past_covariates")
+            future_covariates = batch.get("future_covariates")
+            if past_covariates is not None:
+                past_covariates = past_covariates.to(device)
+            if future_covariates is not None:
+                future_covariates = future_covariates.to(device)
+
+            B = context.shape[0]
+
+            q_10d = model.predict_quantiles_10d(
+                context,
+                context_mask=context_mask,
+                past_covariates=past_covariates,
+                future_covariates=future_covariates,
+            )
+
+            # Coverage counts
+            for name, idx in key_indices.items():
+                coverage_counts[name] += (target_10d < q_10d[:, idx]).sum().item()
+
+            # Pinball loss
+            pinball = compute_pinball_loss(target_10d, q_10d, quantiles)
+            total_pinball += pinball.item() * B
+
+            # Direction accuracy using mu (from head internals)
+            # Extract mu via head encoder -> mu_head
+            outputs = None
+            try:
+                outputs = model(context, context_mask=context_mask,
+                                past_covariates=past_covariates,
+                                future_covariates=future_covariates)
+            except Exception:
+                pass
+            rep = model._pool_context_representation(context, outputs)
+            h = model.quantile_head.encoder(rep)
+            mu = model.quantile_head.mu_head(h).squeeze(-1)  # [B]
+
+            pred_up = (mu > 0)
+            true_up = (target_10d > 0)
+            direction_correct += (pred_up == true_up).sum().item()
+            pred_up_count += pred_up.sum().item()
+            true_up_count += true_up.sum().item()
+
+            total_samples += B
+            n_batches += 1
+
+    model.train()
+
+    if total_samples == 0:
+        return {"n_samples": 0}
+
+    result = {"n_samples": total_samples}
+
+    # Coverages + Wilson CIs + half-widths
+    for name, count in coverage_counts.items():
+        p = count / total_samples
+        result[f"coverage_{name}"] = p * 100.0
+        lo, hi = _wilson_interval(p, total_samples)
+        result[f"wilson_{name}_lo"] = lo * 100.0
+        result[f"wilson_{name}_hi"] = hi * 100.0
+        result[f"wilson_{name}_halfwidth"] = (hi - lo) * 50.0  # half of full CI width, in %
+
+    result["avg_pinball"] = total_pinball / total_samples
+    result["direction_acc"] = direction_correct / total_samples
+    result["pred_up_rate"] = pred_up_count / total_samples
+    result["true_up_rate"] = true_up_count / total_samples
+
+    return result
+
+
 def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     """
     Compute validation loss using **Weighted Pinball Loss** (Canonical).
@@ -546,8 +796,12 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                 target_10d = target_10d.to(device)
             past_covariates = batch["past_covariates"]
             future_covariates = batch["future_covariates"]
+            future_covariates_mask = batch.get("future_covariates_mask")
+            group_ids = batch.get("group_ids")
             if past_covariates is not None: past_covariates = past_covariates.to(device)
             if future_covariates is not None: future_covariates = future_covariates.to(device)
+            if future_covariates_mask is not None: future_covariates_mask = future_covariates_mask.to(device)
+            if group_ids is not None: group_ids = group_ids.to(device)
             
             pred_len = future_target.shape[1]
             batch_size = context.shape[0]
@@ -557,6 +811,10 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                 context_np = context.cpu().unsqueeze(1).numpy()
                 predictions = pipeline.predict(inputs=context_np, prediction_length=pred_len) 
                 qp = torch.stack([pred.squeeze(0) for pred in predictions], dim=0).to(device) # [B, Q, Pred]
+                
+                # Fix #2: Prediction fingerprint (first batch only)
+                if steps == 0:
+                    print(f"[Fingerprint] Pred batch0: mean={qp.mean().item():.6f} std={qp.std().item():.6f}")
                 
                 # Daily Pinball
                 p_loss = compute_pinball_loss(
@@ -572,6 +830,94 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                     past_covariates=past_covariates,
                     future_covariates=future_covariates,
                 )
+                
+            # Check B: Fingerprint 10-day predictions (first batch only)
+                if steps == 0:
+                    # Test 1: Also fingerprint daily predictions from same batch for correlation
+                    daily_preds_same_batch = qp if 'qp' in locals() else None
+                    print(f"[Fingerprint 10d] q_10d batch0: mean={q_10d.mean().item():.6f} std={q_10d.std().item():.6f} shape={tuple(q_10d.shape)}")
+                    if daily_preds_same_batch is not None:
+                        print(f"[Test 1 Correlate] Daily preds (same batch): mean={daily_preds_same_batch.mean().item():.6f} std={daily_preds_same_batch.std().item():.6f}")
+                    else:
+                        print(f"[Test 1 Correlate] Daily preds not available in this batch (pipeline may not have run yet)")
+                    
+                    # SCALE CHECK: target_10d distribution vs q_10d distribution
+                    print(f"\n[Scale Check] target_10d: mean={target_10d.mean().item():.6f} std={target_10d.std().item():.6f} min={target_10d.min().item():.6f} max={target_10d.max().item():.6f}")
+                    print(f"[Scale Check] target_10d samples: {[round(v.item(), 6) for v in target_10d[:5]]}")
+                    idx_50_check = quantiles.index(0.5)
+                    q50_vals = q_10d[:, idx_50_check]
+                    print(f"[Scale Check] q50 (10d): mean={q50_vals.mean().item():.6f} std={q50_vals.std().item():.6f} min={q50_vals.min().item():.6f} max={q50_vals.max().item():.6f}")
+                    print(f"[Scale Check] Ratio q50/target: {(q50_vals.mean().item() / (target_10d.mean().item() + 1e-8)):.1f}x")
+                    
+                    # GUARDRAIL: Extract σ and μ statistics from quantile head
+                    # Compute intermediate values from the head
+                    with torch.no_grad():
+                        # Get pooled representation (same as what quantile head uses)
+                        pooled_repr = model._pool_context_representation(
+                            context, 
+                            model(context, context_mask=context_mask, past_covariates=past_covariates, future_covariates=future_covariates)
+                        )
+                        # Pass through quantile head encoder
+                        h = model.quantile_head.encoder(pooled_repr)
+                        # Extract μ and σ
+                        mu = model.quantile_head.mu_head(h).squeeze(-1)
+                        raw_sigma = model.quantile_head.sigma_head(h).squeeze(-1)
+                        sigma = torch.nn.functional.softplus(raw_sigma) + model.quantile_head.sigma_floor
+                        
+                        # Log σ statistics
+                        print(f"\\n[Guardrail σ] mean={sigma.mean().item():.6f} std={sigma.std().item():.6f} min={sigma.min().item():.6f} max={sigma.max().item():.6f}")
+                        
+                        # Log μ variability (should not be ~0)
+                        print(f"[Guardrail μ] mean={mu.mean().item():.6f} std={mu.std().item():.6f} (μ_std should be non-zero = head using features)")
+                        
+                        # Log spread (q90 - q10)
+                        idx_10 = quantiles.index(0.1)
+                        idx_90 = quantiles.index(0.9)
+                        spread = (q_10d[:, idx_90] - q_10d[:, idx_10]).mean().item()
+                        print(f"[Guardrail spread] q90-q10: {spread:.6f} (should be ~0.05-0.15 for your data)")
+
+                    # Diagnostic 1: Print sample row showing key quantile values
+                    try:
+                        idx_01 = quantiles.index(0.01)
+                        idx_10 = quantiles.index(0.1)
+                        idx_50 = quantiles.index(0.5)
+                        idx_90 = quantiles.index(0.9)
+                        idx_99 = quantiles.index(0.99)
+                        sample_row = q_10d[0]  # First example
+                        print(f"\n[Diagnostic 1] Sample quantiles (row 0):")
+                        print(f"  q01={sample_row[idx_01].item():.6f}, q10={sample_row[idx_10].item():.6f}, q50={sample_row[idx_50].item():.6f}, q90={sample_row[idx_90].item():.6f}, q99={sample_row[idx_99].item():.6f}")
+                        print(f"  Quantile indices: 0.01@{idx_01}, 0.10@{idx_10}, 0.50@{idx_50}, 0.90@{idx_90}, 0.99@{idx_99}")
+                    except (ValueError, IndexError) as e:
+                        print(f"[Diagnostic 1] Could not extract key quantiles: {e}")
+                    
+                    # Diagnostic 2: Check monotonicity violations
+                    monotonic_rows = 0
+                    for i in range(q_10d.shape[0]):
+                        row = q_10d[i]
+                        is_monotonic = all(row[j] <= row[j+1] for j in range(len(row)-1))
+                        if is_monotonic:
+                            monotonic_rows += 1
+                    monotonic_pct = (monotonic_rows / q_10d.shape[0]) * 100
+                    print(f"\n[Diagnostic 2] Monotonicity: {monotonic_pct:.1f}% of rows have non-decreasing quantiles")
+                    
+                    # Diagnostic 3: Empirical coverage for key quantiles
+                    try:
+                        coverages = {}
+                        for q_name, q_val, idx in [("q01", 0.01, idx_01), ("q10", 0.1, idx_10), 
+                                                     ("q50", 0.5, idx_50), ("q90", 0.9, idx_90), 
+                                                     ("q99", 0.99, idx_99)]:
+                            q_pred = q_10d[:, idx]
+                            below = (target_10d < q_pred).float().mean().item()
+                            coverages[q_name] = below * 100
+                        print(f"\n[Diagnostic 3] Empirical coverage (% actual < predicted):")
+                        for q_name in ["q01", "q10", "q50", "q90", "q99"]:
+                            expected = float(q_name[1:])
+                            actual = coverages[q_name]
+                            print(f"  {q_name}: {actual:.1f}% (expected {expected:.0f}%)")
+                    except Exception as e:
+                        print(f"[Diagnostic 3] Could not compute coverages: {e}")
+                    print()
+                
                 loss_primary = compute_pinball_loss(target_10d, q_10d, quantiles)
                 total_10d_pinball += loss_primary.item()
 
@@ -599,24 +945,6 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                              s99 = (day_10_preds[:, i99] - day_10_preds[:, i01]).mean().item()
                              total_s99 += s99
                          except ValueError:
-                             pass                
-                # Monitor Spreads (Day 10 Marginal)
-                if qp.shape[2] >= 10:
-                    day_10_preds = qp[:, :, 9] 
-                    if len(quantiles) >= 21:
-                         # Indexes for 0.90/0.10 and 0.99/0.01 assuming dense grid
-                         # Robust lookup if possible, else fixed indices
-                         try:
-                             i90 = quantiles.index(0.9)
-                             i10 = quantiles.index(0.1)
-                             s90 = (day_10_preds[:, i90] - day_10_preds[:, i10]).mean().item()
-                             total_s90 += s90
-                             
-                             i99 = quantiles.index(0.99)
-                             i01 = quantiles.index(0.01)
-                             s99 = (day_10_preds[:, i99] - day_10_preds[:, i01]).mean().item()
-                             total_s99 += s99
-                         except ValueError:
                              pass
 
             # 3. Internal Loss
@@ -627,6 +955,7 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
                 future_target_mask=future_target_mask,
                 past_covariates=past_covariates,
                 future_covariates=future_covariates,
+                group_ids=group_ids,
                 num_output_patches=None
             )
             if hasattr(out, "loss") and out.loss is not None:
@@ -651,7 +980,7 @@ def run_validation(model, dl, device, quantiles, desc="Val", pipeline=None):
     # Standardize output keys (Safe Return)
     return {
         "pinball_loss": avg_pinball_loss, 
-        "internal_loss": avg_internal_loss,
+        #"internal_loss": avg_internal_loss, # Removed to avoid confusion
         "val_10d_pinball": avg_10d_pinball,
         "direction_10d": avg_10d_direction,
         "q10_10d": avg_10d_q10,
@@ -780,7 +1109,7 @@ def main():
             target_col=cfg.target_col
         )
         
-        train_ds, val_ds = dataset.split_validation(0.15)
+        train_ds, val_ds = dataset.split_validation(cfg.val_split_pct)
         
         # Feature names for collate_fn
         feature_names = [c for c in cfg.required_cols if c not in ("timestamp", "date")]
@@ -798,7 +1127,7 @@ def main():
         
         model_wrapper, model_info = load_chronos_adapter(
             model_id="amazon/chronos-2",
-            use_qlora=False, # cfg.use_qlora
+            use_qlora=cfg.use_qlora,
             device=device,
             lora_config=cfg.lora_config
         )
@@ -921,18 +1250,70 @@ def main():
                 unfrozen_param_names.append(name)
         print(f"[Checkpoint] Tracking {len(unfrozen_param_names)} base parameters for 'base_delta.pt'")
 
-        opt = torch.optim.AdamW(trainable_params, lr=cfg.lr)
+        # Separate param groups: LoRA, head (μ/σ), shape (z_τ), temperature, base
+        lora_params = [p for n, p in model_wrapper.model.named_parameters() if p.requires_grad and "lora" in n.lower()]
+        base_params = [p for n, p in model_wrapper.model.named_parameters() if p.requires_grad and "lora" not in n.lower()]
+
+        # Quantile head: separate μ/σ encoder+heads from shape and temperature
+        head_mu_sigma_params = []
+        shape_params = []
+        temperature_params = []
+        for n, p in model_wrapper.named_parameters():
+            if not p.requires_grad or "quantile_head" not in n:
+                continue
+            if "shape." in n:
+                shape_params.append(p)
+            elif "logT" in n:
+                temperature_params.append(p)
+            else:
+                head_mu_sigma_params.append(p)
+
+        lr_lora = cfg.lr
+        lr_head = cfg.lr
+        lr_shape = cfg.lr * 0.1
+        lr_temp = cfg.lr * 0.05
+
+        param_groups = [
+            {"params": lora_params, "lr": lr_lora, "name": "lora"},
+            {"params": head_mu_sigma_params, "lr": lr_head, "name": "head_mu_sigma"},
+        ]
+        if shape_params:
+            param_groups.append({"params": shape_params, "lr": lr_shape, "name": "shape_z_tau"})
+        if temperature_params:
+            param_groups.append({"params": temperature_params, "lr": lr_temp, "name": "temperature"})
+        if base_params:
+            base_lr = cfg.lr / 20.0
+            param_groups.append({"params": base_params, "lr": base_lr, "weight_decay": 0.01, "name": "base_unfrozen"})
+
+        print(f"[Optimizer] Param groups:")
+        print(f"  LoRA: {len(lora_params)} tensors @ lr={lr_lora}")
+        print(f"  Head (μ/σ): {len(head_mu_sigma_params)} tensors @ lr={lr_head}")
+        print(f"  Shape (z_τ): {len(shape_params)} tensors @ lr={lr_shape}")
+        print(f"  Temperature: {len(temperature_params)} tensors @ lr={lr_temp}")
+        if base_params:
+            print(f"  Base: {len(base_params)} tensors @ lr={base_lr}")
+        
+        opt = torch.optim.AdamW(param_groups)
         scheduler = get_linear_schedule_with_warmup(
             opt, num_warmup_steps=cfg.warmup_steps, num_training_steps=cfg.max_steps
         )
         
-        # Helper: Robust Checkpointer
+        # Verification: Check quantile_head params are initialized and in optimizer
+        print("\n[Verify] Checking quantile_head initialization:")
+        for name, param in model_wrapper.named_parameters():
+            if "quantile_head" in name.lower():
+                # Check if in optimizer
+                in_opt = any(param is p for group in opt.param_groups for p in group['params'])
+                print(f"  {name}: shape={tuple(param.shape)}, requires_grad={param.requires_grad}, in_optimizer={in_opt}")
+        print()
+        
+        # Helper: Robust Checkpointer (saves LoRA + base delta + head + shape + temperature + optimizer)
         def save_checkpoint_extended(target_dir: Path, step_meta: dict):
             target_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # 1. Save LoRA Adapter (Standard)
             model_wrapper.model.save_pretrained(target_dir)
-            
+
             # 2. Save Unfrozen Base Weights (Base Delta)
             if unfrozen_param_names:
                 base_delta = {}
@@ -940,10 +1321,20 @@ def main():
                 for name in unfrozen_param_names:
                     if name in state_dict:
                         base_delta[name] = state_dict[name].cpu()
-                
                 torch.save(base_delta, target_dir / "base_delta.pt")
-            
-            # 3. Save Manifest
+
+            # 3. Save quantile head state dict (includes shape + temperature)
+            head_state = model_wrapper.quantile_head.state_dict()
+            torch.save({k: v.cpu() for k, v in head_state.items()}, target_dir / "quantile_head.pt")
+
+            # 4. Save optimizer state for resume
+            torch.save(opt.state_dict(), target_dir / "optimizer.pt")
+
+            # 5. Save run_start_step for resume-safe shape reg decay
+            with open(target_dir / "run_start_step.json", "w") as f:
+                json.dump({"run_start_step": run_start_step, "saved_at_step": step_meta.get("step")}, f)
+
+            # 6. Save Manifest
             with open(target_dir / "manifest.json", "w") as f:
                 json.dump(step_meta, f, indent=2)
             run_recorder.register_checkpoint(
@@ -957,32 +1348,110 @@ def main():
 
         print(f"Starting Training: {cfg.run_id}")
         
-        # --- RESUME BASE DELTA IF EXISTS (Post-Unfreeze) ---
-        # If we resumed an adapter, we MUST also look for base_delta in that same folder
+        # --- RESUME BASE DELTA + HEAD + OPTIMIZER IF EXISTS (Post-Unfreeze) ---
         if args.resume_adapter:
             resume_path = Path(args.resume_adapter)
+
+            # Base delta
             base_delta_path = resume_path / "base_delta.pt"
             if base_delta_path.exists():
                 print(f"[Resume] Loading Base Delta from {base_delta_path}...")
                 base_delta = torch.load(base_delta_path, map_location=device)
                 model_wrapper.model.load_state_dict(base_delta, strict=False)
                 print(f"[Resume] Applied {len(base_delta)} base param updates.")
+            elif len(unfrozen_param_names) > 0:
+                print(f"[Resume] WARN: Unfrozen params detected but no 'base_delta.pt' found in {resume_path}!")
+
+            # Quantile head (includes shape + temperature)
+            head_path = resume_path / "quantile_head.pt"
+            if head_path.exists():
+                print(f"[Resume] Loading quantile head from {head_path}...")
+                head_state = torch.load(head_path, map_location=device)
+                model_wrapper.quantile_head.load_state_dict(head_state)
+                print(f"[Resume] Loaded quantile head ({len(head_state)} tensors)")
             else:
-                if len(unfrozen_param_names) > 0:
-                    print(f"[Resume] WARN: Unfrozen params detected but no 'base_delta.pt' found in {resume_path}!")
+                print(f"[Resume] No quantile_head.pt found, using fresh head init.")
+
+            # Optimizer state
+            opt_path = resume_path / "optimizer.pt"
+            if opt_path.exists():
+                print(f"[Resume] Loading optimizer state from {opt_path}...")
+                try:
+                    opt.load_state_dict(torch.load(opt_path, map_location=device))
+                    print(f"[Resume] Optimizer state restored.")
+                except Exception as e:
+                    print(f"[Resume] WARN: Could not restore optimizer state: {e}")
 
         # Prepare Validation Subsets
         val_quick_ds = dataset.get_quick_val_subset(val_ds, size=50, output_dir=cfg.out_dir)
-        val_quick_dl = DataLoader(val_quick_ds, batch_size=cfg.batch_size, shuffle=False, 
-                                  collate_fn=get_collate_fn(feature_names, cfg.target_col, cfg.covariate_cols, cfg.future_covariate_cols), 
+        val_quick_dl = DataLoader(val_quick_ds, batch_size=cfg.batch_size, shuffle=False,
+                                  collate_fn=get_collate_fn(feature_names, cfg.target_col, cfg.covariate_cols, cfg.future_covariate_cols),
                                   num_workers=0)
-        
+
+        # Create persistent calibration slice (N>=2048) for stable coverage metrics
+        calib_size = int(os.getenv("CALIB_SLICE_SIZE", "2048"))
+        calib_indices = create_calibration_indices(val_ds, size=calib_size, output_dir=cfg.out_dir)
+        calib_collate = get_collate_fn(feature_names, cfg.target_col, cfg.covariate_cols, cfg.future_covariate_cols)
+
+        # --- Part A: Compute data-driven sigma0/mu0 from calib slice ---
+        calib_stats = compute_calib_stats(val_ds, calib_indices, calib_collate, output_dir=cfg.out_dir)
+        sigma0 = calib_stats["sigma0"]
+        mu0 = calib_stats["mu0"]
+        print(f"[CalibStats] Using sigma0={sigma0:.6f}, mu0={mu0:.6f}")
+
+        # --- Part D: Separate warmup for shape vs temperature ---
+        shape_warmup_steps = int(os.getenv("SHAPE_WARMUP_STEPS", "500"))
+        temp_warmup_steps = int(os.getenv("TEMP_WARMUP_STEPS", "2000"))
+        shape_z_frozen = shape_warmup_steps > 0
+        temp_frozen = temp_warmup_steps > 0
+
+        # Freeze shape initially
+        if shape_z_frozen:
+            for n, p in model_wrapper.named_parameters():
+                if "quantile_head.shape." in n:
+                    p.requires_grad = False
+            print(f"[Warmup] Shape (z_τ) frozen for first {shape_warmup_steps} global steps")
+
+        # Freeze temperature initially (separate from shape)
+        if temp_frozen:
+            for n, p in model_wrapper.named_parameters():
+                if "quantile_head.logT" in n:
+                    p.requires_grad = False
+            print(f"[Warmup] Temperature frozen for first {temp_warmup_steps} global steps")
+
+        # --- Part B: σ band penalty config ---
+        sigma_reg_weight = cfg.sigma_reg_weight
+        sigma_band_low = cfg.sigma_band_low
+        sigma_band_high = cfg.sigma_band_high
+
+        # Shape regularization config
+        shape_reg_weight_init = float(os.getenv("SHAPE_REG_WEIGHT", "1e-3"))
+        shape_reg_decay_steps = int(os.getenv("SHAPE_REG_DECAY_STEPS", "5000"))
+        lambda_10d = float(os.getenv("LAMBDA_10D", "0.5"))
+
+        # --- Part E: run_start_step for resume-safe shape reg decay ---
+        run_start_step = 0
+        if args.resume_adapter:
+            resume_path = Path(args.resume_adapter)
+            run_start_path = resume_path / "run_start_step.json"
+            if run_start_path.exists():
+                with open(run_start_path, 'r') as f:
+                    run_start_step = json.load(f).get("run_start_step", 0)
+                print(f"[Resume] Loaded run_start_step={run_start_step}")
+            else:
+                # Best effort: use the step from the manifest if available
+                manifest_path = resume_path / "manifest.json"
+                if manifest_path.exists():
+                    with open(manifest_path, 'r') as f:
+                        run_start_step = json.load(f).get("step", 0)
+                    print(f"[Resume] Inferred run_start_step={run_start_step} from manifest")
+
         step = 0
         running_loss = 0.0
-        
+
         # Infinite loop pattern for step-based training
         train_iter = iter(train_dl)
-        
+
         # Phase 1: Valid Tracking
         best_val_loss = float("inf")
         quick_val_ema = None
@@ -1008,12 +1477,18 @@ def main():
                 target_10d = target_10d.to(device)
             past_covariates = batch["past_covariates"]
             future_covariates = batch["future_covariates"]
+            future_covariates_mask = batch.get("future_covariates_mask")
+            group_ids = batch.get("group_ids")
             if past_covariates is not None: past_covariates = past_covariates.to(device)
             if future_covariates is not None: future_covariates = future_covariates.to(device)
+            if future_covariates_mask is not None: future_covariates_mask = future_covariates_mask.to(device)
+            if group_ids is not None: group_ids = group_ids.to(device)
             
             # Forward
             if step == 0:
                  print(f"[Debug] Input device: {context.device}")
+                 print(f"[Debug] future_covariates shape: {future_covariates.shape if future_covariates is not None else None}")
+                 print(f"[Debug] group_ids shape: {group_ids.shape if group_ids is not None else None}")
             
             out = model_wrapper(
                 context,
@@ -1022,6 +1497,7 @@ def main():
                 future_target_mask=future_target_mask,
                 past_covariates=past_covariates,
                 future_covariates=future_covariates,
+                group_ids=group_ids,
             )
             
             # Phase 3: Quantile Curriculum (Weighted Pinball Loss)
@@ -1059,7 +1535,59 @@ def main():
                 )
 
             loss_10d = None
-            if hasattr(out, "q_10d") and out.q_10d is not None and target_10d is not None:
+            # CRITICAL: Call 10-day head during training to supervise it
+            # BYPASS: Skip if quantile head disabled (encoder extraction broken)
+            if cfg.enable_q10d_head and hasattr(model_wrapper, "predict_quantiles_10d") and target_10d is not None:
+                q_10d_train = model_wrapper.predict_quantiles_10d(
+                    context,
+                    context_mask=context_mask,
+                    past_covariates=past_covariates,
+                    future_covariates=future_covariates,
+                )
+                loss_10d = compute_pinball_loss(
+                    target_10d,
+                    q_10d_train,
+                    quantiles,
+                    quantile_weights=quantile_weights
+                )
+
+                # --- Part B: σ soft clamp band penalty (data-driven anchor sigma0) ---
+                # Compute σ through the head (WITH gradients for proper backprop)
+                pooled_rep = model_wrapper._pool_context_representation(context, out)
+                h_reg = model_wrapper.quantile_head.encoder(pooled_rep)
+                raw_sigma_reg = model_wrapper.quantile_head.sigma_head(h_reg).squeeze(-1)
+                sigma_reg = F.softplus(raw_sigma_reg) + model_wrapper.quantile_head.sigma_floor
+                sigma_mean = sigma_reg.mean()
+
+                low_bound = sigma0 * sigma_band_low
+                high_bound = sigma0 * sigma_band_high
+                log_sigma_mean = torch.log(sigma_mean + 1e-8)
+                log_low = math.log(low_bound)
+                log_high = math.log(high_bound)
+
+                if sigma_mean.item() < low_bound:
+                    sigma_penalty = (log_low - log_sigma_mean) ** 2
+                elif sigma_mean.item() > high_bound:
+                    sigma_penalty = (log_sigma_mean - log_high) ** 2
+                else:
+                    sigma_penalty = torch.tensor(0.0, device=device)
+                reg_sigma = sigma_reg_weight * sigma_penalty
+                loss_10d = loss_10d + reg_sigma
+
+                # --- Part E: Shape regularizer with resume-safe elapsed decay ---
+                if not shape_z_frozen and hasattr(model_wrapper.quantile_head, 'shape'):
+                    z_current = model_wrapper.quantile_head.shape()
+                    z_init_norm = model_wrapper.quantile_head.shape.z_init_normalized
+                    reg_z = ((z_current - z_init_norm) ** 2).mean()
+                    # Decay using elapsed steps since run_start_step (resume-safe)
+                    elapsed = curr_global_step_est - run_start_step
+                    # Clamp elapsed to >= 0
+                    if elapsed < 0: elapsed = 0
+                    decay_frac = max(0.0, 1.0 - elapsed / max(shape_reg_decay_steps, 1))
+                    loss_10d = loss_10d + shape_reg_weight_init * decay_frac * reg_z
+
+            # Fallback: check if model wrapper directly returned q_10d
+            elif hasattr(out, "q_10d") and out.q_10d is not None and target_10d is not None:
                 loss_10d = compute_pinball_loss(
                     target_10d,
                     out.q_10d,
@@ -1067,10 +1595,24 @@ def main():
                     quantile_weights=quantile_weights
                 )
 
+            # DEBUG: Log which loss branch is taken (first 3 steps only)
+            if step < 3:
+                has_qp = hasattr(out, 'quantile_preds') and out.quantile_preds is not None
+                has_q10 = hasattr(out, 'q_10d') and out.q_10d is not None
+                has_loss = hasattr(out, 'loss') and out.loss is not None
+                out_type = type(out).__name__
+                out_attrs = [a for a in dir(out) if not a.startswith('_')]
+                print(f"[Debug Loss] step={step} out_type={out_type} has_qp={has_qp} has_q10={has_q10} has_loss={has_loss}")
+                print(f"[Debug Loss] out attrs: {out_attrs[:15]}")
+                if has_loss:
+                    print(f"[Debug Loss] out.loss = {out.loss.item():.6f}")
+
             if loss_10d is not None and loss_1d is not None:
-                loss = loss_10d + 0.25 * loss_1d
+                loss = loss_1d + lambda_10d * loss_10d
             elif loss_10d is not None:
                 loss = loss_10d
+            elif loss_1d is not None:
+                loss = loss_1d
             else:
                 loss = out.loss if hasattr(out, "loss") else None
                 if loss is None:
@@ -1091,9 +1633,24 @@ def main():
                 opt.step()
                 scheduler.step()
                 opt.zero_grad()
-                
+
                 curr_global_step = (step + 1) // cfg.grad_accum
-                
+
+                # Warmup: unfreeze shape and temperature at their respective steps
+                if shape_z_frozen and curr_global_step >= shape_warmup_steps:
+                    print(f"[Warmup] Unfreezing shape (z_τ) at step {curr_global_step}")
+                    for n, p in model_wrapper.named_parameters():
+                        if "quantile_head.shape." in n:
+                            p.requires_grad = True
+                    shape_z_frozen = False
+
+                if temp_frozen and curr_global_step >= temp_warmup_steps:
+                    print(f"[Warmup] Unfreezing temperature at step {curr_global_step}")
+                    for n, p in model_wrapper.named_parameters():
+                        if "quantile_head.logT" in n:
+                            p.requires_grad = True
+                    temp_frozen = False
+
                 if curr_global_step % cfg.log_every == 0:
                     avg_loss = running_loss / cfg.grad_accum / cfg.log_every
                     # Specifically for first steps where log_every=1
@@ -1124,20 +1681,25 @@ def main():
                     
                     # Safe Unpack
                     qv_loss = qv_metrics.get('pinball_loss', float('inf'))
-                    qv_internal = qv_metrics.get('internal_loss', 0.0)
+                    qv_10d = qv_metrics.get('val_10d_pinball', 0.0)
                     qv_s90 = qv_metrics.get('s90', 0.0)
                     qv_s99 = qv_metrics.get('s99', 0.0)
-                    
-                    print(f"QuickVal Pinball: {qv_loss:.4f} | Internal: {qv_internal:.4f} | S90: {qv_s90:.4f} | S99: {qv_s99:.4f}")
+
+                    # Get current head diagnostics for QuickVal log
+                    with torch.no_grad():
+                        T_qv = model_wrapper.quantile_head.temperature_value
+
+                    print(f"QuickVal Pinball: {qv_loss:.4f} | 10d Pinball: {qv_10d:.4f} | S90: {qv_s90:.4f} | T={T_qv:.3f}")
                     run_recorder.emit_metric(
                         run_id,
                         step=curr_global_step,
                         epoch=None,
                         metrics={
                             "quickval_pinball": qv_loss,
-                            "quickval_internal": qv_internal,
+                            "quickval_10d_pinball": qv_10d,
                             "quickval_s90": qv_s90,
                             "quickval_s99": qv_s99,
+                            "temperature_T": T_qv,
                         },
                     )
                     
@@ -1164,20 +1726,130 @@ def main():
                     })
 
                 # Full Validation (Every 1000 steps initially as per Plan Phase 5)
-                # Plan says: "Full-val: every 2500 steps OR every 1000" -> User said "keep full-val every 1000"
                 if curr_global_step > 0 and curr_global_step % 1000 == 0:
                      print(f"--- FullVal (Step {curr_global_step}) ---")
+
+                     # Re-inject trained model into pipeline
+                     if pipeline is not None:
+                         pipeline.model = model_wrapper.model
+
+                     # Parameter fingerprint
+                     for pname, pparam in model_wrapper.model.named_parameters():
+                         if "lora_A" in pname and pparam.requires_grad:
+                             print(f"[Fingerprint] {pname}: mean={pparam.data.mean().item():.6f} std={pparam.data.std().item():.6f}")
+                             break
+
                      fv_metrics = run_validation(model_wrapper, val_dl, device, quantiles, pipeline=pipeline)
-                     
+
                      # Extract Metrics (Safe)
                      val_loss = fv_metrics.get('pinball_loss', float('inf'))
-                     val_internal = fv_metrics.get('internal_loss', 0.0)
                      val_10d_pinball = fv_metrics.get('val_10d_pinball', 0.0)
                      val_10d_dir = fv_metrics.get('direction_10d', 0.0)
                      val_10d_q10 = fv_metrics.get('q10_10d', 0.0)
                      val_s90 = fv_metrics.get('s90', 0.0)
                      val_s99 = fv_metrics.get('s99', 0.0)
-                     
+
+                     # --- Stable Calibration Metrics (N>=2048 slice) ---
+                     print(f"\n--- Calibration Metrics (N={len(calib_indices)}) ---")
+                     calib_metrics = compute_calibration_metrics(
+                         model_wrapper, val_ds, calib_indices, quantiles, device,
+                         collate_fn=calib_collate, batch_size=64
+                     )
+                     n_calib = calib_metrics.get("n_samples", 0)
+                     if n_calib > 0:
+                         for qname in ["q01", "q10", "q50", "q90", "q99"]:
+                             cov = calib_metrics.get(f"coverage_{qname}", 0)
+                             lo = calib_metrics.get(f"wilson_{qname}_lo", 0)
+                             hi = calib_metrics.get(f"wilson_{qname}_hi", 0)
+                             hw = calib_metrics.get(f"wilson_{qname}_halfwidth", 0)
+                             expected = float(qname[1:])
+                             print(f"  {qname}: {cov:.1f}% (expected {expected:.0f}%) "
+                                   f"[95% CI: {lo:.1f}%-{hi:.1f}%, ±{hw:.1f}%]")
+                         calib_pinball = calib_metrics.get("avg_pinball", 0)
+                         calib_dir = calib_metrics.get("direction_acc", 0)
+                         pred_up = calib_metrics.get("pred_up_rate", 0)
+                         true_up = calib_metrics.get("true_up_rate", 0)
+                         print(f"  Calib Pinball: {calib_pinball:.6f} | Direction Acc: {calib_dir:.2%}")
+                         print(f"  Pred Up Rate: {pred_up:.2%} | True Up Rate: {true_up:.2%}")
+
+                         # Calibration sanity check (after warmup)
+                         if curr_global_step > shape_warmup_steps:
+                             cov_q50 = calib_metrics.get("coverage_q50", 50.0)
+                             cov_q10 = calib_metrics.get("coverage_q10", 10.0)
+                             if cov_q50 < 40.0 or cov_q50 > 60.0:
+                                 print(f"  [WARN] q50 coverage {cov_q50:.1f}% outside [40%, 60%] — calibration may be off")
+                             if cov_q10 < 5.0 or cov_q10 > 15.0:
+                                 print(f"  [WARN] q10 coverage {cov_q10:.1f}% outside [5%, 15%] — calibration may be off")
+
+                     # --- Guardrails: z_τ shape + σ + T + regularizers ---
+                     with torch.no_grad():
+                         z_current = model_wrapper.quantile_head.shape()
+                         z_std_val = z_current.std().item()
+                         z_diffs = z_current[1:] - z_current[:-1]
+                         z_monotonic = (z_diffs >= 0).all().item()
+                         T_val = model_wrapper.quantile_head.temperature_value
+
+                         # Compute current sigma_mean for reporting
+                         # Use a sample from calib to get representative sigma
+                         _calib_sub = Subset(val_ds, calib_indices[:min(64, len(calib_indices))])
+                         _calib_dl_guard = DataLoader(_calib_sub, batch_size=64, shuffle=False,
+                                                     collate_fn=calib_collate, num_workers=0)
+                         sigma_vals = []
+                         for _gb in _calib_dl_guard:
+                             _ctx = _gb["context"].to(device)
+                             _mask = _gb["context_mask"].to(device)
+                             _pc = _gb.get("past_covariates")
+                             _fc = _gb.get("future_covariates")
+                             if _pc is not None: _pc = _pc.to(device)
+                             if _fc is not None: _fc = _fc.to(device)
+                             _out = model_wrapper(_ctx, context_mask=_mask,
+                                                past_covariates=_pc, future_covariates=_fc)
+                             _rep = model_wrapper._pool_context_representation(_ctx, _out)
+                             _h = model_wrapper.quantile_head.encoder(_rep)
+                             _raw_s = model_wrapper.quantile_head.sigma_head(_h).squeeze(-1)
+                             _s = F.softplus(_raw_s) + model_wrapper.quantile_head.sigma_floor
+                             sigma_vals.append(_s.cpu())
+                         if sigma_vals:
+                             _all_sigma = torch.cat(sigma_vals)
+                             sigma_mean_val = _all_sigma.mean().item()
+                         else:
+                             sigma_mean_val = 0.0
+
+                         # Compute current sigma penalty (for reporting only)
+                         _low_b = sigma0 * sigma_band_low
+                         _high_b = sigma0 * sigma_band_high
+                         if sigma_mean_val < _low_b:
+                             _sp = (math.log(_low_b) - math.log(sigma_mean_val + 1e-8)) ** 2
+                         elif sigma_mean_val > _high_b:
+                             _sp = (math.log(sigma_mean_val + 1e-8) - math.log(_high_b)) ** 2
+                         else:
+                             _sp = 0.0
+                         sigma_penalty_val = sigma_reg_weight * _sp
+
+                         # Shape reg value (current)
+                         if hasattr(model_wrapper.quantile_head, 'shape'):
+                             z_init_norm = model_wrapper.quantile_head.shape.z_init_normalized
+                             shape_reg_val = ((z_current - z_init_norm) ** 2).mean().item()
+                             elapsed_g = curr_global_step - run_start_step
+                             decay_frac_g = max(0.0, 1.0 - elapsed_g / max(shape_reg_decay_steps, 1))
+                             shape_reg_effective = shape_reg_weight_init * decay_frac_g * shape_reg_val
+                         else:
+                             shape_reg_val = 0.0
+                             shape_reg_effective = 0.0
+
+                         print(f"\n[Guardrail z_τ] std={z_std_val:.4f} (expect ~1.0) | monotonic={z_monotonic} | T={T_val:.4f}")
+                         print(f"[Guardrail σ]  sigma_mean={sigma_mean_val:.6f} | sigma0={sigma0:.6f} | "
+                               f"band=[{sigma0*sigma_band_low:.6f}, {sigma0*sigma_band_high:.6f}] | "
+                               f"penalty={sigma_penalty_val:.6f}")
+                         print(f"[Guardrail shape_reg] value={shape_reg_val:.6f} | decay_frac={decay_frac_g:.3f} | "
+                               f"effective={shape_reg_effective:.6f}")
+                         if not z_monotonic:
+                             print(f"  [ERROR] z_τ monotonicity violated!")
+                         if abs(z_std_val - 1.0) > 0.3:
+                             print(f"  [WARN] z_τ std deviated from 1.0 by {abs(z_std_val - 1.0):.3f}")
+
+                     print(f"\n[Check A] Current 10d_pinball: {val_10d_pinball:.6f} | Best 10d_pinball: {best_val_loss:.6f}")
+
                      print(f"Full Val Pinball (Daily): {val_loss:.6f}")
                      print(f"Full Val 10-Day (Native Head):")
                      print(f"  Pinball: {val_10d_pinball:.6f} (Primary)")
@@ -1189,41 +1861,56 @@ def main():
                          epoch=None,
                          metrics={
                              "val_pinball": val_loss,
-                             "val_internal": val_internal,
                              "val_10d_pinball": val_10d_pinball,
                              "val_10d_direction": val_10d_dir,
                              "val_10d_q10": val_10d_q10,
                              "val_s90": val_s90,
                              "val_s99": val_s99,
+                             "sigma_mean": sigma_mean_val,
+                             "sigma_penalty": sigma_penalty_val,
+                             "shape_reg_value": shape_reg_val,
+                             "shape_reg_effective": shape_reg_effective,
+                             **({"calib_pinball": calib_metrics.get("avg_pinball"),
+                                 "calib_coverage_q10": calib_metrics.get("coverage_q10"),
+                                 "calib_coverage_q50": calib_metrics.get("coverage_q50"),
+                                 "calib_coverage_q90": calib_metrics.get("coverage_q90"),
+                                 "calib_direction": calib_metrics.get("direction_acc"),
+                                 "calib_pred_up_rate": calib_metrics.get("pred_up_rate"),
+                                 "calib_true_up_rate": calib_metrics.get("true_up_rate"),
+                                 "z_tau_std": z_std_val,
+                                 "temperature_T": T_val,
+                                 } if n_calib > 0 else {}),
                          },
                      )
-                     
-                     # 3. Canary Selection: 10-Day Cumulative Pinball Loss
-                     # Re-enabling 10-day metric selection as we now have stable proxy
-                     primary_metric = val_10d_pinball
-                     
+
+                     # Primary metric: use calib pinball if available, else val
+                     primary_metric = calib_metrics.get("avg_pinball", val_10d_pinball) if n_calib > 0 else val_10d_pinball
+
                      # Best Checkpoint Logic
                      if primary_metric < (best_val_loss - min_delta):
                          print(f"[Best] Improvement found: {best_val_loss:.6f} -> {primary_metric:.6f}")
                          best_val_loss = primary_metric
                          stall_count = 0
-                         
+
                          save_checkpoint_extended(cfg.out_dir / "best", {
                                  "step": curr_global_step,
-                                 "metric_primary": "val_10d_pinball",
+                                 "metric_primary": "calib_pinball" if n_calib > 0 else "val_10d_pinball",
                                  "val_10d_pinball": val_10d_pinball,
                                  "val_daily_pinball": val_loss,
                                  "val_10d_direction": val_10d_dir,
                                  "val_10d_q10": val_10d_q10,
                                  "s90": val_s90,
                                  "s99": val_s99,
+                                 "calib_metrics": calib_metrics if n_calib > 0 else None,
+                                 "z_tau_std": z_std_val,
+                                 "temperature_T": T_val,
                                  "config": str(cfg),
                                  "timestamp": str(datetime.datetime.now())
                          })
                      else:
                          stall_count += 1
                          print(f"[Stall] No improvement (Best: {best_val_loss:.6f}). Stall count: {stall_count}/{early_stop_patience}")
-                         
+
                      # Early Stopping Logic (Phase 1 Gate)
                      if stall_count >= early_stop_patience:
                          print(f"[Stop] Early stopping triggered. Stalled for {stall_count} checks.")

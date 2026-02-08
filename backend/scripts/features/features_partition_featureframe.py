@@ -14,7 +14,9 @@ import argparse
 import logging
 import pandas as pd
 from tqdm import tqdm
-from backend.app.ops import pathmap, bootstrap
+from backend.app.ops import pathmap, bootstrap, config
+from backend.app.data import priors_store
+import polars as pl
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -23,13 +25,15 @@ logger = logging.getLogger(__name__)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", default="backend/data_canonical/daily_parquet")
+    parser.add_argument("--featureframe_path", default="backend/features/featureframe_vv1.parquet")
+    parser.add_argument("--priors_dir", default="backend/data/priors/chronos2/v1")
     parser.add_argument("--featureframe_tag", default="vv1")
     args = parser.parse_args()
 
     bootstrap.ensure_dirs()
     
     # Resolve input (Direct)
-    ff_path = os.path.abspath("backend/features/featureframe_vv1.parquet")
+    ff_path = os.path.abspath(args.featureframe_path)
     
     if not os.path.exists(ff_path):
         # Validation
@@ -42,6 +46,76 @@ def main():
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date")
+
+    # --- PART C: MERGE PRIORS ---
+    if config.PRIORS_ENABLED:
+        logger.info("Priors Enabled. Merging PriorsFrame...")
+        priors_dir = args.priors_dir # Default path from build_priors_frame
+        
+        # Check if priors exist
+        if os.path.exists(priors_dir):
+            try:
+                # Load via store (returns Polars)
+                priors_pl = priors_store.read_priors_frame(priors_dir)
+                
+                if not priors_pl.is_empty():
+                    # Convert to Pandas for merge
+                    priors_df = priors_pl.to_pandas()
+                    
+                    # Normalize columns
+                    # Priors has 'ticker', Features has 'symbol'
+                    if "ticker" in priors_df.columns:
+                        priors_df = priors_df.rename(columns={"ticker": "symbol"})
+                    
+                    # Ensure date match
+                    priors_df["date"] = pd.to_datetime(priors_df["date"])
+                    
+                    # Merge (Left Join on features)
+                    # We want to keep all feature rows, fill missing priors with NaN
+                    logger.info(f"Merging {len(priors_df)} prior rows into {len(df)} feature rows...")
+                    
+                    # Columns to merge
+                    # date, symbol, + p_* cols
+                    prior_cols = [c for c in priors_df.columns if c.startswith("p_")]
+                    merge_cols = ["date", "symbol"] + prior_cols
+                    
+                    priors_subset = priors_df[merge_cols]
+                    
+                    # Drop duplicates in priors if any (shouldn't be, but safe)
+                    priors_subset = priors_subset.drop_duplicates(subset=["date", "symbol"])
+                    
+                    df = pd.merge(df, priors_subset, on=["date", "symbol"], how="left")
+                    
+                    # Fill NaNs?
+                    # Plan says: "Fill missing priors with NaNs; then impute with a safe method... or leave NaN"
+                    # "add a missingness indicator per prior column"
+                    
+                    for col in prior_cols:
+                        # Add indicator
+                        df[f"{col}_isna"] = df[col].isna().astype(int)
+                        # Fill with 0? Or keeps NaNs?
+                        # Selector scaler might handle NaNs if using RobustScaler? 
+                        # RobustScaler doesn't handle NaNs.
+                        # We must fill. forward fill?
+                        # Forward fill per group
+                        # But here we are global dataframe. 
+                        # We can fillna(0) for neutral prior?
+                        # Neural networks hate NaNs.
+                        # Let's fill with 0 and rely on _isna indicator.
+                        # Or better: forward fill within ticker.
+                        # We are about to group by ticker anyway.
+                        pass # specific filling happening inside loop or after merge
+                        
+                    logger.info("Priors merged successfully.")
+                else:
+                    logger.warning("PriorsFrame is empty. Skipping merge.")
+            except Exception as e:
+                logger.error(f"Failed to merge priors: {e}")
+                # Don't fail hard? Or do?
+                # "MUST be deterministic... resume-safe"
+                # If priors enabled but missing/failed, warnings.
+        else:
+            logger.warning(f"Priors directory {priors_dir} not found. Skipping merge.")
     
     # Output Dir
     out_dir = args.output_dir

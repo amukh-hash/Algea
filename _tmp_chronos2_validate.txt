@@ -1,0 +1,40 @@
+325:         output_patch_size = self.chronos_config.output_patch_size
+326:         if context.ndim != 2:
+327:             raise ValueError(f"context must have shape (batch_size, context_length), found: {tuple(context.shape)}")
+328:         if context_mask is not None and context_mask.shape != context.shape:
+329:             raise ValueError(f"mask must have shape {tuple(context.shape)}, found: {tuple(context_mask.shape)}")
+330:         if future_covariates is not None:
+331:             if future_covariates.shape[0] != context.shape[0] or future_covariates.ndim != 2:
+332:                 raise ValueError(
+333:                     f"future_covariates must have shape (batch_size={context.shape[0]}, future_length), found: {tuple(future_covariates.shape)}"
+334:                 )
+335:             if future_covariates.shape[-1] > num_output_patches * output_patch_size:
+336:                 raise ValueError(
+337:                     f"{num_output_patches=} must be large enough to accommodate the length of future_covariates, "
+338:                     f"found: {future_covariates.shape[-1]} > {num_output_patches} * {output_patch_size}"
+339:                 )
+340:             if future_target is not None and future_target.shape != future_covariates.shape:
+341:                 raise ValueError(
+342:                     f"future_target must have the same shape as future_covariates, found: {tuple(future_target.shape)} and {tuple(future_covariates.shape)}"
+343:                 )
+344:         if future_covariates_mask is not None:
+345:             if future_covariates is None:
+346:                 raise ValueError("future_covariates must be provided if future_covariates_mask is provided")
+347:             if future_covariates_mask.shape != future_covariates.shape:
+348:                 raise ValueError(
+349:                     f"future_covariates_mask must have the same shape as future_covariates, "
+350:                     f"found: {tuple(future_covariates_mask.shape)} and {tuple(future_covariates.shape)}"
+351:                 )
+352:         if group_ids is not None and group_ids.shape != (context.shape[0],):
+353:             raise ValueError(f"group_ids must have shape (batch_size,), found: {tuple(group_ids.shape)}")
+354:         if future_target is not None:
+355:             if future_target.shape[0] != context.shape[0] or future_target.ndim != 2:
+356:                 raise ValueError(
+357:                     f"future_target must have shape (batch_size={context.shape[0]}, future_length), found: {tuple(future_target.shape)}"
+358:                 )
+359:             if future_target.shape[-1] > output_patch_size * num_output_patches:
+360:                 raise ValueError(
+361:                     f"{num_output_patches=} must be large enough to accommodate the length of future_target, "
+362:                     f"found: {future_target.shape[-1]} > {num_output_patches} * {output_patch_size}"
+363:                 )
+364:         if future_target_mask is not None:

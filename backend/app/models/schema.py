@@ -24,10 +24,13 @@ class FeatureContract:
     # The 'Teacher' Priors (Chronos-2 Outputs)
     # Must match EXACTLY what the nightly inference produces
     PRIOR_FEATURES = [
-        'drift',
-        'vol_forecast',
-        'tail_risk', # The 10th percentile outcome (Tail Risk)
-        'trend_conf' # Probability of positive trend
+        'p_mu5', 'p_mu10',
+        'p_sig5', 'p_sig10',
+        'p_pdown5', 'p_pdown10',
+        # Indicators
+        'p_mu5_isna', 'p_mu10_isna',
+        'p_sig5_isna', 'p_sig10_isna',
+        'p_pdown5_isna', 'p_pdown10_isna'
     ]
     
     TARGETS = ['fwd_ret', 'fwd_up', 'fwd_vol']

@@ -63,7 +63,9 @@ class SelectorFeatureScaler:
         return X_out
 
     def save(self, path: str):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        dirname = os.path.dirname(path)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
         joblib.dump({
             "scaler": self.scaler,
             "feature_names": self.feature_names,
