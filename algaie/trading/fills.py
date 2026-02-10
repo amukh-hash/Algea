@@ -62,17 +62,25 @@ class ExecutionSimulator:
         return fills, orders
 
 
-def _price_for_ticker(prices: pd.DataFrame, asof: date, ticker: str, column: str) -> float:
+def _row_for_ticker(prices: pd.DataFrame, asof: date, ticker: str) -> pd.Series | None:
+    """Return the first matching row for *ticker* on *asof*, or ``None``."""
     subset = prices[(prices["date"] == pd.Timestamp(asof)) & (prices["ticker"] == ticker)]
     if subset.empty:
+        return None
+    return subset.iloc[0]
+
+
+def _price_for_ticker(prices: pd.DataFrame, asof: date, ticker: str, column: str) -> float:
+    row = _row_for_ticker(prices, asof, ticker)
+    if row is None:
         raise KeyError(f"Missing price for {ticker} on {asof}")
-    if column not in subset.columns:
+    if column not in row.index:
         raise KeyError(f"Missing column {column} for {ticker} on {asof}")
-    return float(subset.iloc[0][column])
+    return float(row[column])
 
 
 def _volume_for_ticker(prices: pd.DataFrame, asof: date, ticker: str) -> float | None:
-    subset = prices[(prices["date"] == pd.Timestamp(asof)) & (prices["ticker"] == ticker)]
-    if subset.empty or "volume" not in subset.columns:
+    row = _row_for_ticker(prices, asof, ticker)
+    if row is None or "volume" not in row.index:
         return None
-    return float(subset.iloc[0]["volume"])
+    return float(row["volume"])

@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, List
+from dataclasses import dataclass, field
+from typing import List
 
 
 @dataclass(frozen=True)
 class CanonicalDailySchema:
-    required_columns: List[str] = (
-        "date",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
+    required_columns: List[str] = field(
+        default_factory=lambda: ["date", "open", "high", "low", "close", "volume"]
     )
-    optional_columns: List[str] = ("vwap", "vix", "rate_proxy")
+    optional_columns: List[str] = field(
+        default_factory=lambda: ["vwap", "vix", "rate_proxy"]
+    )
 
     @property
-    def columns(self) -> Iterable[str]:
-        return list(self.required_columns) + list(self.optional_columns)
+    def columns(self) -> List[str]:
+        return self.required_columns + self.optional_columns

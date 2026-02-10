@@ -6,6 +6,7 @@ from typing import Iterable
 
 import pandas as pd
 
+from algaie.data.common import ensure_datetime, write_dataframe
 from algaie.data.eligibility.validate import validate_eligibility_frame
 
 
@@ -15,8 +16,7 @@ def build_eligibility(
     min_price: float = 5.0,
     min_volume: float = 0.0,
 ) -> pd.DataFrame:
-    canonical_daily = canonical_daily.copy()
-    canonical_daily["date"] = pd.to_datetime(canonical_daily["date"])
+    canonical_daily = ensure_datetime(canonical_daily.copy())
     snapshot = canonical_daily[canonical_daily["date"] <= pd.Timestamp(asof)].copy()
     latest = snapshot.groupby("ticker").tail(1)
     eligible = (latest["close"] >= min_price) & (latest["volume"] >= min_volume)
@@ -33,8 +33,7 @@ def build_eligibility(
 
 
 def write_eligibility(frame: pd.DataFrame, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(destination, index=False)
+    write_dataframe(frame, destination)
 
 
 def load_canonical_files(paths: Iterable[Path]) -> pd.DataFrame:

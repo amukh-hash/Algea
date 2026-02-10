@@ -6,6 +6,7 @@ from typing import Dict, List
 
 import pandas as pd
 
+from algaie.data.common import ensure_datetime
 from algaie.trading.orders import Fill, OrderIntent
 
 
@@ -51,6 +52,26 @@ class Portfolio:
             net += exposure
         return PortfolioSnapshot(asof=asof, equity=equity, cash=self.cash, gross_exposure=gross, net_exposure=net)
 
+    def _record_trade(self, position: Position, exit_date: date, exit_px: float, reason: str) -> float:
+        """Log a closed trade and return the realized PnL."""
+        realized = (exit_px - position.avg_cost) * position.quantity
+        position.realized_pnl += realized
+        self.trade_log.append(
+            {
+                "entry_date": position.entry_date,
+                "exit_date": exit_date,
+                "ticker": position.ticker,
+                "qty": position.quantity,
+                "entry_px": position.avg_cost,
+                "exit_px": exit_px,
+                "pnl": realized,
+                "ret": realized / (position.avg_cost * position.quantity) if position.quantity else 0.0,
+                "hold_days": (exit_date - position.entry_date).days,
+                "reason": reason,
+            }
+        )
+        return realized
+
     def update_from_fill(self, fill: Fill, asof: date) -> None:
         signed_qty = fill.quantity if fill.side == "buy" else -fill.quantity
         position = self.positions.get(fill.ticker)
@@ -71,42 +92,12 @@ class Portfolio:
             position.avg_cost = fill.price
             position.entry_date = asof
         if new_qty == 0:
-            realized = (fill.price - position.avg_cost) * position.quantity
-            position.realized_pnl += realized
-            self.trade_log.append(
-                {
-                    "entry_date": position.entry_date,
-                    "exit_date": asof,
-                    "ticker": position.ticker,
-                    "qty": position.quantity,
-                    "entry_px": position.avg_cost,
-                    "exit_px": fill.price,
-                    "pnl": realized,
-                    "ret": realized / (position.avg_cost * position.quantity) if position.quantity else 0.0,
-                    "hold_days": (asof - position.entry_date).days,
-                    "reason": "exit",
-                }
-            )
+            self._record_trade(position, asof, fill.price, "exit")
             self.cash += position.quantity * fill.price
             self.positions.pop(fill.ticker, None)
             return
         if (position.quantity > 0 > new_qty) or (position.quantity < 0 < new_qty):
-            realized = (fill.price - position.avg_cost) * position.quantity
-            position.realized_pnl += realized
-            self.trade_log.append(
-                {
-                    "entry_date": position.entry_date,
-                    "exit_date": asof,
-                    "ticker": position.ticker,
-                    "qty": position.quantity,
-                    "entry_px": position.avg_cost,
-                    "exit_px": fill.price,
-                    "pnl": realized,
-                    "ret": realized / (position.avg_cost * position.quantity) if position.quantity else 0.0,
-                    "hold_days": (asof - position.entry_date).days,
-                    "reason": "flip",
-                }
-            )
+            self._record_trade(position, asof, fill.price, "flip")
             position.quantity = new_qty
             position.avg_cost = fill.price
             position.entry_date = asof
@@ -134,7 +125,8 @@ class Portfolio:
             target_qty = target_value / price if price > 0 else 0.0
             if rounding_policy == "round":
                 target_qty = float(round(target_qty))
-            current_qty = self.positions.get(ticker, Position(ticker, 0.0, 0.0, asof)).quantity
+            current_pos = self.positions.get(ticker)
+            current_qty = current_pos.quantity if current_pos else 0.0
             delta = target_qty - current_qty
             if abs(delta) < 1e-8:
                 continue
@@ -146,8 +138,7 @@ class Portfolio:
 
 
 def _price_for_ticker(prices: pd.DataFrame, asof: date, ticker: str) -> float:
-    prices = prices.copy()
-    prices["date"] = pd.to_datetime(prices["date"])
+    ensure_datetime(prices, "date")
     subset = prices[(prices["date"] == pd.Timestamp(asof)) & (prices["ticker"] == ticker)]
     if subset.empty:
         raise KeyError(f"Missing price for {ticker} on {asof}")

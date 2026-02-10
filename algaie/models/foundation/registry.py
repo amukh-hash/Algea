@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, Type
+from typing import Dict, Type
 
 from algaie.models.foundation.base import FoundationModel
 

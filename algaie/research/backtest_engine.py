@@ -61,12 +61,11 @@ class BacktestEngine:
         start: date,
         end: date,
     ) -> BacktestResult:
-        prices = prices.copy()
-        prices["date"] = pd.to_datetime(prices["date"])
-        signals = signals.copy()
-        signals["date"] = pd.to_datetime(signals["date"])
-        eligibility = eligibility.copy()
-        eligibility["date"] = pd.to_datetime(eligibility["date"])
+        from algaie.data.common import ensure_datetime
+
+        prices = ensure_datetime(prices.copy())
+        signals = ensure_datetime(signals.copy())
+        eligibility = ensure_datetime(eligibility.copy())
 
         calendar = trading_days(start, end)
         portfolio = Portfolio(cash=self.backtest_config.initial_cash)
@@ -119,15 +118,13 @@ class BacktestEngine:
                     }
                 )
             snapshot = portfolio.snapshot(prices, current)
-            snapshots.append(
-                {
-                    "date": snapshot.asof,
-                    "equity": snapshot.equity,
-                    "cash": snapshot.cash,
-                    "gross_exposure": snapshot.gross_exposure,
-                    "net_exposure": snapshot.net_exposure,
-                }
-            )
+            snapshots.append({
+                "date": snapshot.asof,
+                "equity": snapshot.equity,
+                "cash": snapshot.cash,
+                "gross_exposure": snapshot.gross_exposure,
+                "net_exposure": snapshot.net_exposure,
+            })
 
         equity_curve = build_equity_curve(snapshots)
         trades = build_trade_log(portfolio.trade_log)

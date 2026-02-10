@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from datetime import date
@@ -7,6 +8,10 @@ from typing import Iterable, List, Optional
 
 from algaie.trading.broker_base import BrokerAccount, BrokerBase, BrokerPosition
 from algaie.trading.orders import Order, OrderIntent
+
+logger = logging.getLogger(__name__)
+
+_REQUIRED_ENV_VARS = ("IBKR_GATEWAY_URL",)
 
 
 @dataclass(frozen=True)
@@ -17,13 +22,18 @@ class IbkrConfig:
 
 class IBKRLiveBroker(BrokerBase):
     def __init__(self, config: IbkrConfig) -> None:
+        if not config.gateway_url:
+            raise ValueError("IbkrConfig.gateway_url must not be empty")
+        if not config.account_id:
+            logger.warning("IBKR account_id not set; some operations may fail")
         self.config = config
 
     @classmethod
     def from_env(cls) -> "IBKRLiveBroker":
-        gateway_url = os.getenv("IBKR_GATEWAY_URL")
-        if not gateway_url:
-            raise RuntimeError("Missing IBKR_GATEWAY_URL in environment")
+        missing = [v for v in _REQUIRED_ENV_VARS if not os.getenv(v)]
+        if missing:
+            raise RuntimeError(f"Missing required env vars: {', '.join(missing)}")
+        gateway_url = os.getenv("IBKR_GATEWAY_URL", "")
         return cls(IbkrConfig(gateway_url=gateway_url, account_id=os.getenv("IBKR_ACCOUNT_ID")))
 
     def submit_orders(self, intents: Iterable[OrderIntent]) -> List[Order]:

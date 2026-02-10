@@ -33,3 +33,29 @@ def prepare_run(config: PipelineConfig) -> tuple[ArtifactPaths, ArtifactRegistry
 
 def write_artifact_log(registry: ArtifactRegistry, run_dir: Path) -> None:
     registry.dump(run_dir / "artifacts.json")
+
+
+def detect_ffn_modules(model) -> list[str]:
+    """Detect FFN projection module name suffixes for LoRA targeting.
+
+    Shared across training and inference-verification scripts to avoid
+    duplicating the detection heuristic.
+    """
+    candidates = {
+        "wi", "wo", "wi_0", "wi_1", "dense", "fc1", "fc2",
+        "gate_proj", "up_proj", "down_proj", "mlp",
+    }
+    found: set[str] = set()
+    for name, mod in model.named_modules():
+        if hasattr(mod, "weight") and mod.weight is not None:
+            short = name.split(".")[-1]
+            if short in candidates or any(c in short for c in candidates):
+                found.add(short)
+    return sorted(found)
+
+
+def normalise_ohlcv_columns(df):
+    """Rename 'ticker' -> 'symbol' if needed (common across data scripts)."""
+    if "ticker" in df.columns and "symbol" not in df.columns:
+        df = df.rename(columns={"ticker": "symbol"})
+    return df

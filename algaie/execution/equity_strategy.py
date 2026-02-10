@@ -4,17 +4,22 @@ from dataclasses import dataclass
 
 from algaie.execution.interfaces import ExecutionDecision, SignalFrame
 
+# Named constants for decision fields
+ACTION_OPEN = "open"
+REASON_SCORE_RANKED = "score_ranked"
+DEFAULT_QUANTITY = 1.0
+
 
 @dataclass
 class EquityStrategy:
     def run(self, signals: SignalFrame) -> list[ExecutionDecision]:
-        decisions: list[ExecutionDecision] = []
-        for _, row in signals.frame.iterrows():
-            decision = ExecutionDecision(
-                action="open",
-                instrument=row["ticker"],
-                quantity=1.0,
-                reason="score_ranked",
+        tickers = signals.frame["ticker"]
+        return [
+            ExecutionDecision(
+                action=ACTION_OPEN,
+                instrument=ticker,
+                quantity=DEFAULT_QUANTITY,
+                reason=REASON_SCORE_RANKED,
             )
-            decisions.append(decision)
-        return decisions
+            for ticker in tickers
+        ]

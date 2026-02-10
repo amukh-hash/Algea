@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from algaie.data.common import ensure_datetime, write_dataframe
 from algaie.data.priors.validate import validate_priors_frame
 from algaie.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
 
@@ -15,8 +16,7 @@ def build_priors(
     config: FoundationModelConfig | None = None,
 ) -> pd.DataFrame:
     model = SimpleChronos2(config or FoundationModelConfig())
-    canonical_daily = canonical_daily.copy()
-    canonical_daily["date"] = pd.to_datetime(canonical_daily["date"])
+    canonical_daily = ensure_datetime(canonical_daily.copy())
     snapshot = canonical_daily[canonical_daily["date"] <= pd.Timestamp(asof)].copy()
     priors = model.infer_priors(snapshot, pd.Timestamp(asof)).priors
     validate_priors_frame(priors)
@@ -24,5 +24,4 @@ def build_priors(
 
 
 def write_priors(frame: pd.DataFrame, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(destination, index=False)
+    write_dataframe(frame, destination)

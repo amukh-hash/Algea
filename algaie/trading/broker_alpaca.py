@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from datetime import date
@@ -9,6 +10,13 @@ import requests
 
 from algaie.trading.broker_base import BrokerAccount, BrokerBase, BrokerPosition
 from algaie.trading.orders import Order, OrderIntent
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+_REQUEST_TIMEOUT_SECS = 30
 
 
 @dataclass(frozen=True)
@@ -49,8 +57,15 @@ class AlpacaPaperBroker(BrokerBase):
                 "time_in_force": "day",
                 "client_order_id": intent.client_order_id,
             }
-            response = self.session.post(f"{self.config.base_url}/v2/orders", json=payload, timeout=30)
-            response.raise_for_status()
+            try:
+                response = self.session.post(
+                    f"{self.config.base_url}/v2/orders", json=payload, timeout=_REQUEST_TIMEOUT_SECS
+                )
+                response.raise_for_status()
+            except requests.ConnectionError as exc:
+                raise ConnectionError(f"Cannot reach Alpaca API: {exc}") from exc
+            except requests.HTTPError as exc:
+                raise RuntimeError(f"Alpaca order submission failed for {intent.ticker}: {exc}") from exc
             data = response.json()
             orders.append(
                 Order(
@@ -66,8 +81,13 @@ class AlpacaPaperBroker(BrokerBase):
         return orders
 
     def get_positions(self) -> List[BrokerPosition]:
-        response = self.session.get(f"{self.config.base_url}/v2/positions", timeout=30)
-        response.raise_for_status()
+        try:
+            response = self.session.get(f"{self.config.base_url}/v2/positions", timeout=_REQUEST_TIMEOUT_SECS)
+            response.raise_for_status()
+        except requests.ConnectionError as exc:
+            raise ConnectionError(f"Cannot reach Alpaca API: {exc}") from exc
+        except requests.HTTPError as exc:
+            raise RuntimeError(f"Failed to fetch positions: {exc}") from exc
         data = response.json()
         return [
             BrokerPosition(
@@ -80,8 +100,15 @@ class AlpacaPaperBroker(BrokerBase):
 
     def get_orders(self, status: Optional[str] = None) -> List[Order]:
         params = {"status": status} if status else {}
-        response = self.session.get(f"{self.config.base_url}/v2/orders", params=params, timeout=30)
-        response.raise_for_status()
+        try:
+            response = self.session.get(
+                f"{self.config.base_url}/v2/orders", params=params, timeout=_REQUEST_TIMEOUT_SECS
+            )
+            response.raise_for_status()
+        except requests.ConnectionError as exc:
+            raise ConnectionError(f"Cannot reach Alpaca API: {exc}") from exc
+        except requests.HTTPError as exc:
+            raise RuntimeError(f"Failed to fetch orders: {exc}") from exc
         data = response.json()
         return [
             Order(
@@ -98,8 +125,13 @@ class AlpacaPaperBroker(BrokerBase):
         ]
 
     def get_account(self) -> BrokerAccount:
-        response = self.session.get(f"{self.config.base_url}/v2/account", timeout=30)
-        response.raise_for_status()
+        try:
+            response = self.session.get(f"{self.config.base_url}/v2/account", timeout=_REQUEST_TIMEOUT_SECS)
+            response.raise_for_status()
+        except requests.ConnectionError as exc:
+            raise ConnectionError(f"Cannot reach Alpaca API: {exc}") from exc
+        except requests.HTTPError as exc:
+            raise RuntimeError(f"Failed to fetch account: {exc}") from exc
         data = response.json()
         return BrokerAccount(
             asof=date.today(),
@@ -109,5 +141,12 @@ class AlpacaPaperBroker(BrokerBase):
         )
 
     def cancel_order(self, order_id: str) -> None:
-        response = self.session.delete(f"{self.config.base_url}/v2/orders/{order_id}", timeout=30)
-        response.raise_for_status()
+        try:
+            response = self.session.delete(
+                f"{self.config.base_url}/v2/orders/{order_id}", timeout=_REQUEST_TIMEOUT_SECS
+            )
+            response.raise_for_status()
+        except requests.ConnectionError as exc:
+            raise ConnectionError(f"Cannot reach Alpaca API: {exc}") from exc
+        except requests.HTTPError as exc:
+            raise RuntimeError(f"Failed to cancel order {order_id}: {exc}") from exc

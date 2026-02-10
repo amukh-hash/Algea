@@ -1,29 +1,25 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import List
 
-import numpy as np
 import pandas as pd
 
-
-@dataclass(frozen=True)
-class SignalIssue:
-    message: str
-    rows: List[int]
+from algaie.data.common import BaseValidationError, ValidationIssue, find_non_finite_rows
 
 
-class SignalValidationError(RuntimeError):
-    def __init__(self, issues: List[SignalIssue]) -> None:
-        self.issues = issues
-        super().__init__("; ".join(issue.message for issue in issues))
+# Re-export for backward compatibility
+SignalIssue = ValidationIssue
+SignalValidationError = BaseValidationError
 
 
 def validate_signal_frame(df: pd.DataFrame) -> None:
-    issues: List[SignalIssue] = []
+    issues: List[ValidationIssue] = []
+
+    # Single isfinite pass on specific columns instead of computing twice
     numeric = df[["score", "rank"]]
-    if not np.isfinite(numeric.to_numpy()).all():
-        bad_rows = df.index[~np.isfinite(numeric.to_numpy()).all(axis=1)].tolist()
-        issues.append(SignalIssue("non-finite scores", bad_rows))
+    non_finite = find_non_finite_rows(df, columns=numeric)
+    if non_finite.any():
+        issues.append(ValidationIssue("non-finite scores", df.index[non_finite].tolist()))
+
     if issues:
         raise SignalValidationError(issues)

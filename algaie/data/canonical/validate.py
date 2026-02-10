@@ -1,25 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import List, Tuple
 
 import pandas as pd
 
 from algaie.core.config import PipelineConfig
+from algaie.data.common import BaseValidationError, ValidationIssue
 
 
-@dataclass(frozen=True)
-class ValidationIssue:
-    message: str
-    rows: List[int]
-
-
-class ValidationError(RuntimeError):
-    def __init__(self, issues: Iterable[ValidationIssue]) -> None:
-        self.issues = list(issues)
-        message = "; ".join(issue.message for issue in self.issues)
-        super().__init__(message)
+# Re-export for backward compatibility
+ValidationError = BaseValidationError
 
 
 def validate_canonical_daily(df: pd.DataFrame) -> List[ValidationIssue]:

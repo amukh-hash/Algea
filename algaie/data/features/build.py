@@ -5,12 +5,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from algaie.data.common import ensure_datetime, write_dataframe
 from algaie.data.features.validate import validate_feature_frame
 
 
 def build_features(canonical_daily: pd.DataFrame) -> pd.DataFrame:
-    df = canonical_daily.copy()
-    df["date"] = pd.to_datetime(df["date"])
+    df = ensure_datetime(canonical_daily.copy())
     df = df.sort_values(["ticker", "date"]).copy()
     df["ret_1d"] = df.groupby("ticker")["close"].pct_change()
     df["ret_5d"] = df.groupby("ticker")["close"].pct_change(5)
@@ -25,5 +25,4 @@ def build_features(canonical_daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def write_features(frame: pd.DataFrame, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(destination, index=False)
+    write_dataframe(frame, destination)

@@ -16,5 +16,5 @@ class PaperExecutor:
 
 @dataclass
 class NoopExecutor:
-    def execute(self, decision: ExecutionDecision) -> None:
-        _ = decision
+    def execute(self, _decision: ExecutionDecision) -> None:
+        pass

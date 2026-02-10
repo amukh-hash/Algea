@@ -6,6 +6,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
+from algaie.data.common import ensure_datetime
+
 
 @dataclass(frozen=True)
 class PortfolioTargetConfig:
@@ -32,15 +34,14 @@ class PortfolioTargetBuilder:
     ) -> pd.DataFrame:
         signals = signals.copy()
         eligibility = eligibility.copy()
-        signals["date"] = pd.to_datetime(signals["date"])
-        eligibility["date"] = pd.to_datetime(eligibility["date"])
+        ensure_datetime(signals, "date")
+        ensure_datetime(eligibility, "date")
         merged = signals.merge(eligibility, on=["date", "ticker"], how="inner")
         merged = merged[merged["is_eligible"]]
         daily = merged[merged["date"] == asof].copy()
         if daily.empty:
             return pd.DataFrame(columns=["date", "ticker", "target_weight", "score", "rank"])
-        daily = daily.nsmallest(self.config.top_k, "rank")
-        daily = daily.nsmallest(self.config.max_names, "rank")
+        daily = daily.nsmallest(min(self.config.top_k, self.config.max_names), "rank")
         weights = self._compute_weights(daily)
         daily["target_weight"] = weights
         if total_equity is not None and self.config.min_dollar_position > 0:
@@ -75,10 +76,9 @@ class PortfolioTargetBuilder:
     def _cap_weights(self, daily: pd.DataFrame) -> pd.DataFrame:
         capped = daily.copy()
         for _ in range(5):
-            over = capped["target_weight"] > self.config.max_weight_per_name
-            if not over.any():
+            if (capped["target_weight"] <= self.config.max_weight_per_name).all():
                 break
-            capped.loc[over, "target_weight"] = self.config.max_weight_per_name
+            capped["target_weight"] = capped["target_weight"].clip(upper=self.config.max_weight_per_name)
             total = capped["target_weight"].sum()
             if total > 0:
                 capped["target_weight"] = capped["target_weight"] / total

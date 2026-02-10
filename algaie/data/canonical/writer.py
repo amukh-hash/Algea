@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from algaie.data.common import write_dataframe
+
 
 def write_canonical_daily(df: pd.DataFrame, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(destination, index=False)
+    write_dataframe(df, destination)

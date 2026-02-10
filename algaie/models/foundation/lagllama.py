@@ -24,11 +24,9 @@ class LagLlamaStub(FoundationModel):
         raise NotImplementedError("LagLlama stub not implemented")
 
     def infer_priors(self, canonical_df: pd.DataFrame, asof: pd.Timestamp | None = None) -> FoundationModelOutput:
-        _ = (canonical_df, asof)
         raise NotImplementedError("LagLlama stub not implemented")
 
     def train(self, train_data: pd.DataFrame, val_data: pd.DataFrame | None = None) -> str:
-        _ = (train_data, val_data)
         raise NotImplementedError("LagLlama stub not implemented")
 
 

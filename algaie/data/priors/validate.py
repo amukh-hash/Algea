@@ -1,36 +1,34 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import List
 
-import numpy as np
 import pandas as pd
 
-
-@dataclass(frozen=True)
-class PriorsIssue:
-    message: str
-    rows: List[int]
+from algaie.data.common import BaseValidationError, ValidationIssue, find_non_finite_rows
 
 
-class PriorsValidationError(RuntimeError):
-    def __init__(self, issues: List[PriorsIssue]) -> None:
-        self.issues = issues
-        super().__init__("; ".join(issue.message for issue in issues))
+# Re-export for backward compatibility
+PriorsIssue = ValidationIssue
+PriorsValidationError = BaseValidationError
 
 
 def validate_priors_frame(df: pd.DataFrame) -> None:
-    issues: List[PriorsIssue] = []
-    numeric = df.select_dtypes(include=[np.number])
-    if not np.isfinite(numeric.to_numpy()).all():
-        bad_rows = df.index[~np.isfinite(numeric.to_numpy()).all(axis=1)].tolist()
-        issues.append(PriorsIssue("non-finite priors", bad_rows))
-    if (df[["p_sig5", "p_sig10"]] <= 0).any().any():
-        bad_rows = df.index[(df["p_sig5"] <= 0) | (df["p_sig10"] <= 0)].tolist()
-        issues.append(PriorsIssue("non-positive sigma", bad_rows))
+    issues: List[ValidationIssue] = []
+
+    # Single isfinite pass instead of computing twice
+    non_finite = find_non_finite_rows(df)
+    if non_finite.any():
+        issues.append(ValidationIssue("non-finite priors", df.index[non_finite].tolist()))
+
+    # Compute conditions once, reuse the mask
+    neg_sigma = (df["p_sig5"] <= 0) | (df["p_sig10"] <= 0)
+    if neg_sigma.any():
+        issues.append(ValidationIssue("non-positive sigma", df.index[neg_sigma].tolist()))
+
     for col in ["p_pdown5", "p_pdown10"]:
-        if ((df[col] < 0) | (df[col] > 1)).any():
-            bad_rows = df.index[(df[col] < 0) | (df[col] > 1)].tolist()
-            issues.append(PriorsIssue("p_down out of bounds", bad_rows))
+        oob = (df[col] < 0) | (df[col] > 1)
+        if oob.any():
+            issues.append(ValidationIssue("p_down out of bounds", df.index[oob].tolist()))
+
     if issues:
         raise PriorsValidationError(issues)

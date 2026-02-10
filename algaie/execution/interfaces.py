@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 import pandas as pd
+
+Action = Literal["open", "close", "hold"]
 
 
 @dataclass(frozen=True)
@@ -14,7 +16,7 @@ class SignalFrame:
 
 @dataclass(frozen=True)
 class ExecutionDecision:
-    action: str
+    action: Action
     instrument: str
     quantity: float
     reason: str
