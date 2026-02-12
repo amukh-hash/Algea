@@ -19,6 +19,13 @@ _ARTIFACT_DIRS: Dict[str, tuple] = {
     "backtests": ("backtests",),
     "paper": ("paper",),
     "live": ("live",),
+    "options_chains": ("options_chains",),
+    "vrp_reports": ("vrp_reports",),
+    # v2
+    "vrp_audits": ("vrp_audits",),
+    "lag_llama_series": ("lag_llama", "series"),
+    "lag_llama_forecasts": ("lag_llama", "forecasts"),
+    "lag_llama_validation": ("lag_llama", "validation"),
 }
 
 
@@ -76,6 +83,31 @@ class ArtifactPaths:
     @property
     def live(self) -> Path:
         return self._resolve("live")
+
+    @property
+    def options_chains(self) -> Path:
+        return self._resolve("options_chains")
+
+    @property
+    def vrp_reports(self) -> Path:
+        return self._resolve("vrp_reports")
+
+    # v2 paths
+    @property
+    def vrp_audits(self) -> Path:
+        return self._resolve("vrp_audits")
+
+    @property
+    def lag_llama_series(self) -> Path:
+        return self._resolve("lag_llama_series")
+
+    @property
+    def lag_llama_forecasts(self) -> Path:
+        return self._resolve("lag_llama_forecasts")
+
+    @property
+    def lag_llama_validation(self) -> Path:
+        return self._resolve("lag_llama_validation")
 
 
 def ensure_artifact_dirs(paths: ArtifactPaths) -> None:

@@ -43,6 +43,7 @@ class SelectorDataset(Dataset):
         features_df: pd.DataFrame,
         date_range: Optional[Tuple[str, str]] = None,
         feature_cols: Optional[List[str]] = None,
+        decision_frequency: int = 1,
     ) -> None:
         # Lazy import to avoid circular deps
         if not self.DEFAULT_FEATURE_COLS:
@@ -86,6 +87,11 @@ class SelectorDataset(Dataset):
 
         self.features_df = df
         self.dates = sorted(df["date"].unique())
+
+        # Part 2A: decision-date sampling — only train on every Nth date
+        if decision_frequency > 1:
+            self.dates = self.dates[::decision_frequency]
+
         self.feature_cols = feature_cols or list(self.DEFAULT_FEATURE_COLS)
 
     def __len__(self) -> int:

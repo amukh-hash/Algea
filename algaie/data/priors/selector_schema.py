@@ -46,13 +46,20 @@ DERIVED_COLS: List[str] = DERIVED_COLS_10 + DERIVED_COLS_30
 
 # Scalar features that are z-scored cross-sectionally per date
 ZSCORE_SOURCE_COLS: List[str] = [
-    # 10-day teacher
-    "drift_10", "prob_up_10", "iqr_10", "tail_risk_10", "upside_10",
+    # 10-day teacher  (prob_up_10, iqr_10, upside_10 removed — dead features)
+    "drift_10", "tail_risk_10",
     # 30-day teacher
     "drift_30", "prob_up_30", "iqr_30", "tail_risk_30",
 ]
 
+# Features removed from model inputs: std=0 across universe (dead features)
+DEAD_ZSCORE_COLS: List[str] = [
+    "prob_up_10", "iqr_10", "upside_10",  # 10d dead
+    "prob_up_30", "iqr_30",                # 30d dead (verified by auditor)
+]
+
 Z_FEATURE_COLS: List[str] = [f"z_{c}" for c in ZSCORE_SOURCE_COLS]
+
 
 # Agreement / multi-horizon features (computed from z-scored values)
 AGREEMENT_COLS: List[str] = [

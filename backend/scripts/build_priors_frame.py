@@ -268,8 +268,8 @@ def build_frame_for_date(
 
 def main():
     parser = argparse.ArgumentParser(description="Build selector priors frame")
-    parser.add_argument("--target-horizon", type=int, default=5,
-                        help="Forward return horizon in trading days")
+    parser.add_argument("--target-horizon", type=int, default=10,
+                        help="Forward return horizon in trading days (default: 10)")
     parser.add_argument("--start-date", required=True, help="YYYY-MM-DD")
     parser.add_argument("--end-date", required=True, help="YYYY-MM-DD")
     parser.add_argument("--teacher-10d-run", default="RUN-2026-02-09-175844")
@@ -277,6 +277,8 @@ def main():
     parser.add_argument("--context-len", type=int, default=252)
     parser.add_argument("--cache-root", default=None)
     parser.add_argument("--output-root", default=None)
+    parser.add_argument("--force", action="store_true", default=False,
+                        help="Force rebuild even if output parquet already exists")
     args = parser.parse_args()
 
     cache_root = Path(args.cache_root) if args.cache_root else (
@@ -325,7 +327,7 @@ def main():
         out_dir = output_root / f"date={date_str}"
         out_file = out_dir / "part.parquet"
 
-        if out_file.exists():
+        if out_file.exists() and not args.force:
             skipped += 1
             continue
 
