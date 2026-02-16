@@ -18,4 +18,5 @@ joblib
 pydantic
 psutil
 huggingface_hub
+ib_insync
 # chronos

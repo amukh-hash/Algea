@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 
@@ -36,3 +36,5 @@ class Fill:
     price: float
     side: str
     order_id: Optional[str] = None
+    commission: float = 0.0
+    execution_time: Optional[datetime] = None

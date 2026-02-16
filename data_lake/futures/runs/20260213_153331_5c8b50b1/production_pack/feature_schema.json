@@ -1,0 +1,25 @@
+{
+  "chosen_params": {
+    "alpha": 100.0
+  },
+  "feature_order": [
+    "signal",
+    "rolling_std_ret_co",
+    "rolling_std_ret_oc",
+    "rolling_mean_volume",
+    "roll_window_flag",
+    "days_to_expiry",
+    "ret_co_rank_pct",
+    "ret_co_cs_demean"
+  ],
+  "nan_fill_values": {
+    "days_to_expiry": 170.0,
+    "ret_co_cs_demean": -3.8343411148111795e-06,
+    "ret_co_rank_pct": 0.6666666666666666,
+    "roll_window_flag": 0.0,
+    "rolling_mean_volume": 260635.3,
+    "rolling_std_ret_co": 0.0017737494762443782,
+    "rolling_std_ret_oc": 0.009158966790501571,
+    "signal": -3.948823250676803e-05
+  }
+}

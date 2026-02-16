@@ -34,7 +34,8 @@ def load_teacher(run_dir: Path):
         config = json.load(f)
 
     model_id = config.get("model_id", "amazon/chronos-2")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    from algaie.core.device import get_device
+    device = get_device()
 
     from chronos import Chronos2Pipeline
     pipeline = Chronos2Pipeline.from_pretrained(model_id, device_map=None, dtype=torch.float32)

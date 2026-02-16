@@ -45,7 +45,8 @@ def load_production_model(run_dir: Path):
         config = json.load(f)
 
     model_id = config.get("model_id", "amazon/chronos-2")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    from algaie.core.device import get_device
+    device = get_device()
 
     logger.info(f"Loading {model_id} pipeline...")
 

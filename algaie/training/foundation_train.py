@@ -51,7 +51,8 @@ def train_foundation_model(
     destination.mkdir(parents=True, exist_ok=True)
 
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        from algaie.core.device import get_device
+        device = get_device()
 
     # Attempt to use real Chronos2 loading; fall back to stub
     try:

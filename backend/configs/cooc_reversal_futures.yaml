@@ -1,0 +1,57 @@
+# CO→OC Reversal Futures Pipeline Configuration
+# Created: 2026-02-13
+# Purpose: Real-data pipeline config for Phase 1 production pack
+
+pipeline:
+  id: "cooc_reversal_futures_v1"
+  description: "CO→OC reversal futures sleeve — Ridge regression baseline"
+  seed: 42
+
+universe:
+  roots: ["ES", "NQ", "RTY", "YM"]
+
+data:
+  date_range:
+    start: "2015-01-02"
+    end: "2025-12-31"
+  provider: "yfinance"
+  # yfinance symbol mapping: root → ticker
+  yfinance_map:
+    ES: "ES=F"
+    NQ: "NQ=F"
+    RTY: "RTY=F"
+    YM: "YM=F"
+  bronze_dir: "data_lake/futures/bronze"
+  canonical_dir: "data_lake/futures/canonical"
+
+features:
+  rolling_vol_window: 20
+  liquidity_window: 20
+  lookback: 20
+
+splits:
+  train_frac: 0.60
+  val_frac: 0.20
+  walk_forward:
+    fold_size_days: 40
+    embargo_days: 2
+    min_train_days: 60
+
+model:
+  mode: "regression"
+  estimator: "Ridge"
+  param_grid:
+    - alpha: 0.01
+    - alpha: 0.1
+    - alpha: 1.0
+    - alpha: 10.0
+    - alpha: 100.0
+  primary_metric: "ic"
+
+validation:
+  missingness_threshold: 0.05
+  ic_tolerance: 0.01
+
+output:
+  run_dir: "data_lake/futures/runs"
+  export_dir: "data_lake/futures/export"

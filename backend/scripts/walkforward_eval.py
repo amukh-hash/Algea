@@ -323,8 +323,8 @@ def main():
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Device: {device}")
+    from algaie.core.device import get_device
+    device = get_device()
 
     # Load data
     priors_path = Path(args.priors_frame)

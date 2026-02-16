@@ -297,8 +297,8 @@ def main():
     parser.add_argument("--cache-root", default=None, help="Override cache output dir")
     args = parser.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Device: {device}")
+    from algaie.core.device import get_device
+    device = get_device()
 
     runs_dir = ROOT / "backend" / "data" / "runs"
     run_dir = runs_dir / args.teacher_run

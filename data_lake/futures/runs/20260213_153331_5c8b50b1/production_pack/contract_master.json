@@ -1,0 +1,50 @@
+{
+  "ES": {
+    "multiplier": 50.0,
+    "roll_month_codes": [
+      "H",
+      "M",
+      "U",
+      "Z"
+    ],
+    "symbol": "ES",
+    "tick_size": 0.25,
+    "tick_value": 12.5
+  },
+  "NQ": {
+    "multiplier": 20.0,
+    "roll_month_codes": [
+      "H",
+      "M",
+      "U",
+      "Z"
+    ],
+    "symbol": "NQ",
+    "tick_size": 0.25,
+    "tick_value": 5.0
+  },
+  "RTY": {
+    "multiplier": 50.0,
+    "roll_month_codes": [
+      "H",
+      "M",
+      "U",
+      "Z"
+    ],
+    "symbol": "RTY",
+    "tick_size": 0.1,
+    "tick_value": 5.0
+  },
+  "YM": {
+    "multiplier": 5.0,
+    "roll_month_codes": [
+      "H",
+      "M",
+      "U",
+      "Z"
+    ],
+    "symbol": "YM",
+    "tick_size": 1.0,
+    "tick_value": 5.0
+  }
+}

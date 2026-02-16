@@ -106,10 +106,12 @@ def test_cuda():
         print("  ⊘ CUDA not available, skipping")
         return
 
+    from algaie.core.device import get_device
+    dev = get_device()
     d = 12
-    model = MLPSelector(d_input=d, hidden=64, depth=2).cuda()
-    x = torch.randn(2, 100, d, device="cuda")
-    mask = torch.ones(2, 100, device="cuda")
+    model = MLPSelector(d_input=d, hidden=64, depth=2).to(dev)
+    x = torch.randn(2, 100, d, device=dev)
+    mask = torch.ones(2, 100, device=dev)
     out = model(x, mask)
     assert out["score"].device.type == "cuda"
     print(f"  ✓ CUDA: score={out['score'].shape}")

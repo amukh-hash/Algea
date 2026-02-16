@@ -221,8 +221,8 @@ def evaluate(pipeline, val_ds, config, device, max_batches=50):
 
 
 def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Device: {device}")
+    from algaie.core.device import get_device
+    device = get_device()
 
     runs_dir = ROOT / "backend" / "data" / "runs"
     run_ids = [

@@ -384,8 +384,8 @@ def run_ridge_baseline(
 # ═══════════════════════════════════════════════════════════════════════════
 
 def train(args):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Device: {device}")
+    from algaie.core.device import get_device
+    device = get_device()
 
     # Load priors frame (partitioned parquet)
     priors_path = Path(args.priors_frame)

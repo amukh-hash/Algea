@@ -42,7 +42,8 @@ def train_selector(
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        from algaie.core.device import get_device
+        device = get_device()
 
     from algaie.models.ranker.selector_v2 import TwoHeadRankSelector, WeightedPairwiseLoss
     from algaie.training.selector_dataset import SelectorDataset, selector_collate_fn

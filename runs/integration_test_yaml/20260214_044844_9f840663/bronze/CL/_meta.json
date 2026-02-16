@@ -1,0 +1,10 @@
+{
+  "params": {
+    "end": "2024-12-31",
+    "start": "2023-01-02"
+  },
+  "retrieval_ts": "2026-02-14T04:48:44.060921+00:00",
+  "root": "CL",
+  "sha256": "8c5a20bc6187edfc3f20d03386a6fad1cfce6813fba7c0624260cf77cefe4ac1",
+  "vendor": "local"
+}

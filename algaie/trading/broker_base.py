@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import date
-from typing import Iterable, List
+from datetime import date, datetime
+from typing import Iterable, List, Optional
 
-from algaie.trading.orders import Order, OrderIntent
+from algaie.trading.orders import Fill, Order, OrderIntent
 
 
 @dataclass(frozen=True)
@@ -43,3 +43,11 @@ class BrokerBase(ABC):
     @abstractmethod
     def cancel_order(self, order_id: str) -> None:
         raise NotImplementedError
+
+    def get_fills(
+        self,
+        time_min: Optional[datetime] = None,
+        time_max: Optional[datetime] = None,
+    ) -> List[Fill]:
+        """Retrieve fills/executions.  Default returns empty list."""
+        return []

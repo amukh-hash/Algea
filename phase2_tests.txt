@@ -1,0 +1,47 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\Aishik\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Aishik\Documents\Workshop\Algaie
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collecting ... collected 37 items
+
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_parse_short_format PASSED [  2%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_parse_short_format_december PASSED [  5%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_parse_long_format PASSED [  8%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_parse_dash_format PASSED [ 10%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_parse_rty PASSED [ 13%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_parse_invalid_raises PASSED [ 16%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_build_future_contract PASSED [ 18%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_build_future_ym_exchange PASSED [ 21%]
+backend/tests/test_ibkr_broker.py::TestContractParsing::test_exchange_map_complete PASSED [ 24%]
+backend/tests/test_ibkr_broker.py::TestAccountMasking::test_mask_standard PASSED [ 27%]
+backend/tests/test_ibkr_broker.py::TestAccountMasking::test_mask_short PASSED [ 29%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerSubmit::test_submit_orders_returns_orders PASSED [ 32%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerSubmit::test_submit_multiple_deterministic_order PASSED [ 35%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerSubmit::test_readonly_blocks_submission PASSED [ 37%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerQueries::test_get_positions PASSED [ 40%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerQueries::test_get_orders PASSED [ 43%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerQueries::test_get_account PASSED [ 45%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerQueries::test_get_fills PASSED [ 48%]
+backend/tests/test_ibkr_broker.py::TestIBKRLiveBrokerQueries::test_cancel_order PASSED [ 51%]
+backend/tests/test_ibkr_broker.py::TestFromEnv::test_from_env_defaults PASSED [ 54%]
+backend/tests/test_ibkr_broker.py::TestFromEnv::test_from_env_readonly PASSED [ 56%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestSignalMode::test_no_pack_returns_heuristic PASSED [ 59%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestSignalMode::test_missing_dir_returns_heuristic PASSED [ 62%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestSignalMode::test_heuristic_predictions_negative_retco PASSED [ 64%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestSignalMode::test_heuristic_missing_root_returns_zero PASSED [ 67%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_all_pass PASSED [ 70%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_crash_risk_blocks_all PASSED [ 72%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_per_order_qty_cap PASSED [ 75%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_per_instrument_cap PASSED [ 78%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_flatten_bypass PASSED [ 81%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_roll_window_blocks PASSED [ 83%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_gross_notional_cap PASSED [ 86%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestPaperGuards::test_caution_regime_does_not_block PASSED [ 89%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestReconciliation::test_clean_reconciliation PASSED [ 91%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestReconciliation::test_partial_fill_detected PASSED [ 94%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestReconciliation::test_residual_position_flagged PASSED [ 97%]
+backend/tests/test_cooc_paper_cycle_ibkr.py::TestReconciliation::test_empty_day_is_clean PASSED [100%]
+
+============================= 37 passed in 0.85s ==============================

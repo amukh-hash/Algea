@@ -1,0 +1,276 @@
+"""Canonical feature builder — single source of truth for training + runtime.
+
+Both ``pipeline.dataset.build_features`` and the runtime sleeve **must**
+delegate to :func:`compute_core_features` so that feature parity is
+structurally enforced (not just tested after the fact).
+
+All rolling operations are strictly causal (look-back only).
+All features are computable from data available before market open.
+
+Schema versions
+---------------
+  V1: 9 features  (original)
+  V2: 19 features (V1 + shock regime + prior-day context + trend/drawdown)
+  V3: 23 features (V2 + cross-sectional context: shock_score, rank_z, sigma/vol ranks)
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+import numpy as np
+import pandas as pd
+
+# ---------------------------------------------------------------------------
+# Feature schema — ordered tuple used for model input everywhere
+# ---------------------------------------------------------------------------
+
+FEATURE_SCHEMA_V1: tuple[str, ...] = (
+    "r_co",               # raw overnight return
+    "r_co_cs_demean",     # cross-sectional demeaned r_co
+    "r_co_rank_pct",      # cross-sectional rank of r_co
+    "sigma_co",           # rolling std of r_co
+    "sigma_oc_hist",      # rolling std of r_oc (backward-looking, causal)
+    "volume_z",           # z-score of volume vs rolling mean/std
+    "roll_window_flag",   # 1 if near contract roll, else 0
+    "days_to_expiry",     # days until front contract expiry
+    "day_of_week",        # 0=Mon .. 4=Fri
+)
+
+FEATURE_SCHEMA_V2: tuple[str, ...] = FEATURE_SCHEMA_V1 + (
+    # --- Overnight shock regime ---
+    "abs_r_co",           # |r_co| — magnitude of overnight move
+    "z_abs_r_co",         # z-score of |r_co| vs rolling mean/std
+    "shock_flag",         # 1[|r_co| > rolling p90(|r_co|)]
+    # --- Prior-day intraday context ---
+    "prev_r_oc",          # r_oc[D-1] — yesterday's intraday return
+    "prev_abs_r_oc",      # |r_oc[D-1]|
+    # --- Trend / drawdown regime ---
+    "daily_ret",          # (1+r_co)*(1+r_oc)-1 — full daily return
+    "trend_20",           # 20d rolling mean of daily_ret
+    "dd_60",              # 60d max-drawdown (negative = deeper)
+    "rv_60",              # 60d realized vol of daily_ret
+    "skew_proxy",         # rolling mean of sign(daily_ret)*|daily_ret|
+)
+
+FEATURE_SCHEMA_V3: tuple[str, ...] = FEATURE_SCHEMA_V2 + (
+    # --- Cross-sectional context (meaningful at N≥8) ---
+    "shock_score",        # abs(r_co) / (sigma_co + eps) — normalized shock
+    "r_co_rank_z",        # z-score of r_co within daily cross-section
+    "sigma_co_rank_pct",  # cross-sectional rank of sigma_co
+    "volume_rank_pct",    # cross-sectional rank of volume
+)
+
+# Default schema for new training runs (V2 = production default)
+FEATURE_SCHEMA = FEATURE_SCHEMA_V2
+NUM_FEATURES_V2 = len(FEATURE_SCHEMA_V2)
+NUM_FEATURES_V3 = len(FEATURE_SCHEMA_V3)
+NUM_FEATURES = NUM_FEATURES_V2  # backward compat alias
+
+
+def active_schema(version: int = 2) -> tuple[str, ...]:
+    """Return the feature schema for a given version."""
+    if version <= 1:
+        return FEATURE_SCHEMA_V1
+    if version == 2:
+        return FEATURE_SCHEMA_V2
+    return FEATURE_SCHEMA_V3
+
+
+@dataclass(frozen=True)
+class FeatureConfig:
+    """Configurable knobs for the feature builder."""
+    lookback: int = 20
+    long_lookback: int = 60
+    winsor_z: float = 3.0
+    min_periods: int = 3
+    schema_version: int = 2
+    # V3 shock_score threshold (for execution gating)
+    shock_z_threshold: float = 2.0
+
+
+# ---------------------------------------------------------------------------
+# Core builder
+# ---------------------------------------------------------------------------
+
+def compute_core_features(
+    frame: pd.DataFrame,
+    cfg: Optional[FeatureConfig] = None,
+) -> pd.DataFrame:
+    """Build canonical features from a gold-like frame.
+
+    Parameters
+    ----------
+    frame
+        Must contain: ``trading_day``, ``instrument`` (or ``root``),
+        ``r_co`` (or ``ret_co``), ``r_oc`` (or ``ret_oc``), ``volume``,
+        ``days_to_expiry``, ``roll_window_flag`` (or computable).
+    cfg
+        Feature configuration.  Defaults to ``FeatureConfig()``.
+
+    Returns
+    -------
+    DataFrame with columns from the active schema plus any input columns,
+    sorted by ``(instrument, trading_day)``.
+    """
+    if cfg is None:
+        cfg = FeatureConfig()
+
+    df = frame.copy()
+
+    # --- Ensure canonical column names ---
+    if "instrument" not in df.columns:
+        if "root" in df.columns:
+            df["instrument"] = df["root"]
+        else:
+            raise KeyError("frame must have 'instrument' or 'root' column")
+    if "r_co" not in df.columns:
+        if "ret_co" in df.columns:
+            df["r_co"] = df["ret_co"]
+        else:
+            raise KeyError("frame must have 'r_co' or 'ret_co' column")
+    if "r_oc" not in df.columns:
+        if "ret_oc" in df.columns:
+            df["r_oc"] = df["ret_oc"]
+        else:
+            raise KeyError("frame must have 'r_oc' or 'ret_oc' column")
+
+    df = df.sort_values(["instrument", "trading_day"]).reset_index(drop=True)
+    lb = cfg.lookback
+    llb = cfg.long_lookback
+    mp = cfg.min_periods
+
+    g = df.groupby("instrument")
+
+    # ==================================================================
+    # V1 features
+    # ==================================================================
+
+    # --- Per-instrument rolling volatilities ---
+    df["sigma_co"] = g["r_co"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).std()
+    )
+    df["sigma_oc_hist"] = g["r_oc"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).std()
+    )
+    df["sigma_oc"] = df["sigma_oc_hist"]  # backward-compat alias
+
+    # --- Volume z-score ---
+    vol_mean = g["volume"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).mean()
+    )
+    vol_std = g["volume"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).std()
+    )
+    df["volume_z"] = (df["volume"] - vol_mean) / vol_std.replace(0, np.nan)
+
+    # --- Metadata defaults ---
+    if "days_to_expiry" not in df.columns:
+        df["days_to_expiry"] = 0
+    if "roll_window_flag" not in df.columns:
+        df["roll_window_flag"] = 0
+
+    # --- Calendar ---
+    df["day_of_week"] = pd.to_datetime(df["trading_day"]).dt.dayofweek
+
+    # --- Cross-sectional features ---
+    df["r_co_rank_pct"] = df.groupby("trading_day")["r_co"].rank(pct=True)
+    df["r_co_cs_demean"] = (
+        df["r_co"] - df.groupby("trading_day")["r_co"].transform("mean")
+    )
+
+    if cfg.schema_version < 2:
+        return df
+
+    # ==================================================================
+    # V2 features — overnight shock regime
+    # ==================================================================
+
+    df["abs_r_co"] = df["r_co"].abs()
+
+    abs_mean = g["abs_r_co"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).mean()
+    )
+    abs_std = g["abs_r_co"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).std()
+    )
+    df["z_abs_r_co"] = (df["abs_r_co"] - abs_mean) / abs_std.replace(0, np.nan)
+
+    abs_p90 = g["abs_r_co"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).quantile(0.90)
+    )
+    df["shock_flag"] = (df["abs_r_co"] > abs_p90).astype(float)
+
+    # ==================================================================
+    # V2 features — prior-day intraday context (lag by 1 within instrument)
+    # ==================================================================
+
+    df["prev_r_oc"] = g["r_oc"].shift(1)
+    df["prev_abs_r_oc"] = df["prev_r_oc"].abs()
+
+    # ==================================================================
+    # V2 features — trend / drawdown regime
+    # ==================================================================
+
+    # Full daily return (safe: combines known r_co[D] and r_oc[D-1] for lags)
+    df["daily_ret"] = (1 + df["r_co"]) * (1 + df["r_oc"]) - 1
+
+    # Trend: 20d rolling mean of daily_ret (strictly causal)
+    df["trend_20"] = g["daily_ret"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).mean()
+    )
+
+    # 60d drawdown: max peak-to-trough over last 60 days
+    def _rolling_drawdown(s: pd.Series) -> pd.Series:
+        """Rolling max drawdown (negative value = deeper drawdown)."""
+        cumret = (1 + s).cumprod()
+        dd = pd.Series(np.nan, index=s.index)
+        for i in range(len(s)):
+            start = max(0, i - llb + 1)
+            window = cumret.iloc[start:i + 1]
+            if len(window) < mp:
+                continue
+            peak = window.cummax()
+            drawdown = ((window - peak) / peak).min()
+            dd.iloc[i] = drawdown
+        return dd
+
+    df["dd_60"] = g["daily_ret"].transform(_rolling_drawdown)
+
+    # 60d realized vol
+    df["rv_60"] = g["daily_ret"].transform(
+        lambda s: s.rolling(llb, min_periods=mp).std()
+    )
+
+    # Asymmetry proxy: rolling mean of signed magnitude
+    signed_mag = np.sign(df["daily_ret"]) * df["daily_ret"].abs()
+    df["_signed_mag"] = signed_mag
+    df["skew_proxy"] = g["_signed_mag"].transform(
+        lambda s: s.rolling(lb, min_periods=mp).mean()
+    )
+    df.drop(columns=["_signed_mag"], inplace=True)
+
+    if cfg.schema_version < 3:
+        return df
+
+    # ==================================================================
+    # V3 features — cross-sectional context (meaningful at N≥8)
+    # ==================================================================
+
+    _EPS = 1e-8
+
+    # shock_score: normalized overnight shock intensity (per-instrument)
+    df["shock_score"] = df["abs_r_co"] / (df["sigma_co"] + _EPS)
+
+    # r_co_rank_z: z-score of r_co within the daily cross-section
+    cs_mean = df.groupby("trading_day")["r_co"].transform("mean")
+    cs_std = df.groupby("trading_day")["r_co"].transform("std")
+    df["r_co_rank_z"] = (df["r_co"] - cs_mean) / cs_std.replace(0, np.nan)
+
+    # sigma_co_rank_pct: cross-sectional rank of sigma_co
+    df["sigma_co_rank_pct"] = df.groupby("trading_day")["sigma_co"].rank(pct=True)
+
+    # volume_rank_pct: cross-sectional rank of volume
+    df["volume_rank_pct"] = df.groupby("trading_day")["volume"].rank(pct=True)
+
+    return df

@@ -1,1 +1,1 @@
-__all__ = ["config", "logging", "paths", "artifacts"]
+__all__ = ["config", "device", "logging", "paths", "artifacts"]

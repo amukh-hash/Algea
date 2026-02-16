@@ -409,8 +409,8 @@ def validate(
 # --- Setup helpers ----------------------------------------------------------
 def setup_device():
     """Configure CUDA device with TF32 if available, return device."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Device: {device}")
+    from algaie.core.device import get_device
+    device = get_device()
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
@@ -530,7 +530,7 @@ def train(args):
 
     # AMP
     use_amp = args.amp and device.type == "cuda"
-    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    scaler = torch.amp.GradScaler(device.type, enabled=use_amp)
     logger.info(f"AMP: {'ON' if use_amp else 'OFF'}")
 
     # Model (load first to check config for covariates support)

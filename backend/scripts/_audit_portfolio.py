@@ -1,8 +1,9 @@
 """One-shot portfolio sanity audit."""
 import json
+from pathlib import Path
 import numpy as np
 
-RUN = r"C:\Users\Aishik\Documents\Workshop\Algaie\backend\data\selector\runs\SEL-20260211-141209"
+RUN = str(Path(__file__).resolve().parents[1] / "data" / "selector" / "runs" / "SEL-20260211-141209")
 
 pm = json.load(open(f"{RUN}/portfolio_metrics.json"))
 rp = json.load(open(f"{RUN}/selector_full_report.json"))

@@ -1,0 +1,11 @@
+{
+  "gap_report": [],
+  "monotonic_ts": true,
+  "no_duplicates": true,
+  "non_negative_volume": true,
+  "ohlc_sane": true,
+  "ok": true,
+  "root": "6A",
+  "row_count": 522,
+  "violations": []
+}

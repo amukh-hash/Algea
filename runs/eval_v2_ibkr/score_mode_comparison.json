@@ -1,0 +1,25 @@
+{
+  "modes": [
+    {
+      "mode": "baseline",
+      "sharpe": 1.1780039554965915,
+      "mean_daily_ret": 0.00019152589290562214,
+      "hit_rate": 0.46017699115044247,
+      "max_drawdown": -0.01219232779465339,
+      "worst_1pct": -0.004942349030961496,
+      "n_days": 113
+    },
+    {
+      "mode": "model_raw",
+      "sharpe": 24.625315039006725,
+      "mean_daily_ret": 0.0033522875584995004,
+      "hit_rate": 1.0,
+      "max_drawdown": 0.0,
+      "worst_1pct": 0.0004629527996338373,
+      "n_days": 113
+    }
+  ],
+  "best_mode": "model_raw",
+  "improvement_over_baseline": 23.447311083510133,
+  "gate_passed": true
+}

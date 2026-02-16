@@ -1,0 +1,10 @@
+{
+  "end": "2025-12-31",
+  "retrieval_ts": "2026-02-14T15:53:45.670356+00:00",
+  "root": "HG",
+  "row_count": 611,
+  "sha256": "53024d981f06a57dc52630ad7579d7546caf7084b261ddecc511d6fc4703b73c",
+  "start": "2015-01-02",
+  "use_rth": true,
+  "what_to_show": "TRADES"
+}

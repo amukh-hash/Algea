@@ -1,0 +1,98 @@
+{
+  "chosen_params": {
+    "alpha": 0.01
+  },
+  "feature_order": [
+    "r_co",
+    "r_co_cs_demean",
+    "r_co_rank_pct",
+    "sigma_co",
+    "sigma_oc",
+    "volume_z",
+    "roll_window_flag",
+    "days_to_expiry",
+    "day_of_week",
+    "abs_r_co",
+    "z_abs_r_co",
+    "shock_flag",
+    "prev_r_oc",
+    "prev_abs_r_oc",
+    "daily_ret",
+    "trend_20",
+    "dd_60",
+    "rv_60",
+    "skew_proxy"
+  ],
+  "model_path": "runs\\integration_test_yaml\\20260214_044844_9f840663\\model\\model.pkl",
+  "nan_fill_values": {
+    "abs_r_co": 0.00692260508236453,
+    "daily_ret": 0.0001274157540509524,
+    "day_of_week": 2.0,
+    "days_to_expiry": 135.0,
+    "dd_60": -0.06286090575014422,
+    "prev_abs_r_oc": 0.0013613056694720682,
+    "prev_r_oc": 5.394081808107742e-06,
+    "r_co": 3.819798459658852e-05,
+    "r_co_cs_demean": 1.1575812886668456e-05,
+    "r_co_rank_pct": 0.5357142857142857,
+    "roll_window_flag": 0.0,
+    "rv_60": 0.009904010154643615,
+    "shock_flag": 0.0,
+    "sigma_co": 0.009905956546582214,
+    "sigma_oc": 0.0019664237140612573,
+    "skew_proxy": 3.200044444321149e-05,
+    "trend_20": 3.200044444321149e-05,
+    "volume_z": 0.00017039982386675618,
+    "z_abs_r_co": -0.18469459302935623
+  },
+  "primary_metric": "ic",
+  "primary_metric_value": 0.9999515863355493,
+  "scaler_path": "runs\\integration_test_yaml\\20260214_044844_9f840663\\model\\preprocessor.pkl",
+  "trial_log": [
+    {
+      "avg_metric": 0.9999515863355493,
+      "fold_metrics": [
+        0.9999515863355493
+      ],
+      "params": {
+        "alpha": 0.01
+      }
+    },
+    {
+      "avg_metric": 0.9999496108428356,
+      "fold_metrics": [
+        0.9999496108428356
+      ],
+      "params": {
+        "alpha": 0.1
+      }
+    },
+    {
+      "avg_metric": 0.9997722531112,
+      "fold_metrics": [
+        0.9997722531112
+      ],
+      "params": {
+        "alpha": 1.0
+      }
+    },
+    {
+      "avg_metric": 0.9871752600470499,
+      "fold_metrics": [
+        0.9871752600470499
+      ],
+      "params": {
+        "alpha": 10.0
+      }
+    },
+    {
+      "avg_metric": 0.7332297898438342,
+      "fold_metrics": [
+        0.7332297898438342
+      ],
+      "params": {
+        "alpha": 100.0
+      }
+    }
+  ]
+}

@@ -42,7 +42,8 @@ def train_ranker_model(
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        from algaie.core.device import get_device
+        device = get_device()
 
     try:
         from algaie.models.ranker.rank_transformer import RankTransformer

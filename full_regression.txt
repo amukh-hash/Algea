@@ -1,0 +1,19 @@
+........................................................................ [ 13%]
+........................................................................ [ 26%]
+........................................................................ [ 39%]
+........................................................................ [ 52%]
+........................................................................ [ 66%]
+........................................................................ [ 79%]
+........................................................................ [ 92%]
+........................................                                 [100%]
+============================== warnings summary ===============================
+backend/tests/test_chronos_priors.py::TestPriorsMonotonicEnforcement::test_lenient_auto_sorts
+  C:\Users\Aishik\Documents\Workshop\Algaie\backend\tests\test_chronos_priors.py:58: UserWarning: Quantile monotonicity violated; auto-sorted to q10=0.0100, q50=0.0500, q90=0.1000
+    p.validate(strict=False)
+
+backend/tests/test_mlp_selector.py::test_compatibility_with_transformer
+  C:\Users\Aishik\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\nn\modules\transformer.py:385: UserWarning: enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.norm_first was True
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+544 passed, 2 warnings in 45.31s

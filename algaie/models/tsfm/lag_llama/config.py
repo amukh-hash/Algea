@@ -29,7 +29,7 @@ class LagLlamaConfig:
     min_history_days: int = 400
 
     # --- Reproducibility ---
-    device: str = "cuda"
+    device: str = "cuda:1"
     seed: int = 42
     num_samples: int = 100                             # for quantile estimation
 

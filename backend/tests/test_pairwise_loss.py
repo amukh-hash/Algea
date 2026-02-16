@@ -145,7 +145,9 @@ def test_modes_cuda():
         print("  ⊘ CUDA not available, skipping")
         return
 
-    scores, targets, mask = _make_inputs(N=200, device="cuda")
+    from algaie.core.device import get_device
+    dev = get_device()
+    scores, targets, mask = _make_inputs(N=200, device=str(dev))
 
     for mode in ("uniform", "stratified"):
         torch.manual_seed(123)

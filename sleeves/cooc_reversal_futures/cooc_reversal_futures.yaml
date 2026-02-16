@@ -1,0 +1,84 @@
+# cooc_reversal_futures.yaml — default configuration for training & promotion
+# Override with CLI flags or env vars as needed.
+
+data:
+  provider: yfinance          # "yfinance" (research) or "ibkr_hist" (promotion)
+  session_mode: RTH           # Regular Trading Hours
+  universe:
+    - ES
+    - NQ
+    - YM
+    - RTY
+    - CL
+    - GC
+    - SI
+    - ZN
+    - ZB
+    - 6E
+    - 6J
+    - HG
+    - 6B
+    - 6A
+  lookback: 20
+  start_date: "2015-01-01"
+  end_date: "2025-12-31"
+  min_instruments_per_day: 12
+  warmup_days: 252
+
+features:
+  schema_version: 2           # keep V2 default; set to 3 for V3 opt-in
+
+model:
+  estimator_type: CSTransformer
+  two_head: true
+  d_model: 128
+  n_heads: 4
+  n_layers: 3
+  dropout: 0.1
+  lr: 0.0003
+  weight_decay: 0.0001
+  epochs: 60
+  batch_size: 32
+  early_stop_patience: 10
+  min_panel_N: 8              # reject training days with fewer instruments
+  seeds:
+    - 11
+    - 22
+    - 33
+
+cv:
+  fold_size_days: 252         # ~1 year per fold
+  embargo_days: 5
+
+costs:
+  commission_per_contract: 2.0
+  slippage_bps_open: 1.0
+  slippage_bps_close: 1.0
+
+execution:
+  shock:
+    enabled: true
+    shock_z_threshold: 2.0
+    gross_multiplier_on_shock: 0.5
+    per_instrument: true
+
+promotion:
+  require_ibkr: true          # set to false for research/exploration runs
+  min_sharpe_delta: 0.10
+  max_drawdown_tolerance: -0.10
+  worst_1pct_tolerance_bps: 25.0
+  min_hit_rate: 0.45
+  promotion_windows:
+    - name: primary_2024
+      start: "2024-01-02"
+      end: "2024-12-31"
+    - name: stress_covid_2020
+      start: "2020-02-01"
+      end: "2020-06-30"
+    - name: stress_vol_2022
+      start: "2022-01-03"
+      end: "2022-12-30"
+    - name: stress_2025
+      start: "2025-01-02"
+      end: "2025-12-31"
+

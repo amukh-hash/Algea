@@ -1,0 +1,258 @@
+{
+  "all_passed": true,
+  "mode": "dry_run",
+  "results": [
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 50.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "ES",
+      "tick_size": 0.25,
+      "tick_value": 12.5
+    },
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 20.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "NQ",
+      "tick_size": 0.25,
+      "tick_value": 5.0
+    },
+    {
+      "exchange": "ECBOT",
+      "issues": [],
+      "multiplier": 5.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "YM",
+      "tick_size": 1.0,
+      "tick_value": 5.0
+    },
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 50.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "RTY",
+      "tick_size": 0.1,
+      "tick_value": 5.0
+    },
+    {
+      "exchange": "NYMEX",
+      "issues": [],
+      "multiplier": 1000.0,
+      "passed": true,
+      "roll_cycle": "monthly",
+      "roll_month_codes": [
+        "F",
+        "G",
+        "H",
+        "J",
+        "K",
+        "M",
+        "N",
+        "Q",
+        "U",
+        "V",
+        "X",
+        "Z"
+      ],
+      "root": "CL",
+      "tick_size": 0.01,
+      "tick_value": 10.0
+    },
+    {
+      "exchange": "COMEX",
+      "issues": [],
+      "multiplier": 100.0,
+      "passed": true,
+      "roll_cycle": "custom",
+      "roll_month_codes": [
+        "G",
+        "J",
+        "M",
+        "Q",
+        "V",
+        "Z"
+      ],
+      "root": "GC",
+      "tick_size": 0.1,
+      "tick_value": 10.0
+    },
+    {
+      "exchange": "COMEX",
+      "issues": [],
+      "multiplier": 5000.0,
+      "passed": true,
+      "roll_cycle": "custom",
+      "roll_month_codes": [
+        "H",
+        "K",
+        "N",
+        "U",
+        "Z"
+      ],
+      "root": "SI",
+      "tick_size": 0.005,
+      "tick_value": 25.0
+    },
+    {
+      "exchange": "ECBOT",
+      "issues": [],
+      "multiplier": 1000.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "ZN",
+      "tick_size": 0.015625,
+      "tick_value": 15.625
+    },
+    {
+      "exchange": "ECBOT",
+      "issues": [],
+      "multiplier": 1000.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "ZB",
+      "tick_size": 0.03125,
+      "tick_value": 31.25
+    },
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 125000.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "6E",
+      "tick_size": 5e-05,
+      "tick_value": 6.25
+    },
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 12500000.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "6J",
+      "tick_size": 5e-07,
+      "tick_value": 6.25
+    },
+    {
+      "exchange": "COMEX",
+      "issues": [],
+      "multiplier": 25000.0,
+      "passed": true,
+      "roll_cycle": "custom",
+      "roll_month_codes": [
+        "H",
+        "K",
+        "N",
+        "U",
+        "Z"
+      ],
+      "root": "HG",
+      "tick_size": 0.0005,
+      "tick_value": 12.5
+    },
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 62500.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "6B",
+      "tick_size": 0.0001,
+      "tick_value": 6.25
+    },
+    {
+      "exchange": "CME",
+      "issues": [],
+      "multiplier": 100000.0,
+      "passed": true,
+      "roll_cycle": "quarterly",
+      "roll_month_codes": [
+        "H",
+        "M",
+        "U",
+        "Z"
+      ],
+      "root": "6A",
+      "tick_size": 0.0001,
+      "tick_value": 10.0
+    }
+  ],
+  "roots_checked": [
+    "ES",
+    "NQ",
+    "YM",
+    "RTY",
+    "CL",
+    "GC",
+    "SI",
+    "ZN",
+    "ZB",
+    "6E",
+    "6J",
+    "HG",
+    "6B",
+    "6A"
+  ]
+}

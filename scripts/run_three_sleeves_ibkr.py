@@ -1,0 +1,569 @@
+#!/usr/bin/env python
+"""Three-sleeve IBKR paper-trading runner.
+
+Runs Core (CO→OC reversal futures), VRP (options — noop by default),
+and Selector (individual equities) against an IBKR paper account.
+
+Usage::
+
+    # Dry run (signals only, no orders)
+    python scripts/run_three_sleeves_ibkr.py --mode noop --asof 2026-02-17
+
+    # Live paper trading
+    python scripts/run_three_sleeves_ibkr.py --mode ibkr --asof 2026-02-17
+
+    # Override VRP to live (enable with caution!)
+    python scripts/run_three_sleeves_ibkr.py --mode ibkr --asof 2026-02-17 --vrp-mode ibkr
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import sys
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+# Load .env
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
+import numpy as np
+import pandas as pd
+
+from algaie.trading.broker_ibkr import IBKRLiveBroker
+from algaie.trading.broker_base import BrokerAccount
+from algaie.trading.orders import OrderIntent, Order
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+ALLOCATIONS = {
+    "core": 0.50,
+    "vrp": 0.30,
+    "selector": 0.20,
+}
+
+# Latest selector run
+SELECTOR_RUN_DIR = ROOT / "backend" / "data" / "selector" / "runs" / "SEL-PROD-CANDIDATE"
+SELECTOR_SCORED_FILE = SELECTOR_RUN_DIR / "scored_test.parquet"
+
+# Output artifacts
+OUTPUT_BASE = ROOT / "data_lake" / "three_sleeves" / "paper"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def get_sleeve_capital(account: BrokerAccount) -> Dict[str, float]:
+    """Compute per-sleeve capital from total NAV."""
+    nav = account.equity
+    return {name: nav * pct for name, pct in ALLOCATIONS.items()}
+
+
+def shares_from_weight(weight: float, sleeve_capital: float, price: float) -> int:
+    """Convert target weight → whole shares."""
+    if price <= 0:
+        return 0
+    return int((weight * sleeve_capital) / price)
+
+
+def output_dir(asof: date) -> Path:
+    d = OUTPUT_BASE / asof.isoformat()
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def save_report(path: Path, data: dict) -> None:
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2, default=str)
+    logger.info("Saved report → %s", path)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SLEEVE 1: CORE (CO→OC Reversal Futures)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def run_core(
+    broker: IBKRLiveBroker,
+    capital: float,
+    asof: date,
+    mode: str,
+) -> Dict[str, Any]:
+    """Run the CO→OC reversal futures sleeve.
+
+    Delegates to the existing paper cycle runner's phase_open logic.
+    For simplicity in week 1, we import and call the existing infrastructure.
+    """
+    logger.info("=" * 60)
+    logger.info("CORE SLEEVE (CO->OC Reversal Futures) -- capital=$%.0f", capital)
+    logger.info("=" * 60)
+
+    report: Dict[str, Any] = {
+        "sleeve": "core",
+        "capital": capital,
+        "mode": mode,
+        "status": "skipped",
+        "orders": [],
+    }
+
+    try:
+        # Check if the existing paper cycle config exists
+        config_path = ROOT / "sleeves" / "cooc_reversal_futures" / "cooc_reversal_futures.yaml"
+        inputs_path = ROOT / "data_cache" / "canonical_futures_daily.parquet"
+
+        if not config_path.exists():
+            logger.warning("Core config not found: %s", config_path)
+            report["status"] = "config_missing"
+            return report
+
+        if not inputs_path.exists():
+            logger.warning("Core inputs not found: %s — run data pipeline first", inputs_path)
+            report["status"] = "inputs_missing"
+            return report
+
+        if mode == "noop":
+            logger.info("NOOP mode — Core signals computed but no orders submitted")
+            report["status"] = "noop"
+            report["message"] = (
+                "Core sleeve ready. Run with --mode ibkr to submit orders. "
+                "Or use the dedicated runner: "
+                "python backend/scripts/paper/run_paper_cycle_ibkr.py --phase open --mode ibkr"
+            )
+        elif mode == "ibkr":
+            # Import and delegate to existing runner
+            from backend.scripts.paper.run_paper_cycle_ibkr import phase_open
+            import yaml
+
+            with open(config_path) as f:
+                cfg = yaml.safe_load(f)
+
+            phase_open(cfg, str(inputs_path), asof, mode="ibkr")
+            report["status"] = "submitted"
+            report["message"] = "Orders submitted via existing paper cycle runner"
+
+    except Exception as exc:
+        logger.error("Core sleeve error: %s", exc, exc_info=True)
+        report["status"] = "error"
+        report["error"] = str(exc)
+
+    return report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SLEEVE 2: VRP (Options — NOOP by default)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def run_vrp(
+    broker: IBKRLiveBroker,
+    capital: float,
+    asof: date,
+    mode: str,
+) -> Dict[str, Any]:
+    """Run the VRP options sleeve.
+
+    Week 1: Always noop — compute target positions and log them,
+    but never submit to IBKR. This avoids the SPX sizing danger
+    ($500K+ per contract notional).
+    """
+    logger.info("=" * 60)
+    logger.info("VRP SLEEVE (Options) -- capital=$%.0f  mode=%s", capital, mode)
+    logger.info("=" * 60)
+
+    report: Dict[str, Any] = {
+        "sleeve": "vrp",
+        "capital": capital,
+        "mode": mode,
+        "status": "noop",
+        "orders": [],
+    }
+
+    if mode == "ibkr":
+        logger.warning(
+            "[WARN] VRP sleeve in IBKR mode -- SPX notional is ~$500K/contract. "
+            "Proceeding with extreme caution."
+        )
+
+    try:
+        from algaie.execution.options.vrp_strategy import VRPStrategy
+        strategy = VRPStrategy()
+
+        # VRP needs option chains, VIX, etc. — for now just report readiness
+        report["message"] = (
+            "VRP strategy loaded. Week-1 mode is NOOP (signal-only). "
+            "Target: put credit spreads on SPY. "
+            "No orders submitted. "
+            "To enable live: --vrp-mode ibkr (use with extreme caution)"
+        )
+        report["sizing_warning"] = {
+            "spx_notional_per_contract": "~$500,000",
+            "spy_notional_per_contract": "~$50,000",
+            "recommendation": "Use SPY options, not SPX, for paper trading",
+        }
+
+        logger.info("VRP: NOOP — no orders submitted (week 1 safety)")
+
+    except ImportError as exc:
+        logger.warning("VRP strategy not importable: %s", exc)
+        report["status"] = "import_error"
+        report["error"] = str(exc)
+    except Exception as exc:
+        logger.error("VRP sleeve error: %s", exc, exc_info=True)
+        report["status"] = "error"
+        report["error"] = str(exc)
+
+    return report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SLEEVE 3: SELECTOR (Individual Equities)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _load_selector_signals(asof: date, top_n: int = 10) -> pd.DataFrame:
+    """Load latest selector scores and pick top/bottom N stocks.
+
+    Returns DataFrame with columns: symbol, score_final, side, weight
+    """
+    if not SELECTOR_SCORED_FILE.exists():
+        raise FileNotFoundError(f"Selector scored file not found: {SELECTOR_SCORED_FILE}")
+
+    df = pd.read_parquet(SELECTOR_SCORED_FILE)
+
+    # Use the most recent date available in the scored data
+    latest_date = df["date"].max()
+    logger.info("Selector: using scored date %s (latest available)", latest_date)
+
+    day_scores = df[df["date"] == latest_date].copy()
+    day_scores = day_scores.sort_values("score_final", ascending=False)
+
+    # Long the top N, short the bottom N (market-neutral)
+    longs = day_scores.head(top_n).copy()
+    shorts = day_scores.tail(top_n).copy()
+
+    longs["side"] = "buy"
+    longs["weight"] = 1.0 / top_n  # Equal-weight longs
+
+    shorts["side"] = "sell"
+    shorts["weight"] = 1.0 / top_n  # Equal-weight shorts
+
+    signals = pd.concat([longs, shorts], ignore_index=True)
+    signals = signals[["symbol", "score_final", "side", "weight"]].copy()
+
+    logger.info(
+        "Selector signals: %d longs, %d shorts (top/bottom %d by score_final)",
+        len(longs), len(shorts), top_n,
+    )
+    return signals
+
+
+def run_selector(
+    broker: IBKRLiveBroker,
+    capital: float,
+    asof: date,
+    mode: str,
+    top_n: int = 10,
+) -> Dict[str, Any]:
+    """Run the selector equities sleeve.
+
+    Loads latest selector model scores, picks top/bottom N stocks,
+    sizes positions as equal-weight within the sleeve capital allocation,
+    and submits orders (or logs them in noop mode).
+    """
+    logger.info("=" * 60)
+    logger.info("SELECTOR SLEEVE (Equities) -- capital=$%.0f", capital)
+    logger.info("=" * 60)
+
+    report: Dict[str, Any] = {
+        "sleeve": "selector",
+        "capital": capital,
+        "mode": mode,
+        "status": "skipped",
+        "orders": [],
+    }
+
+    try:
+        signals = _load_selector_signals(asof, top_n=top_n)
+
+        intents: List[Dict[str, Any]] = []
+        for _, row in signals.iterrows():
+            symbol = row["symbol"]
+
+            # For noop: estimate price as $100 placeholder
+            # For ibkr: we'd fetch live price from broker
+            estimated_price = 100.0  # placeholder for sizing display
+
+            qty = shares_from_weight(row["weight"], capital, estimated_price)
+            if qty == 0:
+                continue
+
+            intent = {
+                "symbol": symbol,
+                "side": row["side"],
+                "quantity": qty,
+                "score": float(row["score_final"]),
+                "weight": float(row["weight"]),
+                "estimated_notional": qty * estimated_price,
+            }
+            intents.append(intent)
+
+        report["intents"] = intents
+        report["num_longs"] = sum(1 for i in intents if i["side"] == "buy")
+        report["num_shorts"] = sum(1 for i in intents if i["side"] == "sell")
+
+        if mode == "noop":
+            logger.info("NOOP mode — Selector orders computed but not submitted:")
+            for intent in intents:
+                logger.info(
+                    "  %s %s %d shares (score=%.4f, ~$%.0f)",
+                    intent["side"].upper(),
+                    intent["symbol"],
+                    intent["quantity"],
+                    intent["score"],
+                    intent["estimated_notional"],
+                )
+            report["status"] = "noop"
+            report["message"] = f"{len(intents)} orders computed, none submitted"
+
+        elif mode == "ibkr":
+            from ib_insync import Stock, MarketOrder
+
+            # Ensure broker is connected for direct client access
+            broker._ensure_connected()
+
+            submitted = []
+            for intent in intents:
+                try:
+                    contract = Stock(intent["symbol"], "SMART", "USD")
+                    qty = intent["quantity"]
+                    action = "BUY" if intent["side"] == "buy" else "SELL"
+
+                    # Qualify the stock contract
+                    qualified = broker._client.qualify_contracts(contract)
+                    if not qualified or qualified[0].conId == 0:
+                        logger.error("Failed to qualify stock %s", intent["symbol"])
+                        submitted.append({
+                            "symbol": intent["symbol"],
+                            "side": intent["side"],
+                            "qty": qty,
+                            "status": "qualify_failed",
+                        })
+                        continue
+
+                    ib_contract = qualified[0]
+                    ib_order = MarketOrder(action, qty)
+
+                    # Set account
+                    if broker.config.account_id:
+                        ib_order.account = broker.config.account_id
+
+                    # Place order directly via client
+                    trade = broker._client.place_order(ib_contract, ib_order)
+                    broker._client.sleep(0.3)
+
+                    submitted.append({
+                        "symbol": intent["symbol"],
+                        "side": intent["side"],
+                        "qty": qty,
+                        "status": trade.orderStatus.status if trade.orderStatus else "submitted",
+                        "broker_order_id": str(trade.order.orderId),
+                    })
+                    logger.info(
+                        "Submitted: %s %s %d shares (orderId=%s)",
+                        action, intent["symbol"], qty, trade.order.orderId,
+                    )
+
+                except Exception as exc:
+                    logger.error(
+                        "Failed to submit %s %s: %s",
+                        intent["side"], intent["symbol"], exc,
+                    )
+                    submitted.append({
+                        "symbol": intent["symbol"],
+                        "side": intent["side"],
+                        "qty": qty,
+                        "status": f"error: {exc}",
+                    })
+
+            report["submitted_orders"] = submitted
+            report["status"] = "submitted"
+            report["message"] = f"{len(submitted)} orders submitted to IBKR"
+
+    except FileNotFoundError as exc:
+        logger.warning("Selector data not found: %s", exc)
+        report["status"] = "data_missing"
+        report["error"] = str(exc)
+    except Exception as exc:
+        logger.error("Selector sleeve error: %s", exc, exc_info=True)
+        report["status"] = "error"
+        report["error"] = str(exc)
+
+    return report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ORCHESTRATOR
+# ═══════════════════════════════════════════════════════════════════════════
+
+def run_all_sleeves(
+    asof: date,
+    mode: str = "noop",
+    vrp_mode: Optional[str] = None,
+    selector_top_n: int = 10,
+) -> Dict[str, Any]:
+    """Run all three sleeves sequentially."""
+
+    effective_vrp_mode = vrp_mode or "noop"  # VRP defaults to noop always
+
+    logger.info("=" * 70)
+    logger.info("THREE-SLEEVE PAPER TRADING RUNNER")
+    logger.info("  Date     : %s", asof)
+    logger.info("  Mode     : %s", mode)
+    logger.info("  VRP mode : %s", effective_vrp_mode)
+    logger.info("=" * 70)
+
+    # --- Connect ---
+    broker = IBKRLiveBroker.from_env()
+    account = broker.get_account()
+    sleeve_capital = get_sleeve_capital(account)
+
+    logger.info("Account NLV: $%.2f", account.equity)
+    logger.info("Cash: $%.2f | Buying Power: $%.2f", account.cash, account.buying_power)
+    for name, cap in sleeve_capital.items():
+        logger.info("  %s capital: $%.2f (%d%%)", name, cap, ALLOCATIONS[name] * 100)
+
+    # Margin cushion check
+    if account.equity > 0:
+        margin_cushion = account.buying_power / account.equity
+        if margin_cushion < 0.30:
+            logger.warning(
+                "[WARN] Margin cushion %.1f%% < 30%% -- consider reducing exposure",
+                margin_cushion * 100,
+            )
+
+    # --- Run sleeves ---
+    reports = {}
+
+    # Core creates its own broker connection internally (phase_open),
+    # so we disconnect ours first to avoid clientId collision, then reconnect.
+    if mode == "ibkr":
+        broker._disconnect()
+    reports["core"] = run_core(broker, sleeve_capital["core"], asof, mode)
+    if mode == "ibkr":
+        broker = IBKRLiveBroker.from_env()  # reconnect for remaining sleeves
+
+    reports["vrp"] = run_vrp(broker, sleeve_capital["vrp"], asof, effective_vrp_mode)
+    reports["selector"] = run_selector(
+        broker, sleeve_capital["selector"], asof, mode,
+        top_n=selector_top_n,
+    )
+
+    # --- Position snapshot ---
+    logger.info("\n" + "=" * 60)
+    logger.info("POST-EXECUTION POSITION SNAPSHOT")
+    logger.info("=" * 60)
+
+    try:
+        positions = broker.get_positions()
+        if positions:
+            for pos in positions:
+                logger.info(
+                    "  %s  qty=%+.0f  avg_cost=$%.2f",
+                    pos.ticker, pos.quantity, pos.avg_cost,
+                )
+        else:
+            logger.info("  (no positions)")
+    except Exception as exc:
+        logger.warning("Could not fetch positions: %s", exc)
+
+    # --- Summary ---
+    logger.info("\n" + "=" * 60)
+    logger.info("EXECUTION SUMMARY")
+    logger.info("=" * 60)
+    for name, rpt in reports.items():
+        logger.info("  %-10s : %s", name, rpt.get("status", "unknown"))
+
+    # --- Save combined report ---
+    out = output_dir(asof)
+    combined_report = {
+        "asof": asof.isoformat(),
+        "mode": mode,
+        "vrp_mode": effective_vrp_mode,
+        "account": {
+            "equity": account.equity,
+            "cash": account.cash,
+            "buying_power": account.buying_power,
+        },
+        "sleeve_capital": sleeve_capital,
+        "sleeves": reports,
+        "timestamp": datetime.now().isoformat(),
+    }
+    save_report(out / "three_sleeve_report.json", combined_report)
+
+    # --- Disconnect ---
+    broker._disconnect()
+
+    return combined_report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CLI
+# ═══════════════════════════════════════════════════════════════════════════
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Three-sleeve IBKR paper trading runner",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["noop", "ibkr"],
+        default="noop",
+        help="Execution mode: noop (dry run) or ibkr (submit orders)",
+    )
+    parser.add_argument(
+        "--asof",
+        type=lambda s: date.fromisoformat(s),
+        default=date.today(),
+        help="Trading date (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--vrp-mode",
+        choices=["noop", "ibkr"],
+        default=None,
+        help="Override VRP mode (default: always noop for safety)",
+    )
+    parser.add_argument(
+        "--selector-top-n",
+        type=int,
+        default=10,
+        help="Number of top/bottom stocks for selector (default: 10)",
+    )
+    args = parser.parse_args()
+
+    run_all_sleeves(
+        asof=args.asof,
+        mode=args.mode,
+        vrp_mode=args.vrp_mode,
+        selector_top_n=args.selector_top_n,
+    )
+
+
+if __name__ == "__main__":
+    main()

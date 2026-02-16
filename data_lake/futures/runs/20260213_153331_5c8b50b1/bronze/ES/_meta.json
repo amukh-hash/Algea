@@ -1,0 +1,10 @@
+{
+  "params": {
+    "end": "2025-12-31",
+    "start": "2015-01-02"
+  },
+  "retrieval_ts": "2026-02-13T15:33:31.509229+00:00",
+  "root": "ES",
+  "sha256": "45e0772dfd19d0c564c27c0b09bb93541b2ac379fccda729b2725dd950bf0116",
+  "vendor": "yfinance"
+}

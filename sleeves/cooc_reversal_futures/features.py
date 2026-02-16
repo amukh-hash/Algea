@@ -1,3 +1,9 @@
+"""Runtime feature computation — delegates to features_core for parity.
+
+This module provides the ``FeatureRow`` wrapper and ``compute_core_features``
+that the sleeve uses at inference time.  All actual feature math lives in
+``features_core.py`` to guarantee exact match with training.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -5,6 +11,14 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+
+from .features_core import (
+    FEATURE_SCHEMA,
+    FEATURE_SCHEMA_V1,
+    FEATURE_SCHEMA_V2,
+    FeatureConfig,
+    compute_core_features as _compute_core,
+)
 
 
 @dataclass(frozen=True)
@@ -18,19 +32,30 @@ class FeatureRow:
             raise AssertionError("feature_timestamp_end must be strictly before decision_timestamp")
 
 
-def compute_core_features(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
-    out = df.copy()
-    out["sigma_co"] = out["r_co"].rolling(lookback, min_periods=3).std().replace(0, np.nan)
-    out["z_co"] = out["r_co"] / out["sigma_co"]
-    for col in ("r_co", "z_co"):
-        out[f"{col}_winsor"] = out[col].clip(out[col].quantile(0.05), out[col].quantile(0.95))
-    out["r_co_cs_demean"] = out["r_co"] - out.groupby("date")["r_co"].transform("mean")
-    out["r_co_rank_pct"] = out.groupby("date")["r_co"].rank(pct=True)
-    out["r_oc_mean_l"] = out.groupby("instrument")["r_oc"].transform(lambda s: s.rolling(lookback, min_periods=3).mean())
-    out["r_oc_vol_l"] = out.groupby("instrument")["r_oc"].transform(lambda s: s.rolling(lookback, min_periods=3).std())
-    out["r_co_mean_l"] = out.groupby("instrument")["r_co"].transform(lambda s: s.rolling(lookback, min_periods=3).mean())
-    out["r_co_vol_l"] = out.groupby("instrument")["r_co"].transform(lambda s: s.rolling(lookback, min_periods=3).std())
-    return out
+def compute_core_features(
+    df: pd.DataFrame,
+    lookback: int = 20,
+) -> pd.DataFrame:
+    """Compute canonical features for the runtime sleeve.
+
+    Delegates to ``features_core.compute_core_features`` (shared with training).
+
+    Parameters
+    ----------
+    df
+        Gold-like frame with columns:
+        ``instrument`` (or ``root``), ``trading_day``,
+        ``r_co`` (or ``ret_co``), ``r_oc`` (or ``ret_oc``),
+        ``volume``, ``days_to_expiry``, ``roll_window_flag``.
+    lookback
+        Rolling window size.
+
+    Returns
+    -------
+    DataFrame with ``FEATURE_SCHEMA`` (V2) columns computed.
+    """
+    cfg = FeatureConfig(lookback=lookback, schema_version=2)
+    return _compute_core(df, cfg=cfg)
 
 
 def micro_features(window: pd.DataFrame) -> dict[str, float]:
