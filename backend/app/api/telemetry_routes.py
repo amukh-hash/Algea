@@ -45,16 +45,26 @@ def get_run(run_id: str) -> Run:
     return run
 
 
-@router.get("/runs/{run_id}/metrics", response_model=MetricSeriesResponse)
+@router.get("/runs/{run_id}/metrics")
 def get_metrics(
     run_id: str,
     keys: str,
     start: datetime | None = None,
     end: datetime | None = None,
     every_ms: int | None = Query(None, ge=100),
-) -> MetricSeriesResponse:
+    format: str | None = Query(None, description="Set to 'lw' for lightweight-charts format"),
+) -> MetricSeriesResponse | dict:
     key_list = [key.strip() for key in keys.split(",") if key.strip()]
-    return MetricSeriesResponse(series=storage.query_metrics(run_id, key_list, start, end, every_ms))
+    series = storage.query_metrics(run_id, key_list, start, end, every_ms)
+    if format == "lw":
+        lw_series: dict[str, list[dict[str, float]]] = {}
+        for key, points in series.items():
+            lw_series[key] = [
+                {"time": int(p.ts.timestamp()), "value": p.value}
+                for p in points
+            ]
+        return {"series": lw_series}
+    return MetricSeriesResponse(series=series)
 
 
 @router.get("/runs/{run_id}/events", response_model=EventListResponse)

@@ -1,0 +1,173 @@
+# Diagrams 4
+
+## Diagram 1 — High-level component architecture
+```mermaid
+flowchart LR
+  UI[Frontend Next.js UI] --> API[FastAPI API backend.app.api.main]
+  API --> TEL[(Telemetry DB SQLite/Postgres)]
+  API --> RUNS[Training/Backtest Orchestrators]
+  RUNS --> DATA[Data Canonicalization + Features]
+  DATA --> MODELS[Model Training/Eval]
+  MODELS --> ART[Run Artifacts / production_pack]
+  RUNS --> EXEC[Execution & Portfolio Engine]
+  EXEC --> BRK[Broker Integrations / Paper adapters]
+  RUNS --> LOG[Metrics/Events Logging]
+  LOG --> TEL
+  ART --> UI
+```
+
+## Diagram 2 — Pipeline dataflow
+```mermaid
+flowchart LR
+  I[Ingest] --> C[Canonicalize]
+  C --> F[Feature Build]
+  F --> T[Train]
+  T --> V[Validate]
+  V --> B[Backtest]
+  B --> P[Portfolio & Execution]
+  P --> O[Orders/Broker]
+  V --> A[Artifacts]
+  B --> A
+  P --> M[Telemetry/Metrics]
+```
+
+## Diagram 3 — Control flow / orchestration
+```mermaid
+sequenceDiagram
+  participant U as User/CLI
+  participant E as Entrypoint
+  participant C as Config Loader
+  participant D as Data+Features
+  participant M as Model
+  participant R as Risk/Constraints
+  participant X as Execution
+  participant T as Telemetry
+  U->>E: start run
+  E->>C: load config(s)
+  C-->>E: resolved settings
+  E->>D: build universe/features
+  D-->>E: feature frame
+  E->>M: generate decisions
+  M-->>E: signals/scores
+  E->>R: apply constraints
+  R-->>E: target orders
+  E->>X: send broker/paper orders
+  X-->>E: fills/status
+  E->>T: emit metrics/events/artifacts
+```
+
+## Module dependency graph
+```mermaid
+flowchart TD
+  M0[algaie/execution/options/config.py]
+  M1[sleeves/cooc_reversal_futures/pipeline/types.py]
+  M2[backend/scripts/train_selector.py]
+  M3[backend/tests/test_cooc_pipeline.py]
+  M4[algaie/data/options/vrp_features.py]
+  M5[deprecated/legacy_scripts/selector/phase3_train_selector.py]
+  M6[backend/scripts/run_phase1_cooc.py]
+  M7[backend/scripts/_cli_utils.py]
+  M8[algaie/execution/options/structures.py]
+  M9[algaie/data/common.py]
+  M10[backend/scripts/walkforward_eval.py]
+  M11[sleeves/cooc_reversal_futures/sleeve.py]
+  M12[sleeves/cooc_reversal_futures/pipeline/cli.py]
+  M13[sleeves/cooc_reversal_futures/pipeline/validation.py]
+  M14[sleeves/cooc_reversal_futures/pipeline/dataset.py]
+  M15[backend/scripts/research/run_backtest.py]
+  M16[backend/scripts/paper/run_paper_cycle_ibkr.py]
+  M17[algaie/research/backtest_engine.py]
+  M18[sleeves/cooc_reversal_futures/pipeline/train.py]
+  M19[deprecated/legacy_scripts/teacher/phase1_train_teacher_gold.py]
+  M3 --> M1
+  M3 --> M4
+  M3 --> M11
+  M3 --> M13
+  M3 --> M14
+  M3 --> M18
+  M6 --> M1
+  M6 --> M13
+  M6 --> M14
+  M6 --> M18
+  M11 --> M4
+  M12 --> M1
+  M12 --> M13
+  M12 --> M14
+  M12 --> M18
+  M13 --> M1
+  M13 --> M4
+  M13 --> M11
+  M13 --> M14
+  M13 --> M18
+  M14 --> M1
+  M15 --> M7
+  M15 --> M17
+  M16 --> M4
+  M16 --> M11
+  M18 --> M1
+```
+
+## Call graph for orchestrators
+```mermaid
+flowchart LR
+  O0[shadow_evaluate\nalgaie/execution/shadow_runner.py:95]
+  C0_902[backend/tests/test_shadow_runner.py] --> O0
+  O1[load_pipeline_config\nbackend/scripts/_cli_utils.py:14]
+  C1_428[backend/scripts/canonicalize/canonicalize_daily.py] --> O1
+  C1_187[backend/scripts/eligibility/build_eligibility.py] --> O1
+  C1_450[backend/scripts/features/build_features.py] --> O1
+  O2[prepare_run\nbackend/scripts/_cli_utils.py:18]
+  C2_428[backend/scripts/canonicalize/canonicalize_daily.py] --> O2
+  C2_187[backend/scripts/eligibility/build_eligibility.py] --> O2
+  C2_450[backend/scripts/features/build_features.py] --> O2
+  O3[write_artifact_log\nbackend/scripts/_cli_utils.py:34]
+  C3_428[backend/scripts/canonicalize/canonicalize_daily.py] --> O3
+  C3_187[backend/scripts/eligibility/build_eligibility.py] --> O3
+  C3_450[backend/scripts/features/build_features.py] --> O3
+  O4[detect_ffn_modules\nbackend/scripts/_cli_utils.py:38]
+  C4_248[backend/scripts/eval_chronos_metrics.py] --> O4
+  C4_373[backend/scripts/train_chronos2_teacher.py] --> O4
+  C4_552[backend/scripts/verify_inference_stability.py] --> O4
+  O5[normalise_ohlcv_columns\nbackend/scripts/_cli_utils.py:57]
+  C5_520[backend/scripts/prepare_training_data.py] --> O5
+  O6[_load_priors_frame\nbackend/scripts/audit_selector_pipeline.py:54]
+  O7[make_time_split\nbackend/scripts/audit_selector_pipeline.py:68]
+  C7_216[algaie/training/selector_dataset.py] --> O7
+  C7_107[backend/scripts/train_selector.py] --> O7
+  O8[check_data_integrity\nbackend/scripts/audit_selector_pipeline.py:82]
+  O9[check_feature_health\nbackend/scripts/audit_selector_pipeline.py:139]
+```
+
+## Data schema graph
+```mermaid
+flowchart LR
+  RAW[(Raw market data)] --> SILVER[silver_bars.parquet]
+  SILVER --> GOLD[gold_frame.parquet]
+  GOLD --> DS[dataset.parquet]
+  DS --> MODEL[model.pkl/preprocessor.pkl]
+  MODEL --> VAL[validation_report.json]
+  MODEL --> SCORE[score_mode_comparison.json]
+  VAL --> PACK[production_pack/*]
+  SCORE --> PACK
+```
+
+## Artifact lifecycle
+```mermaid
+flowchart TD
+  RUN[Run ID folder] --> CAN[canonical/*]
+  RUN --> SPL[splits/splits.json]
+  RUN --> FEAT[feature_schema.json]
+  RUN --> MOD[model/model.pkl + manifest]
+  RUN --> VAL[validation/validation_report.json]
+  RUN --> PACK[production_pack/run_manifest.json]
+  PACK --> CONS[Execution/Research consumers]
+```
+
+## Telemetry/metrics flow
+```mermaid
+flowchart LR
+  EMIT[Emitters: scripts/runners] --> API[FastAPI telemetry routes]
+  API --> DB[(SQLite/Postgres telemetry DB)]
+  DB --> Q[Backend query layer]
+  Q --> UI[Frontend dashboards]
+```

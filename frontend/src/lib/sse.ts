@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { api } from "./api";
+import { api, LWPoint } from "./api";
 import { MetricPoint, TelemetryEvent } from "./types";
 
 export function useRunStream(runId: string | null) {
   const [metrics, setMetrics] = useState<Record<string, MetricPoint[]>>({});
+  const [metricsLW, setMetricsLW] = useState<Record<string, LWPoint[]>>({});
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
   const [status, setStatus] = useState<string>("unknown");
 
@@ -14,7 +15,19 @@ export function useRunStream(runId: string | null) {
     const source = new EventSource(api.streamUrl(runId));
     source.addEventListener("metric", (evt) => {
       const point = JSON.parse((evt as MessageEvent).data) as MetricPoint;
-      setMetrics((prev) => ({ ...prev, [point.key]: [...(prev[point.key] ?? []).slice(-199), point] }));
+      setMetrics((prev) => ({
+        ...prev,
+        [point.key]: [...(prev[point.key] ?? []).slice(-199), point],
+      }));
+      // Also maintain LW-format array for chart components
+      const lwPoint: LWPoint = {
+        time: Math.floor(new Date(point.ts).getTime() / 1000),
+        value: point.value,
+      };
+      setMetricsLW((prev) => ({
+        ...prev,
+        [point.key]: [...(prev[point.key] ?? []).slice(-999), lwPoint],
+      }));
     });
     source.addEventListener("event", (evt) => {
       const event = JSON.parse((evt as MessageEvent).data) as TelemetryEvent;
@@ -26,5 +39,8 @@ export function useRunStream(runId: string | null) {
     return () => source.close();
   }, [runId]);
 
-  return useMemo(() => ({ metrics, events, status }), [metrics, events, status]);
+  return useMemo(
+    () => ({ metrics, metricsLW, events, status }),
+    [metrics, metricsLW, events, status]
+  );
 }

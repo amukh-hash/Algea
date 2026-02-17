@@ -54,6 +54,7 @@ class TelemetryStorage:
                     labels TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_metrics_run_key_ts ON metrics(run_id, key, ts);
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_metrics_unique ON metrics(run_id, key, ts);
                 CREATE TABLE IF NOT EXISTS events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     run_id TEXT NOT NULL REFERENCES runs(run_id),
@@ -156,9 +157,31 @@ class TelemetryStorage:
     def insert_metric(self, point: MetricPoint) -> None:
         with self._conn() as conn:
             conn.execute(
-                "INSERT INTO metrics(run_id, ts, key, value, labels) VALUES(?,?,?,?,?)",
+                "INSERT OR IGNORE INTO metrics(run_id, ts, key, value, labels) VALUES(?,?,?,?,?)",
                 (point.run_id, point.ts.isoformat(), point.key, point.value, json.dumps(point.labels)),
             )
+
+    def insert_metrics_batch(self, points: list[MetricPoint]) -> int:
+        """Batch insert metrics, ignoring duplicates on (run_id, key, ts). Returns count inserted."""
+        if not points:
+            return 0
+        with self._conn() as conn:
+            cursor = conn.executemany(
+                "INSERT OR IGNORE INTO metrics(run_id, ts, key, value, labels) VALUES(?,?,?,?,?)",
+                [
+                    (p.run_id, p.ts.isoformat(), p.key, p.value, json.dumps(p.labels))
+                    for p in points
+                ],
+            )
+            return cursor.rowcount
+
+    def delete_run_cascade(self, run_id: str) -> None:
+        """Delete a run and all its metrics, events, and artifacts."""
+        with self._conn() as conn:
+            conn.execute("DELETE FROM metrics WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM events WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM artifacts WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
 
     def query_metrics(
         self,

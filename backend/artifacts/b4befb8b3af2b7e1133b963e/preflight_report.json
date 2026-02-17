@@ -1,0 +1,126 @@
+{
+  "timestamp": "2026-02-07T20:02:42.522378",
+  "config": {
+    "gold_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\processed\\gold",
+    "gold_glob": "*.parquet",
+    "silver_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\prices",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\breadth.parquet",
+    "universe_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\universe",
+    "selector_features_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\features\\selector_features_v2",
+    "priors_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\priors",
+    "gold_sample_k": 5,
+    "gold_min_ok_frac": 1.0,
+    "gold_required_cols": [
+      "ret_1d",
+      "ret_3d",
+      "ret_5d",
+      "ret_10d",
+      "volume"
+    ],
+    "gold_require_timestamp": false,
+    "silver_tickers": [],
+    "silver_required_cols": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "silver_context": 60,
+    "silver_pred": 10,
+    "silver_stride": 1,
+    "require_selector_features": true,
+    "require_priors": false,
+    "require_y_trade": true,
+    "min_breadth_train": 200,
+    "chronos_files_glob": "backend/data/processed/gold/*.parquet",
+    "chronos_context_len": 180,
+    "chronos_prediction_len": 20,
+    "chronos_stride": 5,
+    "chronos_max_samples_per_file": null,
+    "chronos_seed": 42,
+    "chronos_target_col": "close",
+    "chronos_probe_k": 25,
+    "selector_features_build_cmd": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5",
+    "report_path": "backend\\reports\\preflight_report.json",
+    "as_of_date": "2026-02-07"
+  },
+  "gold": {
+    "ok": true,
+    "warning": "Gold dir not found, assuming Phase 2 only mode."
+  },
+  "silver": {
+    "ok": false,
+    "error": "Directory not found"
+  },
+  "universe_frame_v2": {
+    "ok": false,
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\universe",
+    "n_files": 121,
+    "sampled_files": 5,
+    "breadth": null,
+    "samples": [
+      {
+        "file": "raw_ohlcv.parquet",
+        "ok": false,
+        "errors": [
+          "Missing columns: ['symbol', 'is_observable', 'is_tradable', 'tier', 'weight']"
+        ]
+      },
+      {
+        "file": "universe_2016-01-01.parquet",
+        "ok": false,
+        "errors": [
+          "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']"
+        ]
+      },
+      {
+        "file": "universe_2016-02-01.parquet",
+        "ok": false,
+        "errors": [
+          "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']"
+        ]
+      },
+      {
+        "file": "universe_2016-03-01.parquet",
+        "ok": false,
+        "errors": [
+          "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']"
+        ]
+      },
+      {
+        "file": "universe_2016-04-01.parquet",
+        "ok": false,
+        "errors": [
+          "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']"
+        ]
+      }
+    ],
+    "errors": [
+      "Missing columns: ['symbol', 'is_observable', 'is_tradable', 'tier', 'weight']",
+      "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']",
+      "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']",
+      "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']",
+      "Missing columns: ['date', 'symbol', 'is_observable', 'is_tradable', 'tier', 'weight']",
+      "Breadth aggregation failed: invalid input for `col`\n\nExpected `str` or `DataType`, got 'Expr'."
+    ]
+  },
+  "chronos_dataset": {
+    "ok": false,
+    "error": "No Chronos input files matched chronos_files_glob=backend/data/processed/gold/*.parquet"
+  },
+  "selector_featureframe_v2": {
+    "ok": false,
+    "error": "SelectorFeatureFrame v2 root missing: C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\features\\selector_features_v2",
+    "next_command": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5"
+  },
+  "priors": {
+    "ok": true,
+    "status": "skipped_config"
+  },
+  "global_ok": false,
+  "recommendations": [
+    "Run Selector Builder: python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5"
+  ],
+  "next_command": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5"
+}

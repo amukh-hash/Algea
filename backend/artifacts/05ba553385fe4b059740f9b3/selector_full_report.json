@@ -1,0 +1,108 @@
+{
+  "signal": {
+    "val": {
+      "ic": 0.0117,
+      "ndcg": 0.7259,
+      "spread": 0.00128,
+      "n_dates": 374
+    },
+    "test": {
+      "ic": 0.0008,
+      "ndcg": 0.6901,
+      "spread": -0.00012,
+      "n_dates": 123
+    }
+  },
+  "portfolio": {
+    "val": {
+      "ann_return_gross": -0.038691,
+      "ann_return_net": -0.368258,
+      "ann_vol_gross": 0.8387,
+      "ann_vol_net": 0.838684,
+      "gross_sharpe": -0.0461,
+      "net_sharpe": -0.4391,
+      "max_drawdown": -2.511968,
+      "cagr_gross": -0.037952,
+      "cagr_net": -0.308061,
+      "avg_turnover": 0.871872,
+      "ann_turnover": 219.7117,
+      "avg_holding_period": 2.3,
+      "vol_scaled_return": -0.254632,
+      "vol_scaled_vol": 0.448761,
+      "vol_scaled_sharpe": -0.5674,
+      "vol_scaling_effect": -0.1283
+    },
+    "test": {
+      "ann_return_gross": 0.558663,
+      "ann_return_net": 0.240774,
+      "ann_vol_gross": 0.819807,
+      "ann_vol_net": 0.819816,
+      "gross_sharpe": 0.6815,
+      "net_sharpe": 0.2937,
+      "max_drawdown": -1.272782,
+      "cagr_gross": 0.748333,
+      "cagr_net": 0.272233,
+      "avg_turnover": 0.840976,
+      "ann_turnover": 211.9259,
+      "avg_holding_period": 2.4,
+      "vol_scaled_return": 0.256749,
+      "vol_scaled_vol": 0.473046,
+      "vol_scaled_sharpe": 0.5428,
+      "vol_scaling_effect": 0.2491
+    }
+  },
+  "regime": {
+    "val": {
+      "low_stress": {
+        "n_dates": 125,
+        "mean_gross_ret": 0.002901,
+        "mean_net_ret": 0.001632,
+        "ann_sharpe": 0.6023
+      },
+      "mid_stress": {
+        "n_dates": 124,
+        "mean_gross_ret": -0.005442,
+        "mean_net_ret": -0.006749,
+        "ann_sharpe": -1.7743
+      },
+      "high_stress": {
+        "n_dates": 125,
+        "mean_gross_ret": 0.002039,
+        "mean_net_ret": 0.000691,
+        "ann_sharpe": 0.2041
+      },
+      "top_20pct_stress": {
+        "n_dates": 75,
+        "mean_gross_ret": 0.001275,
+        "mean_net_ret": -0.000111,
+        "ann_sharpe": -0.0342
+      }
+    },
+    "test": {
+      "low_stress": {
+        "n_dates": 41,
+        "mean_gross_ret": 0.001664,
+        "mean_net_ret": 0.000418,
+        "ann_sharpe": 0.1348
+      },
+      "mid_stress": {
+        "n_dates": 41,
+        "mean_gross_ret": -0.006438,
+        "mean_net_ret": -0.007656,
+        "ann_sharpe": -1.9561
+      },
+      "high_stress": {
+        "n_dates": 41,
+        "mean_gross_ret": 0.011425,
+        "mean_net_ret": 0.010104,
+        "ann_sharpe": 3.908
+      },
+      "top_20pct_stress": {
+        "n_dates": 25,
+        "mean_gross_ret": 0.008099,
+        "mean_net_ret": 0.006753,
+        "ann_sharpe": 2.7078
+      }
+    }
+  }
+}

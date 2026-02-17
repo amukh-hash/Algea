@@ -1,0 +1,591 @@
+{
+  "timestamp": "2026-02-08T13:21:21.019828",
+  "config": {
+    "gold_dir": "backend\\data_canonical\\daily_parquet",
+    "gold_glob": "*.parquet",
+    "silver_dir": "backend\\data_canonical\\marketframe_daily",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\breadth.parquet",
+    "universe_root": "backend\\data_canonical\\universe\\universe_frame_v2",
+    "selector_features_root": "backend\\data_canonical\\features\\selector_features_v2",
+    "priors_root": "backend\\data\\priors\\chronos2\\v1",
+    "gold_sample_k": 5,
+    "gold_min_ok_frac": 1.0,
+    "gold_required_cols": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "gold_require_timestamp": false,
+    "silver_tickers": [],
+    "silver_required_cols": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "silver_context": 60,
+    "silver_pred": 10,
+    "silver_stride": 1,
+    "require_selector_features": true,
+    "require_priors": true,
+    "require_y_trade": true,
+    "min_breadth_train": 5,
+    "chronos_files_glob": "backend/data_canonical/daily_parquet/*.parquet",
+    "chronos_context_len": 180,
+    "chronos_prediction_len": 20,
+    "chronos_stride": 5,
+    "chronos_max_samples_per_file": 10,
+    "chronos_seed": 42,
+    "chronos_target_col": "close",
+    "chronos_probe_k": 25,
+    "priors_version": "v1",
+    "selector_features_build_cmd": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5",
+    "report_path": "backend\\reports\\preflight_report.json",
+    "as_of_date": "2025-01-07"
+  },
+  "data_versions": {
+    "gold": "221e259eb690",
+    "silver": "unknown",
+    "universe": "v2",
+    "universe_build_id": "unknown",
+    "universe_frame_v2_version": "unknown",
+    "selector": "v2",
+    "selector_build_id": "unknown",
+    "selector_features_v2_version": "unknown",
+    "priors_version": "v1",
+    "gold_version": "221e259eb690",
+    "code_version": "e8043ba90e187a8b39a2513cf3282d758b624a4c"
+  },
+  "gold": {
+    "ok": true,
+    "pass_frac": 1.0,
+    "n_checked": 5,
+    "samples": [
+      {
+        "file": "A.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AA.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AAA.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AAAU.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACB.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      }
+    ]
+  },
+  "silver": {
+    "ok": true,
+    "pass_count": 5,
+    "range": {
+      "min_ts": "2020-07-27",
+      "max_ts": "2025-12-31"
+    },
+    "samples": [
+      {
+        "file": "marketframe_AA_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AAA_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AACB_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AACBR_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AACBU_daily.parquet",
+        "ok": true,
+        "errors": []
+      }
+    ]
+  },
+  "universe_frame_v2": {
+    "ok": true,
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\universe\\universe_frame_v2",
+    "n_files": 20,
+    "sampled_files": 5,
+    "breadth": {
+      "n_days": 5031,
+      "min_tradable": 0,
+      "p10_tradable": 91,
+      "median_tradable": 184,
+      "days_tradable_below_min_breadth_train": 252,
+      "frac_low_breadth_days": 0.05008944543828265,
+      "min_breadth_train": 5
+    },
+    "samples": [
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      }
+    ],
+    "errors": [],
+    "metadata": {
+      "schema_signature": [
+        {
+          "name": "date",
+          "dtype": "Date"
+        },
+        {
+          "name": "symbol",
+          "dtype": "String"
+        },
+        {
+          "name": "is_observable",
+          "dtype": "Boolean"
+        },
+        {
+          "name": "is_tradable",
+          "dtype": "Boolean"
+        },
+        {
+          "name": "tier",
+          "dtype": "String"
+        },
+        {
+          "name": "weight",
+          "dtype": "Float64"
+        },
+        {
+          "name": "close",
+          "dtype": "Float32"
+        },
+        {
+          "name": "dvol",
+          "dtype": "Float32"
+        },
+        {
+          "name": "adv20",
+          "dtype": "Float32"
+        },
+        {
+          "name": "adv60",
+          "dtype": "Float32"
+        },
+        {
+          "name": "vol20",
+          "dtype": "Float32"
+        },
+        {
+          "name": "zero_volume_60",
+          "dtype": "Int32"
+        },
+        {
+          "name": "max_share20",
+          "dtype": "Float32"
+        },
+        {
+          "name": "age_days",
+          "dtype": "UInt32"
+        }
+      ],
+      "n_rows": 10169679,
+      "n_symbols": 5571,
+      "date_range": [
+        "2006-01-03",
+        "2025-12-31"
+      ],
+      "config": {
+        "ohlcv_path": "backend/data_canonical/ohlcv_adj",
+        "metadata_path": "backend/data_canonical/security_master.parquet",
+        "out_dir": "backend/data_canonical/universe",
+        "start_year": 2006,
+        "end_year": 2025
+      },
+      "columns": [
+        "date",
+        "symbol",
+        "is_observable",
+        "is_tradable",
+        "tier",
+        "weight",
+        "close",
+        "dvol",
+        "adv20",
+        "adv60",
+        "vol20",
+        "zero_volume_60",
+        "max_share20",
+        "age_days"
+      ]
+    }
+  },
+  "chronos_dataset": {
+    "ok": true,
+    "n_files": 5587,
+    "dataset_len": 28350,
+    "samples_checked": 25,
+    "negative_transformed_windows_seen": 22,
+    "dataset_stats": {
+      "n_files_total": 5587,
+      "n_rows_total": 4830903,
+      "n_windows_potential": 817126,
+      "n_dropped_observable": 364060,
+      "n_dropped_nan": 0,
+      "n_dropped_invalid_price": 0,
+      "n_final_samples": 28350
+    },
+    "errors": []
+  },
+  "selector_featureframe_v2": {
+    "ok": true,
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\features\\selector_features_v2",
+    "n_files": 12,
+    "sampled_files": 5,
+    "breadth": {
+      "n_days": 2343,
+      "min_n": 200,
+      "p10_n": 212,
+      "median_n": 1205,
+      "days_below_min_breadth_train": 0,
+      "min_breadth_train": 5,
+      "n_rows": 2270810,
+      "min_date": "2014-12-19",
+      "max_date": "2025-12-31"
+    },
+    "samples": [
+      {
+        "file": "year=2014\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2015\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2016\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2017\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2018\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      }
+    ],
+    "errors": [],
+    "next_command": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5",
+    "metadata": {
+      "schema_signature": [
+        {
+          "name": "date",
+          "dtype": "Date"
+        },
+        {
+          "name": "symbol",
+          "dtype": "String"
+        },
+        {
+          "name": "open",
+          "dtype": "Float64"
+        },
+        {
+          "name": "high",
+          "dtype": "Float64"
+        },
+        {
+          "name": "low",
+          "dtype": "Float64"
+        },
+        {
+          "name": "close",
+          "dtype": "Float64"
+        },
+        {
+          "name": "volume",
+          "dtype": "Int64"
+        },
+        {
+          "name": "vwap",
+          "dtype": "Float64"
+        },
+        {
+          "name": "trade_count",
+          "dtype": "Int64"
+        },
+        {
+          "name": "log_return_1d",
+          "dtype": "Float64"
+        },
+        {
+          "name": "log_return_5d",
+          "dtype": "Float64"
+        },
+        {
+          "name": "log_return_20d",
+          "dtype": "Float64"
+        },
+        {
+          "name": "volatility_20d",
+          "dtype": "Float64"
+        },
+        {
+          "name": "relative_volume_20d",
+          "dtype": "Float64"
+        },
+        {
+          "name": "y_rank",
+          "dtype": "Float64"
+        },
+        {
+          "name": "fwd_volatility",
+          "dtype": "Float64"
+        },
+        {
+          "name": "is_observable",
+          "dtype": "Boolean"
+        },
+        {
+          "name": "is_tradable",
+          "dtype": "Boolean"
+        },
+        {
+          "name": "tier",
+          "dtype": "String"
+        },
+        {
+          "name": "weight",
+          "dtype": "Float64"
+        },
+        {
+          "name": "close_right",
+          "dtype": "Float32"
+        },
+        {
+          "name": "dvol",
+          "dtype": "Float32"
+        },
+        {
+          "name": "adv20",
+          "dtype": "Float32"
+        },
+        {
+          "name": "adv60",
+          "dtype": "Float32"
+        },
+        {
+          "name": "vol20",
+          "dtype": "Float32"
+        },
+        {
+          "name": "zero_volume_60",
+          "dtype": "Int32"
+        },
+        {
+          "name": "max_share20",
+          "dtype": "Float32"
+        },
+        {
+          "name": "age_days",
+          "dtype": "UInt32"
+        },
+        {
+          "name": "year",
+          "dtype": "Int32"
+        },
+        {
+          "name": "vol_signal",
+          "dtype": "Float64"
+        },
+        {
+          "name": "x_lr1",
+          "dtype": "Float64"
+        },
+        {
+          "name": "x_lr5",
+          "dtype": "Float64"
+        },
+        {
+          "name": "x_lr20",
+          "dtype": "Float64"
+        },
+        {
+          "name": "x_vol",
+          "dtype": "Float64"
+        },
+        {
+          "name": "x_relvol",
+          "dtype": "Float64"
+        },
+        {
+          "name": "risk_adj_return",
+          "dtype": "Float64"
+        },
+        {
+          "name": "y_trade",
+          "dtype": "Int32"
+        }
+      ],
+      "total_rows": 2270810,
+      "unique_dates": 2343,
+      "n_symbols": 2917,
+      "min_date": "2014-12-19",
+      "max_date": "2025-12-31",
+      "x_cols": [
+        "x_lr1",
+        "x_lr5",
+        "x_lr20",
+        "x_vol",
+        "x_relvol"
+      ],
+      "bounds_check": "passed",
+      "median_breadth": 199.0,
+      "dropped_days": 2436,
+      "config": {
+        "min_breadth_train": 200,
+        "horizon_days": 5,
+        "lookback_window": 20,
+        "volatility_window": 20,
+        "relative_vol_window": 20,
+        "tie_break_policy": "sort_value_then_symbol"
+      }
+    }
+  },
+  "priors": {
+    "ok": false,
+    "error": "Prior artifact missing at backend\\priors\\date=2025-01-07\\priors_vv1.parquet (and no parquets in dir) for date 2025-01-07"
+  },
+  "global_ok": false,
+  "recommendations": [],
+  "next_command": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5"
+}

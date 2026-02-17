@@ -1,0 +1,310 @@
+{
+  "timestamp": "2026-02-07T22:17:32.384068",
+  "config": {
+    "gold_dir": "backend\\data_canonical\\daily_parquet",
+    "gold_glob": "*.parquet",
+    "silver_dir": "backend\\data_canonical\\marketframe_daily",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\breadth.parquet",
+    "universe_root": "backend\\data_canonical\\universe\\universe_frame_v2",
+    "selector_features_root": "backend\\data_canonical\\features\\selector_features_v2",
+    "priors_root": "backend\\priors",
+    "gold_sample_k": 5,
+    "gold_min_ok_frac": 1.0,
+    "gold_required_cols": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "gold_require_timestamp": false,
+    "silver_tickers": [],
+    "silver_required_cols": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "silver_context": 60,
+    "silver_pred": 10,
+    "silver_stride": 1,
+    "require_selector_features": true,
+    "require_priors": true,
+    "require_y_trade": true,
+    "min_breadth_train": 5,
+    "chronos_files_glob": "backend/data_canonical/daily_parquet/*.parquet",
+    "chronos_context_len": 180,
+    "chronos_prediction_len": 20,
+    "chronos_stride": 5,
+    "chronos_max_samples_per_file": 10,
+    "chronos_seed": 42,
+    "chronos_target_col": "close",
+    "chronos_probe_k": 25,
+    "selector_features_build_cmd": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5",
+    "report_path": "backend\\reports\\preflight_report.json",
+    "as_of_date": "2025-01-07"
+  },
+  "gold": {
+    "ok": true,
+    "pass_frac": 1.0,
+    "n_checked": 5,
+    "samples": [
+      {
+        "file": "AA.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AAA.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACB.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACBR.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACBU.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      }
+    ]
+  },
+  "silver": {
+    "ok": true,
+    "pass_count": 5,
+    "range": {
+      "min_ts": "2020-07-27",
+      "max_ts": "2025-12-31"
+    },
+    "samples": [
+      {
+        "file": "marketframe_AA_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AAA_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AACB_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AACBR_daily.parquet",
+        "ok": true,
+        "errors": []
+      },
+      {
+        "file": "marketframe_AACBU_daily.parquet",
+        "ok": true,
+        "errors": []
+      }
+    ]
+  },
+  "universe_frame_v2": {
+    "ok": true,
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\universe\\universe_frame_v2",
+    "n_files": 20,
+    "sampled_files": 5,
+    "breadth": {
+      "n_days": 4542,
+      "min_tradable": 0,
+      "p10_tradable": 7,
+      "median_tradable": 149,
+      "days_tradable_below_min_breadth_train": 339,
+      "frac_low_breadth_days": 0.07463672391017173,
+      "min_breadth_train": 5
+    },
+    "samples": [
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      },
+      {
+        "file": "data.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "bad_weight_rows": 0,
+        "bad_tier_rows": 0,
+        "tradable_not_observable_rows": 0
+      }
+    ],
+    "errors": []
+  },
+  "chronos_dataset": {
+    "ok": true,
+    "n_files": 2345,
+    "dataset_len": 21476,
+    "samples_checked": 25,
+    "negative_transformed_windows_seen": 24,
+    "dataset_stats": {
+      "n_files_total": 2345,
+      "n_rows_total": 2271802,
+      "n_windows_potential": 364351,
+      "n_dropped_observable": 0,
+      "n_dropped_nan": 0,
+      "n_dropped_invalid_price": 0,
+      "n_final_samples": 21476
+    },
+    "errors": []
+  },
+  "selector_featureframe_v2": {
+    "ok": true,
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\features\\selector_features_v2",
+    "n_files": 5,
+    "sampled_files": 5,
+    "breadth": {
+      "n_days": 708,
+      "min_n": 200,
+      "p10_n": 204,
+      "median_n": 219,
+      "days_below_min_breadth_train": 0,
+      "min_breadth_train": 5
+    },
+    "samples": [
+      {
+        "file": "year=2014\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2015\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2016\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2017\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      },
+      {
+        "file": "year=2018\\part-0.parquet",
+        "ok": true,
+        "errors": [],
+        "dup_keys": 0,
+        "x_lr1_min": -1.0,
+        "x_lr1_max": 1.0,
+        "x_lr5_min": -1.0,
+        "x_lr5_max": 1.0,
+        "x_lr20_min": -1.0,
+        "x_lr20_max": 1.0,
+        "x_vol_min": -1.0,
+        "x_vol_max": 1.0,
+        "x_relvol_min": -1.0,
+        "x_relvol_max": 1.0,
+        "nonpositive_weight_rows": 0
+      }
+    ],
+    "errors": [],
+    "next_command": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5"
+  },
+  "priors": {
+    "ok": false,
+    "error": "Prior artifact missing at backend\\priors\\date=2025-01-07\\priors_vlatest.parquet for date 2025-01-07"
+  },
+  "global_ok": false,
+  "recommendations": [],
+  "next_command": "python -m backend.app.features.selector_features_v2 --start 2006-01-01 --end 2025-12-31 --horizon 5"
+}

@@ -1,0 +1,210 @@
+{
+  "asof": "2026-02-17",
+  "mode": "noop",
+  "vrp_mode": "noop",
+  "account": {
+    "equity": 1000000.0,
+    "cash": 1000000.0,
+    "buying_power": 4000000.0
+  },
+  "sleeve_capital": {
+    "core": 500000.0,
+    "vrp": 300000.0,
+    "selector": 200000.0
+  },
+  "sleeves": {
+    "core": {
+      "sleeve": "core",
+      "capital": 500000.0,
+      "mode": "noop",
+      "status": "inputs_missing",
+      "orders": []
+    },
+    "vrp": {
+      "sleeve": "vrp",
+      "capital": 300000.0,
+      "mode": "noop",
+      "status": "noop",
+      "orders": [],
+      "message": "VRP strategy loaded. Week-1 mode is NOOP (signal-only). Target: put credit spreads on SPY. No orders submitted. To enable live: --vrp-mode ibkr (use with extreme caution)",
+      "sizing_warning": {
+        "spx_notional_per_contract": "~$500,000",
+        "spy_notional_per_contract": "~$50,000",
+        "recommendation": "Use SPY options, not SPX, for paper trading"
+      }
+    },
+    "selector": {
+      "sleeve": "selector",
+      "capital": 200000.0,
+      "mode": "noop",
+      "status": "noop",
+      "orders": [],
+      "intents": [
+        {
+          "symbol": "ASTS",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.7092054500598638,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "DAVA",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.6499403574795922,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "METC",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.6497875534736194,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "OPEN",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.6423115185028173,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "WOLF",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.6298946281242472,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "TE",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.5965029803258762,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "SGML",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.5581888050595177,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "RCAT",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.5566153826462966,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "SRPT",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.5388765787277329,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "RGTI",
+          "side": "buy",
+          "quantity": 200,
+          "score": 0.5292013575974116,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "MBLY",
+          "side": "sell",
+          "quantity": 200,
+          "score": -0.7841506940383866,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "LRN",
+          "side": "sell",
+          "quantity": 200,
+          "score": -0.840353938174414,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "IBTA",
+          "side": "sell",
+          "quantity": 200,
+          "score": -0.8654930745252725,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "LW",
+          "side": "sell",
+          "quantity": 200,
+          "score": -0.8885050329421499,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "TTD",
+          "side": "sell",
+          "quantity": 200,
+          "score": -0.9957131432776313,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "NEXT",
+          "side": "sell",
+          "quantity": 200,
+          "score": -1.005301598642234,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "DUOL",
+          "side": "sell",
+          "quantity": 200,
+          "score": -1.167590956000613,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "CCOI",
+          "side": "sell",
+          "quantity": 200,
+          "score": -1.541510649311345,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "MARA",
+          "side": "sell",
+          "quantity": 200,
+          "score": -1.6024189127785453,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        },
+        {
+          "symbol": "LAKE",
+          "side": "sell",
+          "quantity": 200,
+          "score": -2.728293599577572,
+          "weight": 0.1,
+          "estimated_notional": 20000.0
+        }
+      ],
+      "num_longs": 10,
+      "num_shorts": 10,
+      "message": "20 orders computed, none submitted"
+    }
+  },
+  "timestamp": "2026-02-16T02:48:13.757941"
+}

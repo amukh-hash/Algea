@@ -1,0 +1,67 @@
+{
+  "all_passed": false,
+  "baseline_ic": 0.09030442972725326,
+  "gates": [
+    {
+      "detail": "worst missingness 0.0243 in 'volume_z' (threshold=0.05)",
+      "name": "data_missingness",
+      "passed": true
+    },
+    {
+      "detail": "0 rows missing active_contract",
+      "name": "roll_coverage",
+      "passed": true
+    },
+    {
+      "detail": "all rows pass leakage check",
+      "name": "leakage",
+      "passed": true
+    },
+    {
+      "detail": "model IC=0.9997, baseline IC=0.0903, tol=0.01",
+      "name": "model_sanity",
+      "passed": true
+    },
+    {
+      "detail": "sharpe_model=20.133, sharpe_baseline=2.536, sharpe_ok=True, max_dd=0.0000, dd_ok=True, worst_1pct=0.000133, worst_ok=True, hit_rate=0.992, hit_ok=True",
+      "name": "trade_proxy",
+      "passed": true
+    },
+    {
+      "detail": "vol_q0: n=318, ic=1.000; vol_q1: n=318, ic=1.000; vol_q2: n=318, ic=1.000; vol_q3: n=318, ic=0.999; normal: n=1135, ic=1.000; shock: n=137, ic=0.999; non_roll: n=1272, ic=1.000",
+      "name": "regime_slicing",
+      "passed": true
+    },
+    {
+      "detail": "provider=yfinance \u2014 RESEARCH_ONLY, not promotion-grade (need ibkr_hist)",
+      "name": "data_provider",
+      "passed": false
+    },
+    {
+      "detail": "crash: zero_exposure=True, no_orders=True",
+      "name": "strategy_crash",
+      "passed": true
+    },
+    {
+      "detail": "normal_gross=0.8000, caution_gross=0.4000, scale=0.5",
+      "name": "strategy_caution",
+      "passed": true
+    },
+    {
+      "detail": "contracts={'ES': 20, 'NQ': 20}, cap=20",
+      "name": "strategy_caps",
+      "passed": true
+    },
+    {
+      "detail": "128/677 days have < 4 roots; worst day has 1 roots",
+      "name": "coverage",
+      "passed": false
+    },
+    {
+      "detail": "primary=FAIL, stress=0/3 (need 1) \u2014 FAIL",
+      "name": "promotion_windows",
+      "passed": false
+    }
+  ],
+  "model_ic": 0.999701010181551
+}

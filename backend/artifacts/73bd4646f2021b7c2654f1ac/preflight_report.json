@@ -1,0 +1,93 @@
+{
+  "timestamp": "2026-02-05T00:51:59.828340",
+  "config": {
+    "gold_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\daily_parquet",
+    "gold_glob": "*.parquet",
+    "silver_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\prices",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\breadth_daily.parquet",
+    "gold_sample_k": 5,
+    "gold_min_ok_frac": 1.0,
+    "gold_required_cols": [
+      "close_adj",
+      "volume"
+    ],
+    "gold_require_timestamp": false,
+    "silver_tickers": [],
+    "silver_required_cols": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "silver_context": 60,
+    "silver_pred": 10,
+    "silver_stride": 1,
+    "check_selector_artifacts": true,
+    "as_of_date": "2026-02-05",
+    "min_coverage": 0.98,
+    "input_mode": "token",
+    "codec_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\checkpoints\\codec_v1.json",
+    "preproc_json_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\preprocessing\\preproc_v1.json",
+    "report_path": "backend\\reports\\preflight_report.json"
+  },
+  "gold": {
+    "ok": true,
+    "pass_frac": 1.0,
+    "n_checked": 5,
+    "samples": [
+      {
+        "file": "AA.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AAA.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACB.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACBR.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      },
+      {
+        "file": "AACBU.parquet",
+        "ok": true,
+        "errors": [],
+        "kind": "unknown_or_short_series"
+      }
+    ]
+  },
+  "silver": {
+    "ok": false,
+    "error": "Directory not found"
+  },
+  "breadth": {
+    "ok": false,
+    "error": "Breadth file missing timestamp column"
+  },
+  "selector": {
+    "ok": false,
+    "errors": [
+      "Missing Priors for 2026-02-05 (v1)",
+      "Missing Selector Checkpoint v1",
+      "Missing Selector Scaler v1",
+      "Missing Calibration v1"
+    ]
+  },
+  "global_ok": false,
+  "recommendations": [
+    "Run 'python backend/scripts/selector/nightly_build_priors.py' or 'phase3_train_selector.py'"
+  ],
+  "next_command": "Fix errors first"
+}

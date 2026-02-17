@@ -1,0 +1,214 @@
+# Diagrams 2
+
+## Diagram 1 — High-level component architecture
+
+```mermaid
+flowchart LR
+  UI[Frontend UI] --> API[API Layer]
+  API --> ORCH[Orchestration/Controllers]
+  ORCH --> DATA[Data Ingestion/Canonicalization]
+  ORCH --> FEAT[Feature Engineering]
+  FEAT --> TRAIN[Training]
+  TRAIN --> EVAL[Validation/Backtest]
+  EVAL --> EXEC[Paper/Live Execution]
+  EXEC --> TELE[Telemetry/Logs]
+  TELE --> STORE[(Artifacts & Data Lake)]
+  DATA --> STORE
+  TRAIN --> STORE
+```
+
+## Mode: training
+
+```mermaid
+flowchart TD
+  A[Entrypoint] --> B[Load Config]
+  B --> C[Build Inputs]
+  C --> D[Core Logic]
+  D --> E[Write Artifacts/Telemetry]
+```
+
+## Mode: evaluation/backtest
+
+```mermaid
+flowchart TD
+  A[Entrypoint] --> B[Load Config]
+  B --> C[Build Inputs]
+  C --> D[Core Logic]
+  D --> E[Write Artifacts/Telemetry]
+```
+
+## Mode: execution
+
+```mermaid
+flowchart TD
+  A[Entrypoint] --> B[Load Config]
+  B --> C[Build Inputs]
+  C --> D[Core Logic]
+  D --> E[Write Artifacts/Telemetry]
+```
+
+## Mode: ingestion
+
+```mermaid
+flowchart TD
+  A[Entrypoint] --> B[Load Config]
+  B --> C[Build Inputs]
+  C --> D[Core Logic]
+  D --> E[Write Artifacts/Telemetry]
+```
+
+## Diagram 2 — Pipeline dataflow (end-to-end)
+```mermaid
+flowchart LR
+  I[Ingest] --> C[Canonicalize]
+  C --> F[Feature Build]
+  F --> T[Train]
+  T --> V[Validate]
+  V --> B[Backtest]
+  B --> P[Portfolio/Execution]
+  P --> M[Telemetry/Artifacts]
+```
+
+## Diagram 3 — Control flow / orchestration
+```mermaid
+sequenceDiagram
+  participant U as User/Runner
+  participant E as Entrypoint
+  participant C as Config Loader
+  participant D as Data/Features
+  participant S as Strategy/Decision
+  participant R as Risk/Constraints
+  participant B as Broker
+  participant T as Telemetry
+  U->>E: start run
+  E->>C: load config
+  E->>D: build universe/features
+  D->>S: feature frame
+  S->>R: generate decisions
+  R->>B: constrained orders
+  B->>T: fills/status
+  E->>T: run summary
+```
+
+## Module dependency graph (top 20 modules + edges)
+```mermaid
+flowchart LR
+
+  algaie_execution_options_config_py[config.py]
+  sleeves_cooc_reversal_futures_pipeline_types_py[types.py]
+  algaie_data_options_vrp_features_py[vrp_features.py]
+  backend_scripts__cli_utils_py[_cli_utils.py]
+  algaie_data_common_py[common.py]
+  algaie_execution_options_structures_py[structures.py]
+  backend_tests_test_cooc_pipeline_py[test_cooc_pipeline.py]
+  sleeves_cooc_reversal_futures_sleeve_py[sleeve.py]
+  backend_scripts_run_phase1_cooc_py[run_phase1_cooc.py]
+  algaie_research_backtest_engine_py[backtest_engine.py]
+  sleeves_cooc_reversal_futures_pipeline_validation_py[validation.py]
+  algaie_execution_options_vrp_strategy_py[vrp_strategy.py]
+  backend_scripts_paper_run_paper_cycle_py[run_paper_cycle.py]
+  backend_scripts_research_run_backtest_py[run_backtest.py]
+  backend_scripts_run_run_nightly_cycle_py[run_nightly_cycle.py]
+  sleeves_cooc_reversal_futures_pipeline_cli_py[cli.py]
+  algaie_trading_derivatives_risk_py[derivatives_risk.py]
+  algaie_trading_orders_py[orders.py]
+  backend_scripts_live_run_live_cycle_py[run_live_cycle.py]
+  backend_scripts_train_selector_py[train_selector.py]
+  backend_tests_test_cooc_pipeline_py --> sleeves_cooc_reversal_futures_pipeline_validation_py
+  backend_tests_test_cooc_pipeline_py --> sleeves_cooc_reversal_futures_sleeve_py
+  backend_tests_test_cooc_pipeline_py --> sleeves_cooc_reversal_futures_pipeline_types_py
+  sleeves_cooc_reversal_futures_sleeve_py --> algaie_data_options_vrp_features_py
+  backend_scripts_run_phase1_cooc_py --> sleeves_cooc_reversal_futures_pipeline_validation_py
+  backend_scripts_run_phase1_cooc_py --> sleeves_cooc_reversal_futures_pipeline_types_py
+  sleeves_cooc_reversal_futures_pipeline_validation_py --> sleeves_cooc_reversal_futures_sleeve_py
+  sleeves_cooc_reversal_futures_pipeline_validation_py --> algaie_data_options_vrp_features_py
+  sleeves_cooc_reversal_futures_pipeline_validation_py --> sleeves_cooc_reversal_futures_pipeline_types_py
+  algaie_execution_options_vrp_strategy_py --> algaie_execution_options_structures_py
+  algaie_execution_options_vrp_strategy_py --> algaie_data_options_vrp_features_py
+  algaie_execution_options_vrp_strategy_py --> algaie_trading_derivatives_risk_py
+  algaie_execution_options_vrp_strategy_py --> algaie_execution_options_config_py
+  backend_scripts_paper_run_paper_cycle_py --> backend_scripts__cli_utils_py
+  backend_scripts_research_run_backtest_py --> algaie_research_backtest_engine_py
+  backend_scripts_run_run_nightly_cycle_py --> backend_scripts__cli_utils_py
+  sleeves_cooc_reversal_futures_pipeline_cli_py --> sleeves_cooc_reversal_futures_pipeline_validation_py
+  sleeves_cooc_reversal_futures_pipeline_cli_py --> sleeves_cooc_reversal_futures_pipeline_types_py
+  algaie_trading_derivatives_risk_py --> algaie_execution_options_structures_py
+  algaie_trading_derivatives_risk_py --> algaie_execution_options_config_py
+  backend_scripts_live_run_live_cycle_py --> backend_scripts__cli_utils_py
+```
+
+## Call graph for top orchestrators
+```mermaid
+flowchart TD
+
+  O1[backend/app/api/main.py] --> O1a[load_config]
+  O1a --> O1b[build_data/features]
+  O1b --> O1c[run_strategy/train]
+  O1c --> O1d[emit_artifacts]
+  O2[backend/scripts/audit_selector_pipeline.py] --> O2a[load_config]
+  O2a --> O2b[build_data/features]
+  O2b --> O2c[run_strategy/train]
+  O2c --> O2d[emit_artifacts]
+  O3[backend/scripts/build_covariates.py] --> O3a[load_config]
+  O3a --> O3b[build_data/features]
+  O3b --> O3c[run_strategy/train]
+  O3c --> O3d[emit_artifacts]
+  O4[backend/scripts/build_priors_cache.py] --> O4a[load_config]
+  O4a --> O4b[build_data/features]
+  O4b --> O4c[run_strategy/train]
+  O4c --> O4d[emit_artifacts]
+  O5[backend/scripts/build_priors_frame.py] --> O5a[load_config]
+  O5a --> O5b[build_data/features]
+  O5b --> O5c[run_strategy/train]
+  O5c --> O5d[emit_artifacts]
+  O6[backend/scripts/canonicalize/canonicalize_daily.py] --> O6a[load_config]
+  O6a --> O6b[build_data/features]
+  O6b --> O6c[run_strategy/train]
+  O6c --> O6d[emit_artifacts]
+  O7[backend/scripts/data/update_futures_daily.py] --> O7a[load_config]
+  O7a --> O7b[build_data/features]
+  O7b --> O7c[run_strategy/train]
+  O7c --> O7d[emit_artifacts]
+  O8[backend/scripts/dev_emit_fake_telemetry.py] --> O8a[load_config]
+  O8a --> O8b[build_data/features]
+  O8b --> O8c[run_strategy/train]
+  O8c --> O8d[emit_artifacts]
+  O9[backend/scripts/eligibility/build_eligibility.py] --> O9a[load_config]
+  O9a --> O9b[build_data/features]
+  O9b --> O9c[run_strategy/train]
+  O9c --> O9d[emit_artifacts]
+  O10[backend/scripts/eval_chronos_metrics.py] --> O10a[load_config]
+  O10a --> O10b[build_data/features]
+  O10b --> O10c[run_strategy/train]
+  O10c --> O10d[emit_artifacts]
+```
+
+## Data schema graph
+```mermaid
+flowchart LR
+  RAW[(Raw CSV/Parquet)] --> CAN[(Canonical bars)]
+  CAN --> FEAT[(Feature frames)]
+  FEAT --> MODEL[(Model artifacts)]
+  FEAT --> BT[(Backtest reports)]
+  MODEL --> EXEC[(Execution decisions)]
+  EXEC --> TEL[(Telemetry DB/JSON)]
+```
+
+## Artifact lifecycle
+```mermaid
+flowchart LR
+  R[Run start] --> A1[Create run directory]
+  A1 --> A2[Write config snapshot]
+  A2 --> A3[Write model/backtest outputs]
+  A3 --> A4[Write telemetry/logs]
+  A4 --> A5[Consumers: API/UI/analysis]
+```
+
+## Telemetry/metrics flow
+```mermaid
+flowchart LR
+  EM[Emitters in strategy/execution] --> ST[telemetry storage]
+  ST --> API[telemetry routes]
+  API --> UI[frontend views]
+```
+

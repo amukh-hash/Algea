@@ -1,0 +1,108 @@
+# Diagrams 3
+
+```mermaid
+flowchart LR
+UI[Frontend UI] --> API[Backend API]
+API --> ORCH[Pipeline Orchestrators]
+ORCH --> ING[Ingestion Providers]
+ING --> CAN[Canonical Data]
+CAN --> FEAT[Feature Builders]
+FEAT --> TRAIN[Training]
+TRAIN --> VAL[Validation]
+VAL --> BT[Backtest/Eval]
+BT --> EXEC[Execution]
+EXEC --> TEL[Telemetry/Artifacts]
+```
+
+```mermaid
+graph TD
+  backend_tests_test_cooc_phase15_alignment["backend.tests.test_cooc_phase15_alignment"]
+  backend_scripts_train_selector["backend.scripts.train_selector"]
+  deprecated_legacy_scripts_teacher_phase1_train_teacher_gold["deprecated.legacy_scripts.teacher.phase1_train_teacher_gold"]
+  sleeves_cooc_reversal_futures_pipeline_cli["sleeves.cooc_reversal_futures.pipeline.cli"]
+  backend_tests_test_cooc_pipeline["backend.tests.test_cooc_pipeline"]
+  backend_scripts_walkforward_eval["backend.scripts.walkforward_eval"]
+  backend_scripts_verify_run_phase15_alignment["backend.scripts.verify.run_phase15_alignment"]
+  sleeves_cooc_reversal_futures_pipeline_train["sleeves.cooc_reversal_futures.pipeline.train"]
+  backend_scripts_run_phase1_cooc["backend.scripts.run_phase1_cooc"]
+  backend_tests_test_validation_upgrades["backend.tests.test_validation_upgrades"]
+  deprecated_legacy_scripts_selector_phase3_train_selector["deprecated.legacy_scripts.selector.phase3_train_selector"]
+  sleeves_cooc_reversal_futures_pipeline_validation["sleeves.cooc_reversal_futures.pipeline.validation"]
+  backend_scripts_paper_run_paper_cycle_ibkr["backend.scripts.paper.run_paper_cycle_ibkr"]
+  backend_scripts_train_chronos2_teacher["backend.scripts.train_chronos2_teacher"]
+  backend_tests_test_two_level_gate["backend.tests.test_two_level_gate"]
+  backend_scripts_research_run_backtest["backend.scripts.research.run_backtest"]
+  backend_tests_test_alpha_conventions["backend.tests.test_alpha_conventions"]
+  deprecated_legacy_scripts_teacher_phase0_preflight["deprecated.legacy_scripts.teacher.phase0_preflight"]
+  scripts_run_three_sleeves_ibkr["scripts.run_three_sleeves_ibkr"]
+  backend_scripts_build_priors_cache["backend.scripts.build_priors_cache"]
+  backend_scripts_run_phase1_cooc --> sleeves_cooc_reversal_futures_pipeline_train
+  backend_scripts_run_phase1_cooc --> sleeves_cooc_reversal_futures_pipeline_validation
+  backend_scripts_verify_run_phase15_alignment --> sleeves_cooc_reversal_futures_pipeline_validation
+  backend_scripts_verify_run_phase15_alignment --> sleeves_cooc_reversal_futures_pipeline_train
+  backend_tests_test_cooc_phase15_alignment --> sleeves_cooc_reversal_futures_pipeline_validation
+  backend_tests_test_cooc_pipeline --> sleeves_cooc_reversal_futures_pipeline_train
+  backend_tests_test_cooc_pipeline --> sleeves_cooc_reversal_futures_pipeline_validation
+  backend_tests_test_validation_upgrades --> sleeves_cooc_reversal_futures_pipeline_validation
+  scripts_run_three_sleeves_ibkr --> backend_scripts_paper_run_paper_cycle_ibkr
+```
+
+```mermaid
+graph LR
+```
+
+```mermaid
+flowchart LR
+A[Ingest]-->B[Canonicalize]
+B-->C[Feature Build]
+C-->D[Train]
+D-->E[Validate]
+E-->F[Backtest]
+F-->G[Portfolio/Execution]
+G-->H[Telemetry/Artifacts]
+```
+
+```mermaid
+sequenceDiagram
+actor User
+participant Entrypoint
+participant Config
+participant Features
+participant Model
+participant Risk
+participant Broker
+participant Telemetry
+User->>Entrypoint: start run
+Entrypoint->>Config: load config
+Entrypoint->>Features: build universe/features
+Entrypoint->>Model: generate decisions
+Model->>Risk: apply constraints
+Risk->>Broker: place orders
+Broker->>Telemetry: emit fills/metrics
+```
+
+```mermaid
+graph LR
+Bronze[(bronze bars)]-->Silver[(silver bars)]-->Gold[(gold frame)]-->Dataset[(dataset.parquet)]-->Model[(model.pkl)]
+Model-->Validation[(validation_report.json)]
+Validation-->Promotion[(promotion summary)]
+```
+
+```mermaid
+flowchart TD
+Cfg[Config]-->Run[Run ID Folder]
+Run-->BronzeArt[bronze/*]
+Run-->CanonicalArt[canonical/*]
+Run-->DatasetArt[dataset/*]
+Run-->ModelArt[model/*]
+Run-->ValArt[validation/*]
+Run-->Pack[production_pack/*]
+Pack-->Consumers[Execution/UI]
+```
+
+```mermaid
+flowchart LR
+Emitters[Training/Execution modules]-->Logs[Logs/Reports in runs + backend outputs]
+Logs-->API[Backend endpoints/SSE]
+API-->UI[Frontend dashboards]
+```

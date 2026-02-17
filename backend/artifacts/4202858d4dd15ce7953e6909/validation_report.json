@@ -1,0 +1,42 @@
+{
+  "all_passed": false,
+  "baseline_ic": -0.050930685060587184,
+  "gates": [
+    {
+      "detail": "worst missingness 0.0008 in 'rolling_std_ret_co' (threshold=0.05)",
+      "name": "data_missingness",
+      "passed": true
+    },
+    {
+      "detail": "0 rows missing active_contract",
+      "name": "roll_coverage",
+      "passed": true
+    },
+    {
+      "detail": "all rows pass leakage check",
+      "name": "leakage",
+      "passed": true
+    },
+    {
+      "detail": "model IC=-0.0654, baseline IC=-0.0509, tol=0.01",
+      "name": "model_sanity",
+      "passed": false
+    },
+    {
+      "detail": "crash: zero_exposure=True, no_orders=True",
+      "name": "strategy_crash",
+      "passed": true
+    },
+    {
+      "detail": "normal_gross=0.8000, caution_gross=0.4000, scale=0.5",
+      "name": "strategy_caution",
+      "passed": true
+    },
+    {
+      "detail": "contracts={'ES': 20, 'NQ': 20}, cap=20",
+      "name": "strategy_caps",
+      "passed": true
+    }
+  ],
+  "model_ic": -0.06539062330442835
+}
