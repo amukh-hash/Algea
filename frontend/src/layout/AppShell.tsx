@@ -7,6 +7,7 @@ import { useConnectionSummary } from "@/realtime/useRunStream";
 
 const nav = [
   { href: "/execution", label: "Execution" },
+  { href: "/orchestrator", label: "Orchestrator" },
   { href: "/research", label: "Research" },
   { href: "/compare", label: "Compare" },
   { href: "/settings", label: "Settings" },

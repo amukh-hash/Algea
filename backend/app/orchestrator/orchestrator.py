@@ -37,6 +37,7 @@ class Orchestrator:
         jobs: list[Job] | None = None,
         broker: BrokerAdapter | None = None,
         runner: JobRunner | None = None,
+        telemetry: bool = False,
     ) -> None:
         self.config = config or OrchestratorConfig()
         self.calendar = MarketCalendar(self.config)
@@ -45,6 +46,14 @@ class Orchestrator:
         self.broker = broker or PaperBrokerStub()
         self.runner = runner or JobRunner()
         self.locks = LockManager(self.config.db_path)
+        self._telemetry_bridge: Any = None
+        if telemetry:
+            try:
+                from .telemetry_bridge import TelemetryBridge
+                self._telemetry_bridge = TelemetryBridge()
+                logger.info("Telemetry bridge enabled")
+            except Exception:
+                logger.warning("Telemetry bridge unavailable", exc_info=True)
 
     def _day_root(self, asof_date: date) -> Path:
         root = self.config.artifact_root / asof_date.isoformat()
@@ -164,4 +173,6 @@ class Orchestrator:
         (day_root / "runs" / f"{run_id}.json").write_text(json.dumps(asdict(tick), indent=2), encoding="utf-8")
         self._write_heartbeat(day_root, now_et(), session, status)
         logger.info("orchestrator tick complete: %s", tick)
+        if self._telemetry_bridge:
+            self._telemetry_bridge.emit_tick(tick, dry_run=dry_run)
         return tick

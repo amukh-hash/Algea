@@ -30,6 +30,11 @@ def parse_args() -> argparse.Namespace:
         default="stub",
         help="Broker backend: 'stub' (default, no real orders) or 'ibkr' (connects to IBKR TWS/Gateway)",
     )
+    parser.add_argument(
+        "--telemetry",
+        action="store_true",
+        help="Enable telemetry bridge (publish ticks to telemetry DB for frontend)",
+    )
     return parser.parse_args()
 
 
@@ -56,7 +61,7 @@ def main() -> None:
         config.poll_interval_s = args.poll_interval
 
     broker = _build_broker(args.broker)
-    orch = Orchestrator(config=config, broker=broker)
+    orch = Orchestrator(config=config, broker=broker, telemetry=args.telemetry)
     forced_session = Session(args.session) if args.session else None
 
     if run_once:
