@@ -24,7 +24,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--session", choices=[s.value for s in Session])
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--poll-interval", type=int, default=None)
+    parser.add_argument(
+        "--broker",
+        choices=["stub", "ibkr"],
+        default="stub",
+        help="Broker backend: 'stub' (default, no real orders) or 'ibkr' (connects to IBKR TWS/Gateway)",
+    )
     return parser.parse_args()
+
+
+def _build_broker(broker_type: str):
+    """Create the appropriate broker adapter."""
+    if broker_type == "ibkr":
+        from backend.app.orchestrator.broker_ibkr_adapter import IBKRBrokerAdapter
+
+        print("[orchestrate] Using IBKR live broker adapter (from env vars)")
+        return IBKRBrokerAdapter.from_env()
+    else:
+        from backend.app.orchestrator.broker import PaperBrokerStub
+
+        print("[orchestrate] Using paper broker stub")
+        return PaperBrokerStub()
 
 
 def main() -> None:
@@ -35,7 +55,8 @@ def main() -> None:
     if args.poll_interval is not None:
         config.poll_interval_s = args.poll_interval
 
-    orch = Orchestrator(config=config)
+    broker = _build_broker(args.broker)
+    orch = Orchestrator(config=config, broker=broker)
     forced_session = Session(args.session) if args.session else None
 
     if run_once:

@@ -197,16 +197,177 @@ def _generic_signal_handler(ctx: dict[str, Any], sleeve: str, symbols: list[str]
 
 
 def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
-    return _generic_signal_handler(ctx, "core", ["SPY", "QQQ", "IWM"])
+    """Core sleeve: CO->OC reversal futures signals.
+
+    Delegates to ``run_paper_cycle_ibkr.phase_open`` when available.
+    Falls back to the stub _generic_signal_handler if strategy imports fail.
+    """
+    try:
+        import sys
+        from pathlib import Path as _P
+        _root = _P(__file__).resolve().parents[3]
+        if str(_root) not in sys.path:
+            sys.path.insert(0, str(_root))
+
+        from backend.scripts.paper.run_paper_cycle_ibkr import phase_open, _load_config as _load_sleeve_cfg
+        from datetime import date
+
+        asof = date.fromisoformat(_asof(ctx))
+        # Locate default config & inputs
+        config_path = str(_root / "backend" / "configs" / "cooc_reversal_futures.yaml")
+        inputs_path = str(_root / "data_cache" / "canonical_futures_daily.parquet")
+
+        mode = ctx.get("mode", "noop")
+        if ctx.get("dry_run", True):
+            mode = "noop"  # never route orders from signal generation
+
+        phase_open(
+            cfg=_load_sleeve_cfg(config_path),
+            inputs_path=inputs_path,
+            asof=asof,
+            mode=mode,
+        )
+
+        # Write simplified targets for downstream orchestrator jobs
+        p = _paths(ctx)
+        tgt_path = p["targets"] / "core_targets.json"
+        sig_path = p["signals"] / "core_signals.json"
+        _write_json(sig_path, {
+            "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+            "sleeve": "core", "source": "phase_open",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        # Core sleeve manages its own orders; provide zero-weight targets
+        # so downstream risk checks don't flag missing files
+        _write_json(tgt_path, {
+            "status": "ok", "asof_date": _asof(ctx), "sleeve": "core",
+            "targets": [],  # Core manages its own execution
+        })
+
+        return {
+            "status": "ok",
+            "artifacts": {"core_signals": str(sig_path), "core_targets": str(tgt_path)},
+            "metrics": {"source": "phase_open"},
+        }
+    except Exception as exc:
+        logger.warning("Core signal handler falling back to stub: %s", exc)
+        return _generic_signal_handler(ctx, "core", ["SPY", "QQQ", "IWM"])
 
 
 def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
-    return _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])
+    """VRP sleeve: options volatility premium signals.
+
+    Delegates to ``run_three_sleeves_ibkr.run_vrp`` when available.
+    Always runs in noop mode to avoid SPX sizing risk.
+    Falls back to stub if imports fail.
+    """
+    try:
+        import sys
+        from pathlib import Path as _P
+        _root = _P(__file__).resolve().parents[3]
+        if str(_root) not in sys.path:
+            sys.path.insert(0, str(_root))
+
+        from scripts.run_three_sleeves_ibkr import run_vrp
+        from algaie.trading.broker_ibkr import IBKRLiveBroker
+        from datetime import date
+
+        asof = date.fromisoformat(_asof(ctx))
+
+        # VRP sleeve always noop — SPX sizing danger
+        # Create a temporary readonly broker for signal generation (no trades)
+        try:
+            broker = IBKRLiveBroker.from_env()
+        except Exception:
+            broker = None
+
+        if broker is not None:
+            vrp_result = run_vrp(broker, capital=30_000.0, asof=asof, mode="noop")
+            try:
+                broker._disconnect()
+            except Exception:
+                pass
+        else:
+            vrp_result = {"status": "skipped", "reason": "no broker available"}
+
+        p = _paths(ctx)
+        sig_path = p["signals"] / "vrp_signals.json"
+        tgt_path = p["targets"] / "vrp_targets.json"
+        _write_json(sig_path, {
+            "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+            "sleeve": "vrp", "source": "run_vrp",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "vrp_result": vrp_result,
+        })
+        # VRP is always noop, provide empty targets
+        _write_json(tgt_path, {
+            "status": "ok", "asof_date": _asof(ctx), "sleeve": "vrp",
+            "targets": [],  # VRP currently noop
+        })
+
+        return {
+            "status": "ok",
+            "artifacts": {"vrp_signals": str(sig_path), "vrp_targets": str(tgt_path)},
+            "metrics": {"source": "run_vrp", "mode": "noop"},
+        }
+    except Exception as exc:
+        logger.warning("VRP signal handler falling back to stub: %s", exc)
+        return _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])
 
 
 def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Selector sleeve: equities swing trading signals.
+
+    Delegates to ``run_three_sleeves_ibkr._load_selector_signals`` when available.
+    Falls back to stub if imports fail.
+    """
     run_type = "intraday" if _session(ctx) == Session.INTRADAY.value else "premarket"
-    return _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"], run_type=run_type)
+    try:
+        import sys
+        from pathlib import Path as _P
+        _root = _P(__file__).resolve().parents[3]
+        if str(_root) not in sys.path:
+            sys.path.insert(0, str(_root))
+
+        from scripts.run_three_sleeves_ibkr import _load_selector_signals
+        from datetime import date
+
+        asof = date.fromisoformat(_asof(ctx))
+        signals_df = _load_selector_signals(asof, top_n=10)
+
+        # Convert DataFrame signals to target weights
+        targets = []
+        if signals_df is not None and len(signals_df) > 0:
+            for _, row in signals_df.iterrows():
+                targets.append({
+                    "symbol": str(row.get("symbol", "")),
+                    "target_weight": round(float(row.get("weight", 0.0)), 6),
+                    "score": round(float(row.get("score_final", 0.0)), 6),
+                    "side": str(row.get("side", "")),
+                })
+
+        p = _paths(ctx)
+        sig_path = p["signals"] / "selector_signals.json"
+        tgt_path = p["targets"] / "selector_targets.json"
+        _write_json(sig_path, {
+            "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+            "sleeve": "selector", "run_type": run_type, "source": "_load_selector_signals",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "signals": targets,
+        })
+        _write_json(tgt_path, {
+            "status": "ok", "asof_date": _asof(ctx), "sleeve": "selector",
+            "targets": targets,
+        })
+
+        return {
+            "status": "ok",
+            "artifacts": {"selector_signals": str(sig_path), "selector_targets": str(tgt_path)},
+            "metrics": {"n_symbols": len(targets), "run_type": run_type, "source": "_load_selector_signals"},
+        }
+    except Exception as exc:
+        logger.warning("Selector signal handler falling back to stub: %s", exc)
+        return _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"], run_type=run_type)
 
 
 def _load_targets_required(ctx: dict[str, Any]) -> tuple[dict[str, Path], list[str]]:

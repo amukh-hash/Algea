@@ -11,7 +11,16 @@ from backend.app.orchestrator.broker import PaperBrokerStub
 from backend.app.orchestrator.calendar import MarketCalendar, Session
 from backend.app.orchestrator.config import OrchestratorConfig
 from backend.app.orchestrator.health import summarize_health
-from backend.app.orchestrator.job_defs import Job, handle_order_build_and_route, topo_sort
+from backend.app.orchestrator.job_defs import (
+    Job,
+    _generic_signal_handler,
+    handle_data_refresh_intraday,
+    handle_fills_reconcile,
+    handle_eod_reports,
+    handle_order_build_and_route,
+    handle_risk_checks_global,
+    topo_sort,
+)
 from backend.app.orchestrator.migrations import apply_migrations
 from backend.app.orchestrator.orchestrator import Orchestrator
 from backend.app.orchestrator.state_store import StateStore
@@ -35,6 +44,23 @@ def _cfg(tmp_path: Path) -> OrchestratorConfig:
         mode="paper",
         paper_only=True,
     )
+
+
+def _stub_signal_jobs() -> list[Job]:
+    """Create deterministic stub signal jobs for tests that validate orchestrator wiring."""
+    return [
+        Job("data_refresh_intraday", {Session.PREMARKET, Session.INTRADAY}, [], {"paper", "live", "noop"}, 120, 1, handle_data_refresh_intraday, min_interval_s=300),
+        Job("signals_generate_core", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0,
+            lambda ctx: _generic_signal_handler(ctx, "core", ["SPY", "QQQ", "IWM"])),
+        Job("signals_generate_vrp", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0,
+            lambda ctx: _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])),
+        Job("signals_generate_selector", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0,
+            lambda ctx: _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"])),
+        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
+        Job("order_build_and_route", {Session.OPEN}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
+        Job("fills_reconcile", {Session.INTRADAY, Session.CLOSE}, [], {"paper", "live", "noop"}, 120, 0, handle_fills_reconcile, min_interval_s=300),
+        Job("eod_reports", {Session.CLOSE, Session.OVERNIGHT}, ["fills_reconcile"], {"paper", "live", "noop"}, 120, 0, handle_eod_reports),
+    ]
 
 
 def test_calendar_trading_day_holiday(tmp_path):
@@ -77,14 +103,14 @@ def test_dependency_ordering_and_skip_on_failure(tmp_path):
 
 def test_paper_guard_blocks_non_paper(tmp_path):
     broker = SpyBroker(account_id="U123456", is_paper=True)
-    orch = Orchestrator(config=_cfg(tmp_path), broker=broker)
+    orch = Orchestrator(config=_cfg(tmp_path), jobs=_stub_signal_jobs(), broker=broker)
     orch.run_once(asof=date(2026, 2, 17), forced_session=Session.PREMARKET, dry_run=True)
     res = orch.run_once(asof=date(2026, 2, 17), forced_session=Session.OPEN, dry_run=False)
     assert "order_build_and_route" in res.failed_jobs
 
 
 def test_canonical_risk_report_schema(tmp_path):
-    orch = Orchestrator(config=_cfg(tmp_path), broker=SpyBroker())
+    orch = Orchestrator(config=_cfg(tmp_path), jobs=_stub_signal_jobs(), broker=SpyBroker())
     asof = date(2026, 2, 17)
     orch.run_once(asof=asof, forced_session=Session.PREMARKET, dry_run=True)
     risk_path = tmp_path / "artifacts" / asof.isoformat() / "reports" / "risk_checks.json"
@@ -97,7 +123,7 @@ def test_canonical_risk_report_schema(tmp_path):
 
 def test_open_dry_run_writes_orders_without_routing(tmp_path):
     broker = SpyBroker()
-    orch = Orchestrator(config=_cfg(tmp_path), broker=broker)
+    orch = Orchestrator(config=_cfg(tmp_path), jobs=_stub_signal_jobs(), broker=broker)
     asof = date(2026, 2, 17)
     orch.run_once(asof=asof, forced_session=Session.PREMARKET, dry_run=True)
     res = orch.run_once(asof=asof, forced_session=Session.OPEN, dry_run=True)
