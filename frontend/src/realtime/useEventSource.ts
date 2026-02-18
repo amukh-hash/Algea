@@ -1,34 +1,80 @@
 "use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ConnectionState } from "./types";
 
-import { useEffect, useState } from "react";
-import { ConnectionState } from "./types";
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_MAX_MS = 30_000;
+const MAX_RETRIES = 20;
 
-export function useEventSource(url: string | null, onEvent: (event: MessageEvent) => void) {
+/**
+ * Hardened EventSource hook with exponential backoff reconnect,
+ * retry counting, and rehydrating state.
+ */
+export function useEventSource(
+  url: string | null,
+  handlers: Record<string, (event: MessageEvent) => void>,
+) {
   const [state, setState] = useState<ConnectionState>("connecting");
   const [lastMessageAt, setLastMessageAt] = useState<number | null>(null);
+  const [reconnectCount, setReconnectCount] = useState(0);
+  const sourceRef = useRef<EventSource | null>(null);
+  const retriesRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+
+  const connect = useCallback(() => {
+    if (!url) return;
+
+    setState(retriesRef.current === 0 ? "connecting" : "reconnecting");
+    const source = new EventSource(url);
+    sourceRef.current = source;
+
+    source.onopen = () => {
+      setState("open");
+      retriesRef.current = 0;
+    };
+
+    source.onerror = () => {
+      source.close();
+      sourceRef.current = null;
+
+      if (retriesRef.current >= MAX_RETRIES) {
+        setState("error");
+        return;
+      }
+
+      const delay = Math.min(
+        BACKOFF_BASE_MS * 2 ** retriesRef.current,
+        BACKOFF_MAX_MS,
+      );
+      retriesRef.current += 1;
+      setReconnectCount((c) => c + 1);
+      setState("reconnecting");
+
+      timerRef.current = setTimeout(() => {
+        connect();
+      }, delay);
+    };
+
+    Object.entries(handlersRef.current).forEach(([name, cb]) => {
+      source.addEventListener(name, (evt) => {
+        setLastMessageAt(Date.now());
+        cb(evt as MessageEvent);
+      });
+    });
+  }, [url]);
 
   useEffect(() => {
-    if (!url) return;
-    const source = new EventSource(url);
-    source.onopen = () => setState("open");
-    source.onerror = () => setState("reconnecting");
-    source.onmessage = (evt) => {
-      setLastMessageAt(Date.now());
-      onEvent(evt);
-    };
-    const named = (evt: MessageEvent) => {
-      setLastMessageAt(Date.now());
-      onEvent(evt);
-    };
-    source.addEventListener("metric", named as EventListener);
-    source.addEventListener("event", named as EventListener);
-    source.addEventListener("status", named as EventListener);
-    source.addEventListener("heartbeat", named as EventListener);
-    return () => {
-      setState("closed");
-      source.close();
-    };
-  }, [url, onEvent]);
+    retriesRef.current = 0;
+    connect();
 
-  return { state, lastMessageAt };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (sourceRef.current) sourceRef.current.close();
+      setState("closed");
+    };
+  }, [connect]);
+
+  return { state, lastMessageAt, reconnectCount };
 }

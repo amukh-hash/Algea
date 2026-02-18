@@ -98,42 +98,31 @@ def get_artifact(run_id: str, artifact_id: str) -> FileResponse:
 @router.get("/stream/runs/{run_id}")
 def stream_run(run_id: str, request: Request, since_ts: datetime | None = None) -> StreamingResponse:
     queue = storage.subscribe(run_id)
-    last_event_id_raw = request.headers.get("Last-Event-ID")
-    try:
-      last_event_id = int(last_event_id_raw) if last_event_id_raw else 0
-    except ValueError:
-      last_event_id = 0
+    last_event_id = request.headers.get("last-event-id")
 
     async def event_gen():
+        seq = int(last_event_id) if (last_event_id and last_event_id.isdigit()) else 0
         try:
-            replayed = storage.replay_since(run_id, last_event_id)
-            if replayed:
-                for item in replayed:
-                    yield _sse(item["type"], json.dumps(item["data"]), item["id"])
-            elif last_event_id:
-                snap = storage.stream_snapshot(run_id)
-                yield _sse("snapshot", json.dumps({"ack_last_event_id": last_event_id, **snap}), last_event_id + 1)
-
             if since_ts:
                 for event in storage.query_events(run_id, since_ts, None, None, None, limit=250):
-                    payload = event.model_dump(mode="json")
-                    yield _sse("event", json.dumps(payload), int(payload.get("id", 0)) or 0)
+                    seq += 1
+                    yield _sse("event", event.model_dump_json(), seq)
+            if last_event_id:
+                seq += 1
+                yield _sse("snapshot", json.dumps({"run_id": run_id, "ack_last_event_id": last_event_id}), seq)
             while True:
                 item = queue_get(queue, timeout=1)
                 if item:
-                    yield _sse(item["type"], json.dumps(item["data"]), int(item.get("id", 0)))
+                    seq += 1
+                    yield _sse(item["type"], json.dumps(item["data"]), seq)
                 else:
-                    yield _sse("heartbeat", json.dumps({"ts": now_utc().isoformat()}), 0)
+                    seq += 1
+                    yield _sse("heartbeat", json.dumps({"ts": now_utc().isoformat()}), seq)
         finally:
             storage.unsubscribe(run_id, queue)
 
-    return StreamingResponse(
-        event_gen(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 def _sse(event: str, data: str, event_id: int) -> str:
-    prefix = f"id: {event_id}\n" if event_id > 0 else ""
-    return f"{prefix}event: {event}\ndata: {data}\n\n"
+    return f"id: {event_id}\nevent: {event}\ndata: {data}\n\n"

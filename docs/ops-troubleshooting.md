@@ -1,47 +1,108 @@
-# Ops Troubleshooting
+# Operations Troubleshooting
 
-## Windows: HOME / Playwright setup
-- PowerShell (current session):
-  - `$env:HOME=$env:USERPROFILE`
-- Permanent user env var:
-  - `setx HOME "%USERPROFILE%"`
-- Optional browser cache path:
-  - `setx PLAYWRIGHT_BROWSERS_PATH "%USERPROFILE%\\ms-playwright"`
+## Windows Environment Setup
 
-## Stale process on a port
-- Find process:
-  - `netstat -ano | findstr :8000`
-- Kill process:
-  - `taskkill /PID <pid> /F`
+### `HOME` not set (Playwright / Chromium)
 
-## API timeout symptoms
-- `/api/orchestrator/status` returns 504 when orchestrator probe exceeds timeout.
-- Check `X-Request-ID` in response headers for trace correlation.
+Playwright expects `$HOME` (or `USERPROFILE`) to find its browser cache. On Windows, `HOME` is often unset.
 
-## npm registry access for lint dependencies
-If `npm run lint` fails with missing `eslint`/`eslint-config-next`, verify your registry credentials and scope mapping.
-
-Example `frontend/.npmrc` for npmjs:
-
-```ini
-registry=https://registry.npmjs.org/
-always-auth=true
-//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+**Fix — set `HOME` permanently in PowerShell:**
+```powershell
+[Environment]::SetEnvironmentVariable("HOME", $env:USERPROFILE, "User")
 ```
 
-If your org uses an internal mirror, point `registry=` to that endpoint and configure auth accordingly.
-
-### Why `lint:maybe` can skip in restricted environments
-`npm run lint:maybe` is designed for sandboxed/restricted environments where devDependencies cannot be installed (e.g., HTTP 403 from registry). It prints a clear skip message and exits 0 instead of failing the whole run. In CI and developer machines with full access, use `npm run lint:ci`.
-
-## Local commands to fully enable lint and lockfiles
-Run the following from repo root:
-
-```bash
-cd frontend
-npm install
-npm run lint:ci
-npm run test
-git add package-lock.json package.json .eslintrc.json
-git commit -m "Add ESLint deps and CI-safe lint scripts"
+**Or per-session:**
+```powershell
+$env:HOME = $env:USERPROFILE
 ```
+
+### `PLAYWRIGHT_BROWSERS_PATH`
+
+To control where Playwright installs Chromium:
+
+```powershell
+[Environment]::SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", "$env:USERPROFILE\.playwright", "User")
+npx playwright install chromium
+```
+
+---
+
+## Stale Port / Backend Hangs
+
+### Symptoms
+- `http://localhost:8000/api/orchestrator/status` hangs indefinitely
+- `uvicorn` fails to start with `[Errno 10048]` (port already in use)
+- Dashboard shows empty cards with no error messages
+
+### Diagnose
+
+Find what holds port 8000:
+```powershell
+Get-NetTCPConnection -LocalPort 8000 |
+  Select-Object LocalPort, OwningProcess |
+  ForEach-Object { Get-Process -Id $_.OwningProcess }
+```
+
+### Fix
+
+Kill the stale process:
+```powershell
+Get-NetTCPConnection -LocalPort 8000 |
+  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
+
+Then restart cleanly:
+```powershell
+py -m uvicorn backend.app.api.main:app --port 8000
+```
+
+---
+
+## Health Check
+
+After starting the backend, verify health:
+
+```
+GET http://localhost:8000/healthz
+```
+
+Returns:
+```json
+{
+  "ok": true,
+  "elapsed_ms": 3.2,
+  "checks": {
+    "event_loop": { "ok": true, "latency_ms": 0.01 },
+    "state_db": { "ok": true, "run_count": 42 },
+    "heartbeat": { "ok": true, "age_seconds": 45.3, "session": "intraday" }
+  }
+}
+```
+
+- HTTP 200 = all checks pass
+- HTTP 503 = at least one check failed (see `checks` for details)
+
+---
+
+## Request Timeouts
+
+All `/api/orchestrator/*` endpoints enforce a 5-second timeout. If a database query or file read blocks longer than 5s, the backend returns:
+
+```json
+HTTP 504
+{
+  "error": "timeout",
+  "detail": "_get_status_sync did not complete within 5.0s"
+}
+```
+
+The frontend surfaces this as a "Connection Timeout" banner with a Retry button.
+
+---
+
+## Frontend Not Loading
+
+1. Check backend is running: `curl http://localhost:8000/healthz`
+2. Check frontend is running: `curl http://localhost:3000`
+3. Check CORS: backend must include `http://localhost:3000` in allowed origins (configured in `main.py`)
+4. Check browser console for CORS or network errors

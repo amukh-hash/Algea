@@ -3,37 +3,63 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Button, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { auditLog } from "@/lib/audit";
+import { Button, PageHeader, SearchInput, StatusBadge } from "@/components/ui/primitives";
 
 export default function ResearchPage() {
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"name" | "type" | "status" | "started">("started");
   const [selected, setSelected] = useState<string[]>([]);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const router = useRouter();
-  const runs = useQuery({ queryKey: ["research-runs", q], queryFn: () => api.listRuns(q, 300), staleTime: 60_000 });
+  const { data, refetch } = useQuery({ queryKey: ["registry", q], queryFn: () => api.listRuns(q, 200), staleTime: 60_000 });
 
-  const items = useMemo(() => [...(runs.data?.items ?? [])].sort((a, b) => sortDir === "desc" ? b.started_at.localeCompare(a.started_at) : a.started_at.localeCompare(b.started_at)), [runs.data, sortDir]);
+  const items = useMemo(() => [...(data?.items ?? [])].sort((a, b) => {
+    if (sort === "started") return a.started_at < b.started_at ? 1 : -1;
+    if (sort === "name") return a.name.localeCompare(b.name);
+    if (sort === "type") return a.run_type.localeCompare(b.run_type);
+    return a.status.localeCompare(b.status);
+  }), [data?.items, sort]);
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Research" subtitle="Registry of runs" actions={<Button onClick={() => runs.refetch()}>Refresh</Button>} />
-      <Card className="sticky top-14 z-10">
-        <div className="flex flex-wrap items-center gap-2"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by id or name" className="min-w-72 flex-1 rounded-md border border-border bg-surface-2 p-2" /><Button onClick={() => setSortDir((s) => s === "asc" ? "desc" : "asc")}>Sort started {sortDir}</Button><Button disabled={selected.length < 2 || selected.length > 5} onClick={() => router.push(`/compare?runIds=${selected.join(",")}`)}>Compare ({selected.length})</Button></div>
-      </Card>
-      {runs.isError && <EmptyState title="Unable to fetch registry" message="Try manual refresh." cta={<Button onClick={() => runs.refetch()}>Retry</Button>} />}
-      <div className="overflow-auto rounded-lg border border-border">
-        <table className="min-w-full text-sm">
-          <thead className="bg-surface-2 text-secondary"><tr><th className="p-2"><input aria-label="Select all" type="checkbox" checked={items.length > 0 && selected.length === items.length} onChange={(e) => setSelected(e.target.checked ? items.map((r) => r.run_id) : [])} /></th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Type</th><th className="p-2 text-left">Status</th><th className="p-2 text-left" aria-sort={sortDir === "asc" ? "ascending" : "descending"}>Started</th></tr></thead>
+      <PageHeader title="Research Run Registry" subtitle={`${data?.total ?? 0} total runs`} actions={<><Button onClick={() => refetch()}>Refresh</Button><Button onClick={() => (auditLog("copy_ids", { count: selected.length }), navigator.clipboard.writeText(selected.join(",")))}>Copy IDs</Button></>} />
+      <div className="sticky top-[90px] z-10 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-1 p-3">
+        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search runs" />
+        <Button onClick={() => setSort("name")}>Sort name</Button>
+        <Button onClick={() => setSort("type")}>Sort type</Button>
+        <Button onClick={() => setSort("status")}>Sort status</Button>
+        <Button onClick={() => setSort("started")}>Sort started</Button>
+        <Button variant="primary" disabled={selected.length < 2 || selected.length > 5} onClick={() => router.push(`/compare?runIds=${selected.join(",")}`)}>Compare ({selected.length})</Button>
+      </div>
+      <div className="overflow-auto rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-surface-2 text-left text-xs text-secondary">
+            <tr>
+              <th className="p-2"><input type="checkbox" aria-label="Select all" onChange={(e) => setSelected(e.target.checked ? items.map((r) => r.run_id) : [])} checked={selected.length > 0 && selected.length === items.length} /></th>
+              <SortTh label="Name" active={sort === "name"} onClick={() => setSort("name")} />
+              <SortTh label="Type" active={sort === "type"} onClick={() => setSort("type")} />
+              <SortTh label="Status" active={sort === "status"} onClick={() => setSort("status")} />
+              <SortTh label="Started" active={sort === "started"} onClick={() => setSort("started")} />
+              <th className="p-2">Tags</th>
+              <th className="p-2">Action</th>
+            </tr>
+          </thead>
           <tbody>
-            {items.slice(0, 150).map((run) => (
-              <tr key={run.run_id} className="border-t border-border-subtle hover:bg-surface-2/60">
-                <td className="p-2"><input aria-label={`select ${run.name}`} type="checkbox" checked={selected.includes(run.run_id)} onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, run.run_id] : prev.filter((id) => id !== run.run_id))} /></td>
-                <td className="p-2"><Link className="text-info hover:underline" href={`/runs/${run.run_id}`}>{run.name}</Link></td>
+            {items.slice(0, 100).map((run, idx) => (
+              <tr key={run.run_id} tabIndex={0} className="border-t border-border-subtle" onKeyDown={(e) => {
+                if (e.key === " ") { e.preventDefault(); setSelected((s) => s.includes(run.run_id) ? s.filter((id) => id !== run.run_id) : [...s, run.run_id].slice(0, 5)); }
+                if (e.key === "Enter") router.push(`/runs/${run.run_id}`);
+                if (e.shiftKey && e.key === "ArrowDown" && items[idx + 1]) setSelected((s) => Array.from(new Set([...s, run.run_id, items[idx + 1].run_id])).slice(0, 5));
+              }}>
+                <td className="p-2"><input type="checkbox" checked={selected.includes(run.run_id)} onChange={() => setSelected((s) => s.includes(run.run_id) ? s.filter((id) => id !== run.run_id) : [...s, run.run_id].slice(0, 5))} /></td>
+                <td className="p-2"><Link href={`/runs/${run.run_id}`} className="text-info">{run.name}</Link></td>
                 <td className="p-2">{run.run_type}</td>
                 <td className="p-2"><StatusBadge status={run.status} /></td>
                 <td className="p-2">{new Date(run.started_at).toLocaleString()}</td>
+                <td className="p-2">{run.tags.slice(0, 3).join(", ")}</td>
+                <td className="p-2"><Link href={`/runs/${run.run_id}`} className="text-info">Open</Link></td>
               </tr>
             ))}
           </tbody>
@@ -41,4 +67,8 @@ export default function ResearchPage() {
       </div>
     </div>
   );
+}
+
+function SortTh({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return <th className="p-2" aria-sort={active ? "ascending" : "none"}><button onClick={onClick}>{label}</button></th>;
 }

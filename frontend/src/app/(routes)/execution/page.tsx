@@ -5,51 +5,69 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useRunStream } from "@/lib/sse";
-import { Button, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
-import { useToast } from "@/components/ui/toast";
+import { Button, EmptyState, PageHeader, SearchInput, Skeleton, StatusBadge } from "@/components/ui/primitives";
+import { EventsTimeline } from "@/components/events_timeline";
+import dynamic from "next/dynamic";
 
-function RunCard({ runId, name, paused }: { runId: string; name: string; paused: boolean }) {
-  const stream = useRunStream(runId);
-  const latest = (k: string) => stream.metricsLW[k]?.at(-1)?.value;
-  return (
-    <Card className="space-y-3">
-      <div className="flex items-start justify-between gap-2"><div><Link href={`/runs/${runId}`} className="font-medium text-info hover:underline">{name}</Link><p className="text-xs text-secondary">{runId.slice(0, 12)}</p></div><StatusBadge status={stream.status} /></div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div><p className="text-secondary">PnL</p><p>{latest("pnl_net")?.toFixed(2) ?? "—"}</p></div>
-        <div><p className="text-secondary">Gross</p><p>{latest("gross_exposure")?.toFixed(2) ?? "—"}</p></div>
-        <div><p className="text-secondary">Risk</p><p>{latest("risk_scale")?.toFixed(2) ?? "—"}</p></div>
-      </div>
-      <p className="text-xs text-secondary">Connection: {stream.connectionState}{paused ? " · buffered" : ""}</p>
-    </Card>
-  );
-}
+const Chart = dynamic(() => import("@/components/TimeSeriesChartLW").then((m) => m.TimeSeriesChartLW), { ssr: false });
 
 export default function ExecutionPage() {
-  const [search, setSearch] = useState("");
   const [paused, setPaused] = useState(false);
-  const { push } = useToast();
-  const runs = useQuery({ queryKey: ["runs", search], queryFn: () => api.listRuns(search, 200), staleTime: 30_000 });
+  const [q, setQ] = useState("");
+  const [display, setDisplay] = useState<"cards" | "list">("cards");
+  const { data, isLoading, refetch } = useQuery({ queryKey: ["execution-runs", q], queryFn: () => api.listRuns(q || "Sleeve", 40) });
+  const runs = data?.items ?? [];
+  const family = runs.filter((r) => r.tags.includes("family"));
+  const other = runs.filter((r) => !r.tags.includes("family"));
 
-  const filtered = useMemo(() => (runs.data?.items ?? []).filter((run) => run.name.toLowerCase().includes(search.toLowerCase()) || run.run_id.includes(search)), [runs.data, search]);
-  const family = filtered.filter((r) => r.tags.includes("family"));
-  const other = filtered.filter((r) => !r.tags.includes("family"));
+  const warnings = useMemo(() => runs.filter((r) => ["error", "paused"].includes(r.status)).length, [runs]);
+  const running = runs.filter((r) => r.status === "running").length;
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Trading Ops" subtitle="Live execution and recent sleeve runs" actions={<div className="flex gap-2"><Button onClick={() => setPaused((v) => !v)}>{paused ? "Resume" : "Pause live updates"}</Button><Button onClick={() => runs.refetch()}>Refresh snapshot</Button></div>} />
-      <Card className="sticky top-14 z-10 flex flex-wrap gap-4 text-sm">
-        <span className="rounded-full border border-success/40 px-2 py-1 text-success">Live stream</span>
-        <span>Running: {filtered.filter((r) => r.status === "running").length}</span>
-        <span>Warn/Error: {filtered.filter((r) => ["error", "paused"].includes(r.status)).length}</span>
-      </Card>
-      <Card>
-        <label className="text-xs text-secondary" htmlFor="run-search">Search runs</label>
-        <input id="run-search" value={search} onChange={(e) => setSearch(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-surface-2 p-2" />
-      </Card>
-      {runs.isError && <EmptyState title="Failed to load runs" message="Check API connectivity and retry." cta={<Button onClick={() => runs.refetch()}>Retry</Button>} />}
-      <section className="space-y-2"><h2 className="text-sm font-semibold">Family runs ({family.length})</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{family.map((run) => <RunCard key={run.run_id} runId={run.run_id} name={run.name} paused={paused} />)}</div></section>
-      <section className="space-y-2"><h2 className="text-sm font-semibold">Other runs ({other.length})</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{other.map((run) => <RunCard key={run.run_id} runId={run.run_id} name={run.name} paused={paused} />)}</div></section>
-      {paused && <Button variant="ghost" onClick={() => push("Buffered updates discarded")}>Resume (discard buffered)</Button>}
+      <PageHeader title="Trading Ops" subtitle="Live execution and recent sleeve runs" actions={<><Button onClick={() => setPaused((v) => !v)}>{paused ? "Resume" : "Pause live updates"}</Button><Button onClick={() => refetch()}>Refresh snapshot</Button></>} />
+      <div className="sticky top-[90px] z-10 grid grid-cols-2 gap-3 rounded-md border border-border bg-surface-1 p-3 text-sm md:grid-cols-4">
+        <div><div className="text-muted">Connection</div><div>Live stream</div></div>
+        <div><div className="text-muted">Last update</div><div>{new Date().toLocaleTimeString()}</div></div>
+        <div><div className="text-muted">Running runs</div><div>{running}</div></div>
+        <div><div className="text-muted">Warnings/errors</div><div>{warnings}</div></div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search runs" />
+        <Button variant={display === "cards" ? "primary" : "secondary"} onClick={() => setDisplay("cards")}>Cards</Button>
+        <Button variant={display === "list" ? "primary" : "secondary"} onClick={() => setDisplay("list")}>List</Button>
+      </div>
+      {isLoading && <Skeleton className="h-40" />}
+      {!isLoading && runs.length === 0 && <EmptyState title="No runs" message="Start a sleeve run to populate this dashboard." cta={<Link className="text-info" href="/research">Open research registry</Link>} />}
+      <RunGroup title="Family runs" runs={family} paused={paused} display={display} />
+      <RunGroup title="All other runs" runs={other} paused={paused} display={display} />
     </div>
+  );
+}
+
+function RunGroup({ title, runs, paused, display }: { title: string; runs: Awaited<ReturnType<typeof api.listRuns>>["items"]; paused: boolean; display: "cards" | "list"; }) {
+  const [collapsed, setCollapsed] = useState(false);
+  if (!runs.length) return null;
+  return (
+    <section>
+      <button className="mb-2 text-sm font-semibold" onClick={() => setCollapsed((v) => !v)}>{title} ({runs.length}) {collapsed ? "▸" : "▾"}</button>
+      {!collapsed && <div className={display === "cards" ? "grid gap-3 md:grid-cols-2" : "space-y-2"}>{runs.map((run) => <RunItem key={run.run_id} runId={run.run_id} name={run.name} status={run.status} tags={run.tags} paused={paused} compact={display === "list"} />)}</div>}
+    </section>
+  );
+}
+
+function RunItem({ runId, name, status, tags, paused, compact }: { runId: string; name: string; status: string; tags: string[]; paused: boolean; compact: boolean; }) {
+  const { metricsLW, events } = useRunStream(runId, paused);
+  const pnl = metricsLW.pnl_net ?? metricsLW.equity ?? [];
+  return (
+    <article className="rounded-md border border-border bg-surface-1 p-3">
+      <div className="flex items-center justify-between">
+        <div><Link href={`/runs/${runId}`} className="font-medium text-primary">{name}</Link><div className="text-xs text-muted">{runId.slice(0, 12)}</div></div>
+        <StatusBadge status={status} />
+      </div>
+      <div className="my-2 flex flex-wrap gap-1">{tags.slice(0, 4).map((tag) => <span key={tag} className="rounded bg-surface-2 px-2 py-0.5 text-xs text-secondary">{tag}</span>)}</div>
+      {!compact && pnl.length > 0 && <Chart title="PnL / Equity" mode="compact" series={[{ key: "pnl", name: "PnL", data: pnl }]} height={120} />}
+      <div className="mt-2"><EventsTimeline events={events.slice(0, 5)} filterLevel="warn" /></div>
+    </article>
   );
 }
