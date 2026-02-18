@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 
 def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -10,6 +10,11 @@ def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
     ).fetchone()
     return row is not None
+
+
+def _column_exists(conn: sqlite3.Connection, table_name: str, column_name: str) -> bool:
+    cols = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(c[1] == column_name for c in cols)
 
 
 def _create_v1(conn: sqlite3.Connection) -> None:
@@ -53,12 +58,20 @@ def _create_v1(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_name ON jobs(job_name)")
 
 
+def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
+    """Add last_success_at column for per-job cooldown tracking."""
+    if not _column_exists(conn, "jobs", "last_success_at"):
+        conn.execute("ALTER TABLE jobs ADD COLUMN last_success_at TEXT")
+    conn.execute("UPDATE schema_version SET version=2")
+
+
 def apply_migrations(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
 
     if not _table_exists(conn, "schema_version"):
         _create_v1(conn)
+        _migrate_v1_to_v2(conn)
         conn.commit()
         return
 
@@ -75,16 +88,21 @@ def apply_migrations(conn: sqlite3.Connection) -> None:
             "Upgrade orchestrator code before continuing."
         )
 
-    # explicit incremental migration chain placeholder
+    # explicit incremental migration chain
     while version < CURRENT_SCHEMA_VERSION:
         if version == 0:
             _create_v1(conn)
             version = 1
-            conn.execute("UPDATE schema_version SET version=1")
+            continue
+        if version == 1:
+            _migrate_v1_to_v2(conn)
+            version = 2
             continue
         raise RuntimeError(f"No migration path from schema version {version}")
 
     # ensure v1 tables/indexes exist deterministically
     _create_v1(conn)
+    if not _column_exists(conn, "jobs", "last_success_at"):
+        conn.execute("ALTER TABLE jobs ADD COLUMN last_success_at TEXT")
     conn.execute("UPDATE schema_version SET version=?", (CURRENT_SCHEMA_VERSION,))
     conn.commit()

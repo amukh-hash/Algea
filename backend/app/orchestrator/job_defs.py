@@ -23,6 +23,7 @@ class Job:
     timeout_s: int
     retries: int
     handler: JobHandler
+    min_interval_s: int = 0
 
 
 def _require_ctx(ctx: dict[str, Any], *keys: str) -> None:
@@ -349,6 +350,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     max_total_order_notional = _cfg_float(cfg, "max_total_order_notional", 200_000)
     max_orders = _cfg_int(cfg, "max_orders", 50)
     fallback_price = _cfg_float(cfg, "price_fallback", 100.0)
+    is_dry_run = bool(ctx["dry_run"])
 
     combined: dict[str, float] = {}
     for _, tpath in target_paths.items():
@@ -363,14 +365,67 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     positions = positions_resp.get("positions", []) if isinstance(positions_resp, dict) else []
     current_qty: dict[str, float] = {str(pos.get("symbol", "")).strip(): float(pos.get("qty", 0.0)) for pos in positions}
 
-    prices: dict[str, float] = {}
+    # --- Structured price resolution ---
+    # Priority: 1) broker.get_quote  2) ctx["prices"] (daily close cache)  3) synthetic (dry-run only)
+    daily_close_cache: dict[str, float] = {}
     if isinstance(ctx.get("prices"), dict):
-        prices = {str(k): float(v) for k, v in ctx["prices"].items()}
+        daily_close_cache = {str(k): float(v) for k, v in ctx["prices"].items()}
+
+    broker = ctx["broker"]
+    has_get_quote = hasattr(broker, "get_quote")
+
+    resolved_prices: dict[str, tuple[float, str]] = {}  # sym -> (price, source)
+    missing_prices: list[str] = []
+    used_fallback = False
+
+    for sym in sorted(combined.keys()):
+        # Step 1: broker quote
+        price: float | None = None
+        source = "unknown"
+        if has_get_quote:
+            try:
+                price = broker.get_quote(sym)
+            except Exception:
+                price = None
+            if price is not None:
+                source = "broker"
+
+        # Step 2: daily close cache
+        if price is None and sym in daily_close_cache:
+            price = daily_close_cache[sym]
+            source = "daily_close"
+            used_fallback = True
+            logger.warning("price fallback to daily_close for %s: %.4f", sym, price)
+
+        # Step 3: synthetic (dry-run only) OR hard fail
+        if price is None:
+            if is_dry_run:
+                price = fallback_price
+                source = "synthetic"
+            else:
+                missing_prices.append(sym)
+                continue
+
+        resolved_prices[sym] = (price, source)
+
+    # Hard fail on missing prices in non-dry-run
+    if missing_prices and not is_dry_run:
+        rejected_path = p["orders"] / "rejected.json"
+        _write_json(
+            rejected_path,
+            {
+                "status": "failed",
+                "reasons": ["missing_price"],
+                "missing_symbols": missing_prices,
+            },
+        )
+        raise RuntimeError(f"missing price for {missing_prices} in non-dry-run mode")
 
     orders: list[dict[str, Any]] = []
     for sym, weight in sorted(combined.items()):
-        price = float(prices.get(sym, fallback_price))
-        price_source = "broker" if sym in prices else "synthetic"
+        if sym not in resolved_prices:
+            continue
+        price, price_source = resolved_prices[sym]
         current_notional = current_qty.get(sym, 0.0) * price
         target_notional = weight * account_equity
         delta_notional = target_notional - current_notional
@@ -401,7 +456,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         "asof_date": _asof(ctx),
         "session": _session(ctx),
         "mode": ctx["mode"],
-        "dry_run": bool(ctx["dry_run"]),
+        "dry_run": is_dry_run,
         "risk_report_path": str(report_path),
         "source_targets": {k: str(v) for k, v in target_paths.items()},
         "inputs": {
@@ -419,6 +474,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
             "order_count": len(orders),
             "total_abs_notional": round(total_abs_notional, 8),
             "max_single_abs_notional": round(max_single, 8),
+            "used_fallback_price": used_fallback,
         },
     }
     _write_json(orders_path, payload)
@@ -455,7 +511,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
 
     routed = False
     route_artifact = None
-    if not ctx["dry_run"] and ctx["mode"] not in {"noop"}:
+    if not is_dry_run and ctx["mode"] not in {"noop"}:
         if ctx["mode"] == "paper":
             ctx["broker"].verify_paper()
         broker_resp = ctx["broker"].place_orders(payload)
@@ -469,7 +525,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": "ok",
         "artifacts": artifacts,
-        "summary": {"routed": routed, "order_count": len(orders), "total_abs_notional": round(total_abs_notional, 8)},
+        "summary": {"routed": routed, "order_count": len(orders), "total_abs_notional": round(total_abs_notional, 8), "used_fallback_price": used_fallback},
     }
 
 
@@ -510,13 +566,13 @@ def handle_eod_reports(ctx: dict[str, Any]) -> dict[str, Any]:
 
 def default_jobs() -> list[Job]:
     return [
-        Job("data_refresh_intraday", {Session.PREMARKET, Session.INTRADAY}, [], {"paper", "live", "noop"}, 120, 1, handle_data_refresh_intraday),
+        Job("data_refresh_intraday", {Session.PREMARKET, Session.INTRADAY}, [], {"paper", "live", "noop"}, 120, 1, handle_data_refresh_intraday, min_interval_s=300),
         Job("signals_generate_core", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_core),
         Job("signals_generate_vrp", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_vrp),
-        Job("signals_generate_selector", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_selector),
+        Job("signals_generate_selector", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_selector, min_interval_s=300),
         Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
         Job("order_build_and_route", {Session.OPEN}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
-        Job("fills_reconcile", {Session.INTRADAY, Session.CLOSE}, [], {"paper", "live", "noop"}, 120, 0, handle_fills_reconcile),
+        Job("fills_reconcile", {Session.INTRADAY, Session.CLOSE}, [], {"paper", "live", "noop"}, 120, 0, handle_fills_reconcile, min_interval_s=300),
         Job("eod_reports", {Session.CLOSE, Session.OVERNIGHT}, ["fills_reconcile"], {"paper", "live", "noop"}, 120, 0, handle_eod_reports),
     ]
 

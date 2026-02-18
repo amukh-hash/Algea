@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -90,6 +90,21 @@ class Orchestrator:
         self.runner.dry_run = dry_run
 
         for job in jobs:
+            # --- cooldown / min-interval check (before dependency resolution) ---
+            if job.min_interval_s > 0:
+                last_ok = self.state.get_last_success_at(job.name)
+                if last_ok:
+                    try:
+                        last_ok_dt = datetime.fromisoformat(last_ok)
+                    except ValueError:
+                        last_ok_dt = None
+                    if last_ok_dt is not None:
+                        elapsed = (now.astimezone(timezone.utc) - last_ok_dt.astimezone(timezone.utc)).total_seconds()
+                        if elapsed < job.min_interval_s:
+                            skipped.append(job.name)
+                            self.state.mark_job_skipped(run_id, asof_date.isoformat(), session.value, job.name, "skipped_interval")
+                            continue
+
             if any(dep in failed_set for dep in job.deps):
                 skipped.append(job.name)
                 self.state.mark_job_skipped(run_id, asof_date.isoformat(), session.value, job.name, "blocked_by_dependency")

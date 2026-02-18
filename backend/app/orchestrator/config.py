@@ -26,6 +26,10 @@ class OrchestratorConfig:
     enabled_jobs: list[str] = field(default_factory=list)
     disabled_jobs: list[str] = field(default_factory=list)
     paper_only: bool = field(default_factory=lambda: os.getenv("ORCH_PAPER_ONLY", "1") == "1")
+    account_equity: float = field(default_factory=lambda: float(os.getenv("ORCH_ACCOUNT_EQUITY", "100000")))
+    max_order_notional: float = field(default_factory=lambda: float(os.getenv("ORCH_MAX_ORDER_NOTIONAL", "5000")))
+    max_total_order_notional: float = field(default_factory=lambda: float(os.getenv("ORCH_MAX_TOTAL_ORDER_NOTIONAL", "25000")))
+    max_orders: int = field(default_factory=lambda: int(os.getenv("ORCH_MAX_ORDERS", "20")))
     session_windows: dict[str, SessionWindow] = field(
         default_factory=lambda: {
             "PREMARKET": SessionWindow("07:00", "09:25"),

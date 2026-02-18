@@ -50,14 +50,15 @@ class StateStore:
             "stdout_path",
             "stderr_path",
             "artifacts_json",
+            "last_success_at",
         ]
         values = [fields.get(k) for k in keys]
         with self._connect() as conn:
             conn.execute("BEGIN")
             conn.execute(
                 """
-                INSERT INTO jobs(run_id, asof_date, session, job_name, status, started_at, ended_at, exit_code, error_summary, stdout_path, stderr_path, artifacts_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs(run_id, asof_date, session, job_name, status, started_at, ended_at, exit_code, error_summary, stdout_path, stderr_path, artifacts_json, last_success_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(asof_date, session, job_name) DO UPDATE SET
                     run_id=excluded.run_id,
                     status=excluded.status,
@@ -67,7 +68,8 @@ class StateStore:
                     error_summary=excluded.error_summary,
                     stdout_path=excluded.stdout_path,
                     stderr_path=excluded.stderr_path,
-                    artifacts_json=excluded.artifacts_json
+                    artifacts_json=excluded.artifacts_json,
+                    last_success_at=COALESCE(excluded.last_success_at, jobs.last_success_at)
                 """,
                 values,
             )
@@ -94,17 +96,19 @@ class StateStore:
         stderr_path: str,
         artifacts: list[str],
     ) -> None:
+        ts = _utc_iso()
         self._upsert_job(
             run_id=run_id,
             asof_date=asof_date,
             session=session,
             job_name=job_name,
             status="success",
-            ended_at=_utc_iso(),
+            ended_at=ts,
             exit_code=0,
             stdout_path=stdout_path,
             stderr_path=stderr_path,
             artifacts_json=json.dumps(artifacts),
+            last_success_at=ts,
         )
 
     def mark_job_failed(
@@ -157,6 +161,15 @@ class StateStore:
                 "UPDATE runs SET ended_at=?, status=?, meta_json=? WHERE run_id=?",
                 (_utc_iso(), status, json.dumps(meta), run_id),
             )
+
+    def get_last_success_at(self, job_name: str) -> str | None:
+        """Return the most recent last_success_at for a job (across all sessions)."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT last_success_at FROM jobs WHERE job_name=? AND last_success_at IS NOT NULL ORDER BY last_success_at DESC LIMIT 1",
+                (job_name,),
+            ).fetchone()
+        return None if row is None else str(row["last_success_at"])
 
     def list_runs(self, limit: int = 10) -> list[dict[str, Any]]:
         with self._connect() as conn:
