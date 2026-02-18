@@ -1,5 +1,5 @@
 export type RunType = "sleeve_live" | "sleeve_paper" | "backtest" | "train";
-export type RunStatus = "starting" | "running" | "paused" | "stopped" | "completed" | "error";
+export type RunStatus = "starting" | "running" | "paused" | "stopped" | "completed" | "error" | "ok" | "warning" | "noop" | "inputs_missing";
 
 export interface Run {
   run_id: string;

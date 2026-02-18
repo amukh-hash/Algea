@@ -1,177 +1,90 @@
 "use client";
 
-import { useEffect, useRef, useCallback, memo } from "react";
-import {
-    createChart,
-    IChartApi,
-    ISeriesApi,
-    LineSeries,
-    HistogramSeries,
-    ColorType,
-    CrosshairMode,
-    LineData,
-    HistogramData,
-    Time,
-} from "lightweight-charts";
+import { useEffect, useMemo, useRef } from "react";
+import { createChart, IChartApi, ISeriesApi, LineSeries, ColorType, CrosshairMode, Time, LineData } from "lightweight-charts";
 
 export type LWPoint = { time: number; value: number };
+export type SeriesSpec = { key: string; name?: string; data: LWPoint[]; color?: string; visible?: boolean };
 
-export type SeriesSpec = {
-    key: string;
-    name?: string;
-    type?: "line" | "histogram";
-    data: LWPoint[];
-    color?: string;
-};
+const palette = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)", "var(--series-5)"];
 
-// Auto-generate pleasant colors for series
-const PALETTE = [
-    "#38bdf8", // sky-400
-    "#22c55e", // green-500
-    "#f97316", // orange-500
-    "#a78bfa", // violet-400
-    "#f43f5e", // rose-500
-    "#facc15", // yellow-400
-    "#06b6d4", // cyan-500
-    "#ec4899", // pink-500
-    "#14b8a6", // teal-500
-    "#8b5cf6", // violet-500
-];
+export function TimeSeriesChartLW({
+  title,
+  series,
+  height = 220,
+  mode = "full",
+  alignment = "absolute",
+  normalize = "raw",
+  annotations,
+  onCrosshairMove,
+  externalCrosshairTime,
+}: {
+  title: string;
+  series: SeriesSpec[];
+  height?: number;
+  mode?: "compact" | "full";
+  timeRange?: { start?: number; end?: number };
+  alignment?: "absolute" | "relative";
+  normalize?: "raw" | "index100";
+  annotations?: { time: number; label: string; kind: "info" | "warn" | "error" }[];
+  onCrosshairMove?: (time: number | null) => void;
+  externalCrosshairTime?: number | null;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRefs = useRef<ISeriesApi<"Line">[]>([]);
 
-function getColor(idx: number, explicit?: string): string {
-    return explicit ?? PALETTE[idx % PALETTE.length];
+  const normalized = useMemo(() => series.map((s) => {
+    const start = s.data[0]?.value ?? 1;
+    const data = s.data.map((p) => ({ time: alignment === "relative" ? p.time - (s.data[0]?.time ?? 0) : p.time, value: normalize === "index100" ? (p.value / start) * 100 : p.value }));
+    return { ...s, data };
+  }), [series, alignment, normalize]);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const chart = createChart(ref.current, {
+      width: ref.current.clientWidth,
+      height,
+      layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "var(--color-text-secondary)" },
+      crosshair: { mode: CrosshairMode.Magnet },
+      grid: { vertLines: { visible: mode !== "compact", color: "rgba(148,163,184,0.08)" }, horzLines: { color: "rgba(148,163,184,0.08)" } },
+      timeScale: { timeVisible: true },
+    });
+    chartRef.current = chart;
+    const resize = new ResizeObserver(([entry]) => chart.applyOptions({ width: entry.contentRect.width }));
+    resize.observe(ref.current);
+
+    chart.subscribeCrosshairMove((param) => onCrosshairMove?.(param.time ? Number(param.time) : null));
+    return () => { resize.disconnect(); chart.remove(); };
+  }, [height, mode, onCrosshairMove]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    seriesRefs.current.forEach((s) => chart.removeSeries(s));
+    seriesRefs.current = [];
+    normalized.forEach((s, i) => {
+      const ls = chart.addSeries(LineSeries, { color: s.color ?? palette[i % palette.length], lineWidth: 2, title: s.name ?? s.key });
+      ls.setData(s.data as unknown as LineData[]);
+      seriesRefs.current.push(ls);
+    });
+    annotations?.forEach((ann) => {
+      const marker = chart.addSeries(LineSeries, { color: ann.kind === "error" ? "var(--color-error)" : ann.kind === "warn" ? "var(--color-warning)" : "var(--color-info)", lineWidth: 1 });
+      marker.setData([{ time: ann.time as Time, value: normalized[0]?.data[0]?.value ?? 0 }, { time: ann.time as Time, value: normalized[0]?.data.at(-1)?.value ?? 0 }] as unknown as LineData[]);
+    });
+    chart.timeScale().fitContent();
+  }, [normalized, annotations]);
+
+  useEffect(() => {
+    if (!externalCrosshairTime || !chartRef.current) return;
+    chartRef.current.setCrosshairPosition(0, externalCrosshairTime as Time, seriesRefs.current[0]);
+  }, [externalCrosshairTime]);
+
+  return (
+    <section className="rounded-md border border-border bg-surface-1 p-3" aria-label={`${title} chart`}>
+      <div className="mb-2 text-xs text-secondary">{title}</div>
+      <div ref={ref} style={{ height }} />
+      <div className="sr-only" aria-live="polite">Latest values {normalized.map((s) => `${s.name ?? s.key}: ${s.data.at(-1)?.value ?? "none"}`).join(", ")}</div>
+    </section>
+  );
 }
-
-interface Props {
-    title: string;
-    series: SeriesSpec[];
-    height?: number;
-    rightPriceScale?: boolean;
-}
-
-function TimeSeriesChartLWInner({ title, series, height = 220, rightPriceScale = true }: Props) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const chartRef = useRef<IChartApi | null>(null);
-    const seriesRefs = useRef<ISeriesApi<any>[]>([]);
-
-    // Initialize chart
-    useEffect(() => {
-        if (!containerRef.current) return;
-
-        const chart = createChart(containerRef.current, {
-            width: containerRef.current.clientWidth,
-            height,
-            layout: {
-                background: { type: ColorType.Solid, color: "transparent" },
-                textColor: "#94a3b8",
-                fontSize: 11,
-            },
-            grid: {
-                vertLines: { color: "rgba(148, 163, 184, 0.06)" },
-                horzLines: { color: "rgba(148, 163, 184, 0.06)" },
-            },
-            crosshair: {
-                mode: CrosshairMode.Magnet,
-            },
-            rightPriceScale: {
-                visible: rightPriceScale,
-                borderColor: "rgba(148, 163, 184, 0.15)",
-            },
-            leftPriceScale: {
-                visible: false,
-            },
-            timeScale: {
-                borderColor: "rgba(148, 163, 184, 0.15)",
-                timeVisible: true,
-            },
-            handleScale: true,
-            handleScroll: true,
-        });
-
-        chartRef.current = chart;
-
-        // Handle resize
-        const resizeObserver = new ResizeObserver((entries) => {
-            const { width } = entries[0].contentRect;
-            chart.applyOptions({ width });
-        });
-        resizeObserver.observe(containerRef.current);
-
-        return () => {
-            resizeObserver.disconnect();
-            chart.remove();
-            chartRef.current = null;
-            seriesRefs.current = [];
-        };
-    }, [height, rightPriceScale]);
-
-    // Update series data
-    useEffect(() => {
-        const chart = chartRef.current;
-        if (!chart) return;
-
-        // Remove old series
-        seriesRefs.current.forEach((s) => {
-            try {
-                chart.removeSeries(s);
-            } catch {
-                // already removed
-            }
-        });
-        seriesRefs.current = [];
-
-        // Add new series
-        series.forEach((spec, idx) => {
-            const color = getColor(idx, spec.color);
-            const sorted = [...spec.data].sort((a, b) => a.time - b.time);
-
-            if (spec.type === "histogram") {
-                const histSeries = chart.addSeries(HistogramSeries, {
-                    color,
-                    priceFormat: { type: "volume" },
-                    title: spec.name ?? spec.key,
-                });
-                histSeries.setData(
-                    sorted.map((p) => ({ time: p.time as Time, value: p.value, color })) as HistogramData[]
-                );
-                seriesRefs.current.push(histSeries);
-            } else {
-                const lineSeries = chart.addSeries(LineSeries, {
-                    color,
-                    lineWidth: 2,
-                    title: spec.name ?? spec.key,
-                    crosshairMarkerRadius: 4,
-                    priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
-                });
-                lineSeries.setData(
-                    sorted.map((p) => ({ time: p.time as Time, value: p.value })) as LineData[]
-                );
-                seriesRefs.current.push(lineSeries);
-            }
-        });
-
-        chart.timeScale().fitContent();
-    }, [series]);
-
-    return (
-        <div className="rounded border border-slate-800 bg-slate-900/50 p-3">
-            <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-400">{title}</span>
-                <div className="flex gap-2">
-                    {series.map((s, i) => (
-                        <span key={s.key} className="flex items-center gap-1 text-[10px] text-slate-500">
-                            <span
-                                className="inline-block h-2 w-2 rounded-full"
-                                style={{ backgroundColor: getColor(i, s.color) }}
-                            />
-                            {s.name ?? s.key}
-                        </span>
-                    ))}
-                </div>
-            </div>
-            <div ref={containerRef} style={{ height }} />
-        </div>
-    );
-}
-
-export const TimeSeriesChartLW = memo(TimeSeriesChartLWInner);

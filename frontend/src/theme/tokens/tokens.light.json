@@ -1,0 +1,17 @@
+{
+  "color": {
+    "bg": "#ffffff",
+    "surface1": "#f8fafc",
+    "surface2": "#f1f5f9",
+    "border": "#cbd5e1",
+    "borderSubtle": "#e2e8f0",
+    "text": "#0f172a",
+    "textSecondary": "#334155",
+    "textMuted": "#64748b",
+    "focus": "#0284c7",
+    "success": "#16a34a",
+    "warning": "#ca8a04",
+    "error": "#dc2626",
+    "info": "#0284c7"
+  }
+}

@@ -1,248 +1,73 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-import { api, LWPoint } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useRunStream } from "@/lib/sse";
-import dynamic from "next/dynamic";
+import { Button, EmptyState, PageHeader, SearchInput, Skeleton, StatusBadge } from "@/components/ui/primitives";
 import { EventsTimeline } from "@/components/events_timeline";
-import type { SeriesSpec } from "@/components/TimeSeriesChartLW";
-import type { Run } from "@/lib/types";
+import dynamic from "next/dynamic";
 
-const TimeSeriesChartLW = dynamic(
-  () => import("@/components/TimeSeriesChartLW").then((m) => m.TimeSeriesChartLW),
-  { ssr: false, loading: () => <div className="h-36 animate-pulse rounded bg-slate-900" /> }
-);
-
-
-
-/* ── Family Run Card (multi-day curves) ─────────────────────────────────── */
-
-function FamilyRunCard({ run }: { run: Run }) {
-  const { events } = useRunStream(run.run_id);
-  const { data: metricsData, isLoading } = useQuery({
-    queryKey: ["metrics-lw-family", run.run_id],
-    queryFn: () =>
-      api.getMetricsLW(run.run_id, [
-        "equity",
-        "cash",
-        "buying_power",
-        "sleeve_capital.total",
-        "sleeve_capital.core",
-        "sleeve_capital.vrp",
-        "sleeve_capital.selector",
-        "sleeve.selector.intent_notional_sum",
-        "sleeve.selector.intents_count",
-        "sleeve.core.orders_count",
-        "sleeve.vrp.orders_count",
-        "sleeve.selector.orders_count",
-        "sleeve.selector.num_longs",
-        "sleeve.selector.num_shorts",
-      ]),
-  });
-
-  const s = (key: string): LWPoint[] => metricsData?.series[key] ?? [];
-  const hasPts = (key: string) => s(key).length > 0;
-
-  const equitySeries: SeriesSpec[] = [
-    ...(hasPts("equity") ? [{ key: "equity", name: "Equity", data: s("equity") }] : []),
-    ...(hasPts("cash") ? [{ key: "cash", name: "Cash", data: s("cash"), color: "#22c55e" }] : []),
-    ...(hasPts("buying_power") ? [{ key: "bp", name: "Buying Power", data: s("buying_power"), color: "#a855f7" }] : []),
-  ];
-
-  const capitalSeries: SeriesSpec[] = [
-    ...(hasPts("sleeve_capital.total") ? [{ key: "total", name: "Total", data: s("sleeve_capital.total") }] : []),
-    ...(hasPts("sleeve_capital.core") ? [{ key: "core", name: "Core", data: s("sleeve_capital.core"), color: "#f97316" }] : []),
-    ...(hasPts("sleeve_capital.vrp") ? [{ key: "vrp", name: "VRP", data: s("sleeve_capital.vrp"), color: "#06b6d4" }] : []),
-    ...(hasPts("sleeve_capital.selector") ? [{ key: "sel", name: "Selector", data: s("sleeve_capital.selector"), color: "#eab308" }] : []),
-  ];
-
-  const members = (run.meta as Record<string, unknown>)?.family_members;
-
-  return (
-    <div className="col-span-full rounded-xl border border-indigo-800/40 bg-gradient-to-br from-indigo-950/60 via-slate-900 to-slate-950 p-5 shadow-lg">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100">{run.name}</h2>
-          <p className="text-xs text-slate-500">
-            {run.run_id.slice(0, 12)} · {members ? `${members} daily reports` : "family run"} ·{" "}
-            <span className="text-indigo-400">multi-day curves</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-block h-2.5 w-2.5 rounded-full ${run.status === "running" ? "bg-green-400 animate-pulse" :
-            run.status === "completed" ? "bg-sky-400" : "bg-slate-600"
-            }`} />
-          <span className="text-xs text-slate-400">{run.status}</span>
-          <Link href={`/runs/${run.run_id}`} className="text-xs text-sky-400 hover:underline">
-            detail →
-          </Link>
-        </div>
-      </div>
-
-
-
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 animate-pulse rounded-lg bg-slate-800/50" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {equitySeries.length > 0 && (
-            <div>
-              <TimeSeriesChartLW title="Account (Equity / Cash / BP)" series={equitySeries} height={180} />
-            </div>
-          )}
-          {capitalSeries.length > 0 && (
-            <div>
-              <TimeSeriesChartLW title="Sleeve Capital Allocation" series={capitalSeries} height={180} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {events.length > 0 && (
-        <div className="mt-4">
-          <EventsTimeline events={events.slice(0, 10)} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Standard Sleeve Card (single run) ──────────────────────────────────── */
-
-function SleeveCard({ runId, name }: { runId: string; name: string }) {
-  const { metricsLW, events, status } = useRunStream(runId);
-  const { data: initialMetrics } = useQuery({
-    queryKey: ["metrics-lw", runId],
-    queryFn: () =>
-      api.getMetricsLW(runId, [
-        "pnl_net",
-        "equity",
-        "gross_exposure",
-        "net_exposure",
-        "gate_scale",
-        "risk_scale",
-      ]),
-  });
-
-  const merge = (key: string): LWPoint[] => {
-    const initial = initialMetrics?.series[key] ?? [];
-    const live = metricsLW[key] ?? [];
-    if (live.length === 0) return initial;
-    const lastInitial = initial.length > 0 ? initial[initial.length - 1].time : 0;
-    return [...initial, ...live.filter((p) => p.time > lastInitial)];
-  };
-
-  const pnlData = merge("pnl_net").length > 0 ? merge("pnl_net") : merge("equity");
-  const pnlSeries: SeriesSpec[] = pnlData.length > 0 ? [{ key: "pnl", name: "PnL / Equity", data: pnlData }] : [];
-
-  const exposureSeries: SeriesSpec[] = [
-    ...(merge("gross_exposure").length > 0 ? [{ key: "gross_exposure", name: "Gross", data: merge("gross_exposure") }] : []),
-    ...(merge("net_exposure").length > 0 ? [{ key: "net_exposure", name: "Net", data: merge("net_exposure"), color: "#22c55e" }] : []),
-  ];
-
-  const gateSeries: SeriesSpec[] = [
-    ...(merge("gate_scale").length > 0 ? [{ key: "gate_scale", name: "Gate Scale", data: merge("gate_scale") }] : []),
-    ...(merge("risk_scale").length > 0 ? [{ key: "risk_scale", name: "Risk Scale", data: merge("risk_scale"), color: "#f97316" }] : []),
-  ];
-
-  return (
-    <div className="rounded-lg border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-4 shadow-lg">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <div className="text-sm font-semibold text-slate-200">{name}</div>
-          <div className="text-[10px] text-slate-500">{runId.slice(0, 12)}</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-block h-2 w-2 rounded-full ${status === "running" ? "bg-green-400 animate-pulse" : status === "completed" ? "bg-sky-400" : "bg-slate-600"
-              }`}
-          />
-          <span className="text-xs text-slate-400">{status}</span>
-          <Link href={`/runs/${runId}`} className="ml-2 text-xs text-sky-400 hover:underline">
-            detail →
-          </Link>
-        </div>
-      </div>
-      {pnlSeries.length > 0 && <TimeSeriesChartLW title="PnL / Equity" series={pnlSeries} height={160} />}
-      {exposureSeries.length > 0 && (
-        <div className="mt-2">
-          <TimeSeriesChartLW title="Exposure" series={exposureSeries} height={120} />
-        </div>
-      )}
-      {gateSeries.length > 0 && (
-        <div className="mt-2">
-          <TimeSeriesChartLW title="Gate / Risk Scale" series={gateSeries} height={120} />
-        </div>
-      )}
-      {events.length > 0 && (
-        <div className="mt-3">
-          <EventsTimeline events={events.slice(0, 8)} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Page ────────────────────────────────────────────────────────────────── */
+const Chart = dynamic(() => import("@/components/TimeSeriesChartLW").then((m) => m.TimeSeriesChartLW), { ssr: false });
 
 export default function ExecutionPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["sleeve-runs"],
-    queryFn: () => api.listRuns("Sleeve", 20),
-  });
+  const [paused, setPaused] = useState(false);
+  const [q, setQ] = useState("");
+  const [display, setDisplay] = useState<"cards" | "list">("cards");
+  const { data, isLoading, refetch } = useQuery({ queryKey: ["execution-runs", q], queryFn: () => api.listRuns(q || "Sleeve", 40) });
+  const runs = data?.items ?? [];
+  const family = runs.filter((r) => r.tags.includes("family"));
+  const other = runs.filter((r) => !r.tags.includes("family"));
 
-  const allRuns = data?.items ?? [];
-  const familyRuns = allRuns.filter((r) => (r.tags ?? []).includes("family"));
-  const otherRuns = allRuns.filter((r) => !(r.tags ?? []).includes("family")).slice(0, 6);
+  const warnings = useMemo(() => runs.filter((r) => ["error", "paused"].includes(r.status)).length, [runs]);
+  const running = runs.filter((r) => r.status === "running").length;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-100">Trading Ops / Execution</h1>
-        <p className="text-sm text-slate-500">Live and recent sleeve runs</p>
+    <div className="space-y-4">
+      <PageHeader title="Trading Ops" subtitle="Live execution and recent sleeve runs" actions={<><Button onClick={() => setPaused((v) => !v)}>{paused ? "Resume" : "Pause live updates"}</Button><Button onClick={() => refetch()}>Refresh snapshot</Button></>} />
+      <div className="sticky top-[90px] z-10 grid grid-cols-2 gap-3 rounded-md border border-border bg-surface-1 p-3 text-sm md:grid-cols-4">
+        <div><div className="text-muted">Connection</div><div>Live stream</div></div>
+        <div><div className="text-muted">Last update</div><div>{new Date().toLocaleTimeString()}</div></div>
+        <div><div className="text-muted">Running runs</div><div>{running}</div></div>
+        <div><div className="text-muted">Warnings/errors</div><div>{warnings}</div></div>
       </div>
-
-
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 animate-pulse rounded-lg bg-slate-900" />
-          ))}
-        </div>
-      ) : allRuns.length === 0 ? (
-        <div className="rounded-lg border border-slate-800 bg-slate-900 p-8 text-center text-slate-500">
-          No sleeve runs found. Start a paper/live sleeve to see data here.
-        </div>
-      ) : (
-        <>
-          {familyRuns.length > 0 && (
-            <div className="grid gap-4">
-              {familyRuns.map((run) => (
-                <FamilyRunCard key={run.run_id} run={run} />
-              ))}
-            </div>
-          )}
-
-          {otherRuns.length > 0 && (
-            <>
-              <h2 className="text-lg font-semibold text-slate-300 mt-2">Individual Runs</h2>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {otherRuns.map((run) => (
-                  <SleeveCard key={run.run_id} runId={run.run_id} name={run.name} />
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
+      <div className="flex flex-wrap gap-2">
+        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search runs" />
+        <Button variant={display === "cards" ? "primary" : "secondary"} onClick={() => setDisplay("cards")}>Cards</Button>
+        <Button variant={display === "list" ? "primary" : "secondary"} onClick={() => setDisplay("list")}>List</Button>
+      </div>
+      {isLoading && <Skeleton className="h-40" />}
+      {!isLoading && runs.length === 0 && <EmptyState title="No runs" message="Start a sleeve run to populate this dashboard." cta={<Link className="text-info" href="/research">Open research registry</Link>} />}
+      <RunGroup title="Family runs" runs={family} paused={paused} display={display} />
+      <RunGroup title="All other runs" runs={other} paused={paused} display={display} />
     </div>
+  );
+}
+
+function RunGroup({ title, runs, paused, display }: { title: string; runs: Awaited<ReturnType<typeof api.listRuns>>["items"]; paused: boolean; display: "cards" | "list"; }) {
+  const [collapsed, setCollapsed] = useState(false);
+  if (!runs.length) return null;
+  return (
+    <section>
+      <button className="mb-2 text-sm font-semibold" onClick={() => setCollapsed((v) => !v)}>{title} ({runs.length}) {collapsed ? "▸" : "▾"}</button>
+      {!collapsed && <div className={display === "cards" ? "grid gap-3 md:grid-cols-2" : "space-y-2"}>{runs.map((run) => <RunItem key={run.run_id} runId={run.run_id} name={run.name} status={run.status} tags={run.tags} paused={paused} compact={display === "list"} />)}</div>}
+    </section>
+  );
+}
+
+function RunItem({ runId, name, status, tags, paused, compact }: { runId: string; name: string; status: string; tags: string[]; paused: boolean; compact: boolean; }) {
+  const { metricsLW, events } = useRunStream(runId, paused);
+  const pnl = metricsLW.pnl_net ?? metricsLW.equity ?? [];
+  return (
+    <article className="rounded-md border border-border bg-surface-1 p-3">
+      <div className="flex items-center justify-between">
+        <div><Link href={`/runs/${runId}`} className="font-medium text-primary">{name}</Link><div className="text-xs text-muted">{runId.slice(0, 12)}</div></div>
+        <StatusBadge status={status} />
+      </div>
+      <div className="my-2 flex flex-wrap gap-1">{tags.slice(0, 4).map((tag) => <span key={tag} className="rounded bg-surface-2 px-2 py-0.5 text-xs text-secondary">{tag}</span>)}</div>
+      {!compact && pnl.length > 0 && <Chart title="PnL / Equity" mode="compact" series={[{ key: "pnl", name: "PnL", data: pnl }]} height={120} />}
+      <div className="mt-2"><EventsTimeline events={events.slice(0, 5)} filterLevel="warn" /></div>
+    </article>
   );
 }
