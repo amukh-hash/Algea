@@ -1,0 +1,23 @@
+{
+  "colors": {
+    "bg": "#090b10",
+    "surface1": "#11151d",
+    "surface2": "#181d29",
+    "text": "#e7ecf8",
+    "textSecondary": "#acb6ca",
+    "textMuted": "#7d889f",
+    "border": "#293249",
+    "borderSubtle": "#1e2637",
+    "focus": "#60a5fa",
+    "success": "#22c55e",
+    "warning": "#f59e0b",
+    "error": "#f43f5e",
+    "info": "#38bdf8",
+    "series1": "#38bdf8",
+    "series2": "#22c55e",
+    "series3": "#f97316",
+    "series4": "#a78bfa",
+    "series5": "#f43f5e",
+    "series6": "#facc15"
+  }
+}

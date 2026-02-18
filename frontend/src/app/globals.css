@@ -1,5 +1,19 @@
+@import "../theme/generated.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-slate-950 text-slate-100; }
+:root { color-scheme: dark; }
+html, body { height: 100%; }
+body {
+  @apply bg-app text-primary font-sans;
+}
+
+*:focus-visible {
+  outline: var(--focus-ring-width) solid var(--colors-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

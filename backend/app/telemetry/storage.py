@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 from queue import Empty, Queue
@@ -20,6 +20,8 @@ class TelemetryStorage:
         self.artifacts_root.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._listeners: dict[str, list[Queue[dict[str, Any]]]] = defaultdict(list)
+        self._stream_seq: dict[str, int] = defaultdict(int)
+        self._stream_ring: dict[str, deque[dict[str, Any]]] = defaultdict(lambda: deque(maxlen=1000))
         self._init_db()
 
     def _conn(self) -> sqlite3.Connection:
@@ -81,8 +83,25 @@ class TelemetryStorage:
 
     def publish(self, run_id: str, payload: dict[str, Any]) -> None:
         with self._lock:
+            self._stream_seq[run_id] += 1
+            envelope = {"id": self._stream_seq[run_id], **payload}
+            self._stream_ring[run_id].append(envelope)
             for queue in self._listeners[run_id]:
-                queue.put(payload)
+                queue.put(envelope)
+
+    def stream_snapshot(self, run_id: str) -> dict[str, Any]:
+        run = self.get_run(run_id)
+        with self._lock:
+            ring = list(self._stream_ring[run_id])
+        return {
+            "status": run.status.value if run else "unknown",
+            "last_event_id": ring[-1]["id"] if ring else 0,
+            "recent": ring[-100:],
+        }
+
+    def replay_since(self, run_id: str, last_event_id: int) -> list[dict[str, Any]]:
+        with self._lock:
+            return [item for item in list(self._stream_ring[run_id]) if int(item.get("id", 0)) > last_event_id]
 
     def subscribe(self, run_id: str) -> Queue[dict[str, Any]]:
         queue: Queue[dict[str, Any]] = Queue(maxsize=1000)

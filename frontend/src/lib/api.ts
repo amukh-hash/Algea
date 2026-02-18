@@ -1,11 +1,23 @@
 import { Artifact, MetricPoint, Run, TelemetryEvent } from "./types";
+import { fetchJsonWithTimeout } from "./http";
+import { getCachedRuntimeConfig, resolveRuntimeConfig } from "@/runtime/config";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+
+async function getApiBase(): Promise<string> {
+  const cached = getCachedRuntimeConfig();
+  if (cached) return cached.apiBaseUrl;
+  const cfg = await resolveRuntimeConfig();
+  return cfg.apiBaseUrl;
+}
+
+export function getApiBaseSync(): string {
+  return getCachedRuntimeConfig()?.apiBaseUrl ?? DEFAULT_API_BASE;
+}
 
 async function fetchJSON<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
-  if (!response.ok) throw new Error(await response.text());
-  return response.json() as Promise<T>;
+  const base = await getApiBase();
+  return fetchJsonWithTimeout<T>(`${base}${path}`, { cache: "default" }, 15_000);
 }
 
 export type LWPoint = { time: number; value: number };
@@ -39,6 +51,6 @@ export const api = {
   listArtifacts: (runId: string) =>
     fetchJSON<{ items: Artifact[] }>(`/api/telemetry/runs/${runId}/artifacts`),
   artifactUrl: (runId: string, artifactId: string) =>
-    `${API_BASE}/api/telemetry/runs/${runId}/artifacts/${artifactId}`,
-  streamUrl: (runId: string) => `${API_BASE}/api/telemetry/stream/runs/${runId}`,
+    `${getApiBaseSync()}/api/telemetry/runs/${runId}/artifacts/${artifactId}`,
+  streamUrl: (runId: string) => `${getApiBaseSync()}/api/telemetry/stream/runs/${runId}`,
 };
