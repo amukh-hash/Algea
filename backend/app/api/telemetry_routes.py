@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.app.telemetry.schemas import (
@@ -96,25 +96,33 @@ def get_artifact(run_id: str, artifact_id: str) -> FileResponse:
 
 
 @router.get("/stream/runs/{run_id}")
-def stream_run(run_id: str, since_ts: datetime | None = None) -> StreamingResponse:
+def stream_run(run_id: str, request: Request, since_ts: datetime | None = None) -> StreamingResponse:
     queue = storage.subscribe(run_id)
+    last_event_id = request.headers.get("last-event-id")
 
     async def event_gen():
+        seq = int(last_event_id) if (last_event_id and last_event_id.isdigit()) else 0
         try:
             if since_ts:
                 for event in storage.query_events(run_id, since_ts, None, None, None, limit=250):
-                    yield _sse("event", event.model_dump_json())
+                    seq += 1
+                    yield _sse("event", event.model_dump_json(), seq)
+            if last_event_id:
+                seq += 1
+                yield _sse("snapshot", json.dumps({"run_id": run_id, "ack_last_event_id": last_event_id}), seq)
             while True:
                 item = queue_get(queue, timeout=1)
                 if item:
-                    yield _sse(item["type"], json.dumps(item["data"]))
+                    seq += 1
+                    yield _sse(item["type"], json.dumps(item["data"]), seq)
                 else:
-                    yield _sse("heartbeat", json.dumps({"ts": now_utc().isoformat()}))
+                    seq += 1
+                    yield _sse("heartbeat", json.dumps({"ts": now_utc().isoformat()}), seq)
         finally:
             storage.unsubscribe(run_id, queue)
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
-def _sse(event: str, data: str) -> str:
-    return f"event: {event}\ndata: {data}\n\n"
+def _sse(event: str, data: str, event_id: int) -> str:
+    return f"id: {event_id}\nevent: {event}\ndata: {data}\n\n"

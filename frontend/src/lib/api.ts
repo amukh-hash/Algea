@@ -41,4 +41,5 @@ export const api = {
   artifactUrl: (runId: string, artifactId: string) =>
     `${API_BASE}/api/telemetry/runs/${runId}/artifacts/${artifactId}`,
   streamUrl: (runId: string) => `${API_BASE}/api/telemetry/stream/runs/${runId}`,
+  executionStreamUrl: () => `${API_BASE}/api/telemetry/stream/execution`,
 };

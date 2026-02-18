@@ -1,174 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-
-const RUN_TYPE_COLORS: Record<string, string> = {
-  sleeve_live: "bg-green-500/20 text-green-400",
-  sleeve_paper: "bg-sky-500/20 text-sky-400",
-  backtest: "bg-violet-500/20 text-violet-400",
-  train: "bg-amber-500/20 text-amber-400",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  completed: "text-green-400",
-  running: "text-sky-400",
-  error: "text-red-400",
-  stopped: "text-slate-500",
-  starting: "text-yellow-400",
-};
+import { auditLog } from "@/lib/audit";
+import { Button, PageHeader, SearchInput, StatusBadge } from "@/components/ui/primitives";
 
 export default function ResearchPage() {
   const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  const { data, isLoading } = useQuery({
-    queryKey: ["runs", q],
-    queryFn: () => api.listRuns(q, 100),
-  });
+  const [sort, setSort] = useState<"name" | "type" | "status" | "started">("started");
+  const [selected, setSelected] = useState<string[]>([]);
+  const router = useRouter();
+  const { data, refetch } = useQuery({ queryKey: ["registry", q], queryFn: () => api.listRuns(q, 200), staleTime: 60_000 });
 
-  const filteredItems = (data?.items ?? []).filter(
-    (run) => !typeFilter || run.run_type === typeFilter
-  );
-
-  const typeCounts: Record<string, number> = {};
-  (data?.items ?? []).forEach((r) => {
-    typeCounts[r.run_type] = (typeCounts[r.run_type] ?? 0) + 1;
-  });
-
-  // Compare functionality
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < 5) next.add(id);
-      return next;
-    });
-  };
+  const items = useMemo(() => [...(data?.items ?? [])].sort((a, b) => {
+    if (sort === "started") return a.started_at < b.started_at ? 1 : -1;
+    if (sort === "name") return a.name.localeCompare(b.name);
+    if (sort === "type") return a.run_type.localeCompare(b.run_type);
+    return a.status.localeCompare(b.status);
+  }), [data?.items, sort]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">Research Run Registry</h1>
-          <p className="text-sm text-slate-500">{data?.total ?? 0} total runs</p>
-        </div>
-        {selectedIds.size >= 2 && (
-          <Link
-            href={`/compare?runIds=${Array.from(selectedIds).join(",")}`}
-            className="rounded bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-sky-500 transition"
-          >
-            Compare {selectedIds.size} runs →
-          </Link>
-        )}
+    <div className="space-y-4">
+      <PageHeader title="Research Run Registry" subtitle={`${data?.total ?? 0} total runs`} actions={<><Button onClick={() => refetch()}>Refresh</Button><Button onClick={() => (auditLog("copy_ids", { count: selected.length }), navigator.clipboard.writeText(selected.join(",")))}>Copy IDs</Button></>} />
+      <div className="sticky top-[90px] z-10 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-1 p-3">
+        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search runs" />
+        <Button onClick={() => setSort("name")}>Sort name</Button>
+        <Button onClick={() => setSort("type")}>Sort type</Button>
+        <Button onClick={() => setSort("status")}>Sort status</Button>
+        <Button onClick={() => setSort("started")}>Sort started</Button>
+        <Button variant="primary" disabled={selected.length < 2 || selected.length > 5} onClick={() => router.push(`/compare?runIds=${selected.join(",")}`)}>Compare ({selected.length})</Button>
       </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search runs…"
-          className="rounded-lg border border-slate-800 bg-slate-900 px-4 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600"
-        />
-        <div className="flex gap-1">
-          <button
-            onClick={() => setTypeFilter("")}
-            className={`rounded px-3 py-1.5 text-xs font-medium transition ${!typeFilter ? "bg-slate-700 text-slate-200" : "bg-slate-900 text-slate-500 hover:text-slate-300"
-              }`}
-          >
-            All
-          </button>
-          {Object.keys(typeCounts).map((type) => (
-            <button
-              key={type}
-              onClick={() => setTypeFilter(type === typeFilter ? "" : type)}
-              className={`rounded px-3 py-1.5 text-xs font-medium transition ${typeFilter === type
-                  ? RUN_TYPE_COLORS[type] ?? "bg-slate-700 text-slate-200"
-                  : "bg-slate-900 text-slate-500 hover:text-slate-300"
-                }`}
-            >
-              {type} ({typeCounts[type]})
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table */}
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded bg-slate-900" />
-          ))}
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/50 text-left text-xs text-slate-500">
-                <th className="p-3 w-8" />
-                <th className="p-3">Name</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Started</th>
-                <th className="p-3">Tags</th>
-                <th className="p-3" />
+      <div className="overflow-auto rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-surface-2 text-left text-xs text-secondary">
+            <tr>
+              <th className="p-2"><input type="checkbox" aria-label="Select all" onChange={(e) => setSelected(e.target.checked ? items.map((r) => r.run_id) : [])} checked={selected.length > 0 && selected.length === items.length} /></th>
+              <SortTh label="Name" active={sort === "name"} onClick={() => setSort("name")} />
+              <SortTh label="Type" active={sort === "type"} onClick={() => setSort("type")} />
+              <SortTh label="Status" active={sort === "status"} onClick={() => setSort("status")} />
+              <SortTh label="Started" active={sort === "started"} onClick={() => setSort("started")} />
+              <th className="p-2">Tags</th>
+              <th className="p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.slice(0, 100).map((run, idx) => (
+              <tr key={run.run_id} tabIndex={0} className="border-t border-border-subtle" onKeyDown={(e) => {
+                if (e.key === " ") { e.preventDefault(); setSelected((s) => s.includes(run.run_id) ? s.filter((id) => id !== run.run_id) : [...s, run.run_id].slice(0, 5)); }
+                if (e.key === "Enter") router.push(`/runs/${run.run_id}`);
+                if (e.shiftKey && e.key === "ArrowDown" && items[idx + 1]) setSelected((s) => Array.from(new Set([...s, run.run_id, items[idx + 1].run_id])).slice(0, 5));
+              }}>
+                <td className="p-2"><input type="checkbox" checked={selected.includes(run.run_id)} onChange={() => setSelected((s) => s.includes(run.run_id) ? s.filter((id) => id !== run.run_id) : [...s, run.run_id].slice(0, 5))} /></td>
+                <td className="p-2"><Link href={`/runs/${run.run_id}`} className="text-info">{run.name}</Link></td>
+                <td className="p-2">{run.run_type}</td>
+                <td className="p-2"><StatusBadge status={run.status} /></td>
+                <td className="p-2">{new Date(run.started_at).toLocaleString()}</td>
+                <td className="p-2">{run.tags.slice(0, 3).join(", ")}</td>
+                <td className="p-2"><Link href={`/runs/${run.run_id}`} className="text-info">Open</Link></td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((run) => (
-                <tr
-                  key={run.run_id}
-                  className="border-t border-slate-800/50 transition hover:bg-slate-900/30"
-                >
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(run.run_id)}
-                      onChange={() => toggleSelect(run.run_id)}
-                      className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900"
-                    />
-                  </td>
-                  <td className="p-3">
-                    <Link href={`/runs/${run.run_id}`} className="text-slate-200 hover:text-sky-400">
-                      {run.name}
-                    </Link>
-                  </td>
-                  <td className="p-3">
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${RUN_TYPE_COLORS[run.run_type] ?? "bg-slate-800 text-slate-400"}`}>
-                      {run.run_type}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={`text-xs font-medium ${STATUS_COLORS[run.status] ?? "text-slate-400"}`}>
-                      {run.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-xs text-slate-500">
-                    {new Date(run.started_at).toLocaleString()}
-                  </td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {run.tags.slice(0, 3).map((t) => (
-                        <span key={t} className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <Link href={`/runs/${run.run_id}`} className="text-xs text-sky-400 hover:underline">
-                      open →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+}
+
+function SortTh({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return <th className="p-2" aria-sort={active ? "ascending" : "none"}><button onClick={onClick}>{label}</button></th>;
 }

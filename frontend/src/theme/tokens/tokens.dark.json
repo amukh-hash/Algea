@@ -1,0 +1,18 @@
+{
+  "color": {
+    "bg": "#060a12",
+    "surface1": "#0d1320",
+    "surface2": "#111a2a",
+    "border": "#233146",
+    "borderSubtle": "#1a2436",
+    "text": "#e5ecf8",
+    "textSecondary": "#b2bfd4",
+    "textMuted": "#7f8ba1",
+    "focus": "#38bdf8",
+    "success": "#22c55e",
+    "warning": "#eab308",
+    "error": "#ef4444",
+    "info": "#38bdf8"
+  },
+  "series": ["#38bdf8", "#22c55e", "#f97316", "#a78bfa", "#f43f5e", "#facc15"]
+}
