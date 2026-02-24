@@ -7,6 +7,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 from queue import Empty, Queue
+from queue import Full
 from typing import Any, Iterable
 
 from .schemas import Artifact, Event, MetricPoint, Run
@@ -22,6 +23,7 @@ class TelemetryStorage:
         self._listeners: dict[str, list[Queue[dict[str, Any]]]] = defaultdict(list)
         self._stream_seq: dict[str, int] = defaultdict(int)
         self._stream_ring: dict[str, deque[dict[str, Any]]] = defaultdict(lambda: deque(maxlen=1000))
+        self._dropped_events: dict[str, int] = defaultdict(int)
         self._init_db()
 
     def _conn(self) -> sqlite3.Connection:
@@ -87,16 +89,21 @@ class TelemetryStorage:
             envelope = {"id": self._stream_seq[run_id], **payload}
             self._stream_ring[run_id].append(envelope)
             for queue in self._listeners[run_id]:
-                queue.put(envelope)
+                try:
+                    queue.put_nowait(envelope)
+                except Full:
+                    self._dropped_events[run_id] += 1
 
     def stream_snapshot(self, run_id: str) -> dict[str, Any]:
         run = self.get_run(run_id)
         with self._lock:
             ring = list(self._stream_ring[run_id])
+            dropped = int(self._dropped_events.get(run_id, 0))
         return {
             "status": run.status.value if run else "unknown",
             "last_event_id": ring[-1]["id"] if ring else 0,
             "recent": ring[-100:],
+            "dropped_events": dropped,
         }
 
     def replay_since(self, run_id: str, last_event_id: int) -> list[dict[str, Any]]:

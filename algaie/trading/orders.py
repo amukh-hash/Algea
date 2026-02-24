@@ -12,6 +12,8 @@ class OrderIntent:
     quantity: float
     side: str
     reason: str
+    tick_id: Optional[str] = None
+    submitted_at: Optional[datetime] = None
     limit_price: Optional[float] = None
     client_order_id: Optional[str] = None
 
@@ -23,6 +25,8 @@ class Order:
     quantity: float
     side: str
     status: str
+    submitted_at: Optional[datetime] = None
+    filled_at: Optional[datetime] = None
     fill_price: Optional[float] = None
     broker_order_id: Optional[str] = None
     client_order_id: Optional[str] = None

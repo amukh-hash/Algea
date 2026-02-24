@@ -18,14 +18,13 @@ def build_eligibility(
 ) -> pd.DataFrame:
     canonical_daily = ensure_datetime(canonical_daily.copy())
     snapshot = canonical_daily[canonical_daily["date"] <= pd.Timestamp(asof)].copy()
-    latest = snapshot.groupby("ticker").tail(1)
-    eligible = (latest["close"] >= min_price) & (latest["volume"] >= min_volume)
+    eligible = (snapshot["close"] >= min_price) & (snapshot["volume"] >= min_volume)
     frame = pd.DataFrame(
         {
-            "date": latest["date"],
-            "ticker": latest["ticker"],
+            "date": snapshot["date"],
+            "ticker": snapshot["ticker"],
             "is_eligible": eligible.values,
-            "reason_codes": ["price_volume"] * len(latest),
+            "reason_codes": ["price_volume"] * len(snapshot),
         }
     )
     validate_eligibility_frame(frame)
