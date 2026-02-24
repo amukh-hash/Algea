@@ -1,17 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useRunStream } from "@/lib/sse";
 import { Button, EmptyState, PageHeader, SearchInput, Skeleton, StatusBadge } from "@/components/ui/primitives";
 import { EventsTimeline } from "@/components/events_timeline";
+import { RiskPanel } from "@/components/RiskPanel";
+import { PortfolioValue } from "@/components/PortfolioValue";
 import dynamic from "next/dynamic";
 
 const Chart = dynamic(() => import("@/components/TimeSeriesChartLW").then((m) => m.TimeSeriesChartLW), { ssr: false });
 
 export default function ExecutionPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [paused, setPaused] = useState(false);
   const [q, setQ] = useState("");
   const [display, setDisplay] = useState<"cards" | "list">("cards");
@@ -28,10 +33,12 @@ export default function ExecutionPage() {
       <PageHeader title="Trading Ops" subtitle="Live execution and recent sleeve runs" actions={<><Button onClick={() => setPaused((v) => !v)}>{paused ? "Resume" : "Pause live updates"}</Button><Button onClick={() => refetch()}>Refresh snapshot</Button></>} />
       <div className="sticky top-[90px] z-10 grid grid-cols-2 gap-3 rounded-md border border-border bg-surface-1 p-3 text-sm md:grid-cols-4">
         <div><div className="text-muted">Connection</div><div>Live stream</div></div>
-        <div><div className="text-muted">Last update</div><div>{new Date().toLocaleTimeString()}</div></div>
+        <div><div className="text-muted">Last update</div><div>{mounted ? new Date().toLocaleTimeString() : "--:--:--"}</div></div>
         <div><div className="text-muted">Running runs</div><div>{running}</div></div>
         <div><div className="text-muted">Warnings/errors</div><div>{warnings}</div></div>
       </div>
+      <PortfolioValue />
+      <RiskPanel />
       <div className="flex flex-wrap gap-2">
         <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search runs" />
         <Button variant={display === "cards" ? "primary" : "secondary"} onClick={() => setDisplay("cards")}>Cards</Button>

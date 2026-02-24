@@ -3,6 +3,8 @@
  * Prevents indefinite hangs from unresponsive backends.
  */
 
+import { globalToastBus } from "@/components/ui/ToastProvider";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 export class TimeoutError extends Error {
@@ -29,7 +31,12 @@ interface FetchOptions {
     init?: RequestInit;
 }
 
-const DEFAULT_TIMEOUT = 8_000;
+const DEFAULT_TIMEOUT = 20_000;
+
+// Throttle repeated timeout/error toasts — show at most once per 30s per category
+let _lastTimeoutToast = 0;
+let _lastCongestedToast = 0;
+const TOAST_THROTTLE_MS = 30_000;
 
 /**
  * Fetch with an AbortController-based timeout.
@@ -56,8 +63,30 @@ export async function fetchWithTimeout(
         }
         return response;
     } catch (err) {
-        if (err instanceof ApiError) throw err;
+        if (err instanceof ApiError) {
+            if (err.status === 504 || err.status === 503) {
+                const now = Date.now();
+                if (now - _lastCongestedToast > TOAST_THROTTLE_MS) {
+                    _lastCongestedToast = now;
+                    globalToastBus.addToast({
+                        type: "error",
+                        title: "Backend Congested",
+                        description: `Service responded with ${err.status}.`,
+                    });
+                }
+            }
+            throw err;
+        }
         if ((err as Error).name === "AbortError") {
+            const now = Date.now();
+            if (now - _lastTimeoutToast > TOAST_THROTTLE_MS) {
+                _lastTimeoutToast = now;
+                globalToastBus.addToast({
+                    type: "error",
+                    title: "Timeout",
+                    description: `Request to backend timed out after ${timeout}ms.`,
+                });
+            }
             throw new TimeoutError(url, timeout);
         }
         throw err;

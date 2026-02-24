@@ -1,0 +1,15 @@
+{
+  "run_id": "0c83a805-0722-4cf4-8124-46d43ccbcbed",
+  "asof_date": "2026-02-24",
+  "session": "premarket",
+  "ran_jobs": [],
+  "skipped_jobs": [
+    "data_refresh_intraday",
+    "signals_generate_core",
+    "signals_generate_selector",
+    "signals_generate_vrp"
+  ],
+  "failed_jobs": [
+    "risk_checks_global"
+  ]
+}

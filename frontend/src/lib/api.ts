@@ -49,4 +49,17 @@ export const api = {
     `${API_BASE}/api/telemetry/stream/runs/${runId}`,
   executionStreamUrl: () =>
     `${API_BASE}/api/telemetry/stream/execution`,
+  // -- Orchestrator & Execution Routes --
+  getOrchestratorStatus: () =>
+    fetchJSON<any>(`/api/orchestrator/status`, { timeout: 5_000 }),
+  listOrchestratorRuns: (limit = 20) =>
+    fetchJSON<any>(`/api/orchestrator/runs?limit=${limit}`, { timeout: 5_000 }),
+  getOrchestratorRunJobs: (runId: string) =>
+    fetchJSON<any>(`/api/orchestrator/runs/${runId}/jobs`, { timeout: 5_000 }),
+  getPositions: (asof?: string) =>
+    fetchJSON<any>(`/api/orchestrator/positions${asof ? `?asof=${asof}` : ''}`, { timeout: 5_000 }),
+  getTargets: (asof?: string) =>
+    fetchJSON<any>(`/api/orchestrator/targets${asof ? `?asof=${asof}` : ''}`, { timeout: 5_000 }),
+  getFills: (asof?: string) =>
+    fetchJSON<any>(`/api/orchestrator/fills${asof ? `?asof=${asof}` : ''}`, { timeout: 5_000 }),
 };

@@ -1,0 +1,14 @@
+{
+  "fills": [
+    {
+      "commission": 0.0,
+      "id": "seed-001",
+      "price": 2666.15,
+      "qty": 2.0,
+      "side": "BUY",
+      "symbol": "RTYM6",
+      "ts": "2026-02-23T10:30:00+00:00"
+    }
+  ],
+  "since": null
+}

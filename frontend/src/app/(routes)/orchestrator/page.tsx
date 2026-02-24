@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { orchApi, OrchJob, OrchRun, OrchTarget } from "@/lib/orch";
+import { controlApi } from "@/lib/control";
 import {
     Button,
     Card,
@@ -11,6 +12,11 @@ import {
     StatusBadge,
 } from "@/components/ui/primitives";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { Tabs } from "@/components/ui/primitives";
+import { CalendarSchedule } from "@/components/CalendarSchedule";
+import { JobDAG } from "@/components/JobDAG";
+import { ArtifactBrowser } from "@/components/ArtifactBrowser";
+import { useToasts } from "@/components/ui/ToastProvider";
 
 /* ── helpers ─────────────────────────────────────────────────────── */
 
@@ -57,6 +63,10 @@ function jobStatusColor(status: string): string {
 /* ── main page ───────────────────────────────────────────────────── */
 
 export default function OrchestratorPage() {
+    const [activeTab, setActiveTab] = useState("dashboard");
+    const { addToast } = useToasts();
+    const qc = useQueryClient();
+
     const status = useQuery({
         queryKey: ["orch-status"],
         queryFn: orchApi.getStatus,
@@ -77,9 +87,28 @@ export default function OrchestratorPage() {
         queryFn: () => orchApi.getTargets(),
         refetchInterval: 30_000,
     });
+    const controlState = useQuery({
+        queryKey: ["control-state"],
+        queryFn: controlApi.getState,
+        refetchInterval: 5_000,
+    });
+
+    const triggerMut = useMutation({
+        mutationFn: () => controlApi.triggerTick(true),
+        onSuccess: (d) => {
+            addToast({ type: "success", title: "Tick Triggered", description: `Run ${d.run_id?.slice(0, 12)} — ${d.ran_jobs?.length ?? 0} jobs ran` });
+            qc.invalidateQueries({ queryKey: ["orch-runs"] });
+            qc.invalidateQueries({ queryKey: ["orch-status"] });
+        },
+        onError: (e: Error) => addToast({ type: "error", title: "Tick Failed", description: e.message }),
+    });
+
+    const pauseMut = useMutation({
+        mutationFn: () => controlState.data?.paused ? controlApi.resume() : controlApi.pause(),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ["control-state"] }),
+    });
 
     const hb = status.data?.heartbeat;
-    const lastRun = status.data?.last_run;
 
     return (
         <div className="space-y-5">
@@ -87,13 +116,27 @@ export default function OrchestratorPage() {
                 title="Orchestrator"
                 subtitle="Paper trading operations dashboard"
                 actions={
-                    <Button onClick={() => { status.refetch(); runs.refetch(); positions.refetch(); targets.refetch(); }}>
-                        Refresh
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => pauseMut.mutate()}
+                            variant={controlState.data?.paused ? "primary" : "secondary"}
+                        >
+                            {controlState.data?.paused ? "▶ Resume" : "⏸ Pause"}
+                        </Button>
+                        <Button onClick={() => triggerMut.mutate()} variant="primary">
+                            ⚡ Run Tick
+                        </Button>
+                        <Button onClick={() => { status.refetch(); runs.refetch(); positions.refetch(); targets.refetch(); }}>
+                            Refresh
+                        </Button>
+                    </div>
                 }
             />
 
-            {/* ── Global error banner ────────────────────────────────── */}
+            {/* Calendar schedule */}
+            <CalendarSchedule />
+
+            {/* Global error banner */}
             {status.error && (
                 <ErrorBanner
                     error={status.error as Error}
@@ -102,7 +145,7 @@ export default function OrchestratorPage() {
                 />
             )}
 
-            {/* ── Status Banner ──────────────────────────────────────── */}
+            {/* Status Banner */}
             <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-1 p-4 md:grid-cols-5">
                 <StatCell label="Mode" value={hb?.mode ?? "—"} highlight={hb?.mode === "paper" ? "text-amber-400" : undefined} />
                 <StatCell label="Session" value={hb?.session ?? "—"} highlight={sessionColor(hb?.session ?? "")} />
@@ -111,67 +154,82 @@ export default function OrchestratorPage() {
                 <StatCell label="Date" value={status.data?.asof_date ?? "—"} />
             </div>
 
-            {/* ── Positions ──────────────────────────────────────────── */}
-            <Card>
-                <h2 className="mb-3 text-lg font-semibold">Positions</h2>
-                {positions.error && (
-                    <ErrorBanner error={positions.error as Error} onRetry={() => positions.refetch()} isRetrying={positions.isFetching} />
-                )}
-                {positions.isLoading && <Skeleton className="h-16" />}
-                {positions.data && positions.data.positions.length === 0 && (
-                    <p className="text-sm text-secondary">No open positions</p>
-                )}
-                {positions.data && positions.data.positions.length > 0 && (
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-border text-left text-xs text-muted">
-                                <th className="pb-2">Symbol</th>
-                                <th className="pb-2 text-right">Qty</th>
-                                <th className="pb-2 text-right">Avg Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {positions.data.positions.map((p) => (
-                                <tr key={p.symbol} className="border-b border-border/30">
-                                    <td className="py-2 font-mono font-medium">{p.symbol}</td>
-                                    <td className="py-2 text-right">{p.qty}</td>
-                                    <td className="py-2 text-right">${p.avg_cost.toLocaleString()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </Card>
+            {/* Tabs */}
+            <Tabs active={activeTab} onChange={setActiveTab} items={[
+                {
+                    id: "dashboard",
+                    label: "Dashboard",
+                    panel: (
+                        <div className="space-y-5">
+                            {/* Positions */}
+                            <Card>
+                                <h2 className="mb-3 text-lg font-semibold">Positions</h2>
+                                {positions.error && <ErrorBanner error={positions.error as Error} onRetry={() => positions.refetch()} isRetrying={positions.isFetching} />}
+                                {positions.isLoading && <Skeleton className="h-16" />}
+                                {positions.data && positions.data.positions.length === 0 && (
+                                    <p className="text-sm text-secondary">No open positions</p>
+                                )}
+                                {positions.data && positions.data.positions.length > 0 && (
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-border text-left text-xs text-muted">
+                                                <th className="pb-2">Symbol</th>
+                                                <th className="pb-2 text-right">Qty</th>
+                                                <th className="pb-2 text-right">Avg Cost</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {positions.data.positions.map((p) => (
+                                                <tr key={p.symbol} className="border-b border-border/30">
+                                                    <td className="py-2 font-mono font-medium">{p.symbol}</td>
+                                                    <td className="py-2 text-right">{p.qty}</td>
+                                                    <td className="py-2 text-right">${p.avg_cost.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </Card>
 
-            {/* ── Targets ────────────────────────────────────────────── */}
-            <Card>
-                <h2 className="mb-3 text-lg font-semibold">Today&apos;s Targets</h2>
-                {targets.error && (
-                    <ErrorBanner error={targets.error as Error} onRetry={() => targets.refetch()} isRetrying={targets.isFetching} />
-                )}
-                {targets.isLoading && <Skeleton className="h-16" />}
-                {targets.data && Object.keys(targets.data.sleeves).length === 0 && (
-                    <p className="text-sm text-secondary">No targets generated yet today</p>
-                )}
-                {targets.data && Object.entries(targets.data.sleeves).map(([sleeve, data]) => (
-                    <SleeveTargets key={sleeve} sleeve={sleeve} targets={data.targets ?? []} />
-                ))}
-            </Card>
+                            {/* Targets */}
+                            <Card>
+                                <h2 className="mb-3 text-lg font-semibold">Today&apos;s Targets</h2>
+                                {targets.error && <ErrorBanner error={targets.error as Error} onRetry={() => targets.refetch()} isRetrying={targets.isFetching} />}
+                                {targets.isLoading && <Skeleton className="h-16" />}
+                                {targets.data && Object.keys(targets.data.sleeves).length === 0 && (
+                                    <p className="text-sm text-secondary">No targets generated yet today</p>
+                                )}
+                                {targets.data && Object.entries(targets.data.sleeves).map(([sleeve, data]) => (
+                                    <SleeveTargets key={sleeve} sleeve={sleeve} targets={data.targets ?? []} />
+                                ))}
+                            </Card>
 
-            {/* ── Recent Runs ────────────────────────────────────────── */}
-            <Card>
-                <h2 className="mb-3 text-lg font-semibold">Recent Ticks</h2>
-                {runs.error && (
-                    <ErrorBanner error={runs.error as Error} onRetry={() => runs.refetch()} isRetrying={runs.isFetching} />
-                )}
-                {runs.isLoading && <Skeleton className="h-32" />}
-                {runs.data?.items.map((run) => (
-                    <RunRow key={run.run_id} run={run} />
-                ))}
-                {runs.data?.items.length === 0 && (
-                    <p className="text-sm text-secondary">No orchestrator runs recorded yet</p>
-                )}
-            </Card>
+                            {/* Recent Runs */}
+                            <Card>
+                                <h2 className="mb-3 text-lg font-semibold">Recent Ticks</h2>
+                                {runs.error && <ErrorBanner error={runs.error as Error} onRetry={() => runs.refetch()} isRetrying={runs.isFetching} />}
+                                {runs.isLoading && <Skeleton className="h-32" />}
+                                {runs.data?.items.map((run) => (
+                                    <RunRow key={run.run_id} run={run} />
+                                ))}
+                                {runs.data?.items.length === 0 && (
+                                    <p className="text-sm text-secondary">No orchestrator runs recorded yet</p>
+                                )}
+                            </Card>
+                        </div>
+                    ),
+                },
+                {
+                    id: "pipeline",
+                    label: "Pipeline",
+                    panel: <JobDAG />,
+                },
+                {
+                    id: "artifacts",
+                    label: "Artifacts",
+                    panel: <ArtifactBrowser />,
+                },
+            ]} />
         </div>
     );
 }

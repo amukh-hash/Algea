@@ -25,7 +25,7 @@ class TelemetryStorage:
         self._init_db()
 
     def _conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=3)
         conn.row_factory = sqlite3.Row
         return conn
 

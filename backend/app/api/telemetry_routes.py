@@ -29,11 +29,16 @@ def list_runs(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ) -> RunListResponse:
-    items, total = storage.list_runs(
-        {"run_type": run_type, "status": status, "sleeve_name": sleeve_name, "q": q},
-        limit=limit,
-        offset=offset,
-    )
+    import sqlite3 as _sqlite3
+    try:
+        items, total = storage.list_runs(
+            {"run_type": run_type, "status": status, "sleeve_name": sleeve_name, "q": q},
+            limit=limit,
+            offset=offset,
+        )
+    except _sqlite3.OperationalError:
+        # DB locked by orchestrator — return empty rather than hang
+        items, total = [], 0
     return RunListResponse(items=items, total=total)
 
 

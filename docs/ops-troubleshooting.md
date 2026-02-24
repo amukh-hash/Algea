@@ -106,3 +106,79 @@ The frontend surfaces this as a "Connection Timeout" banner with a Retry button.
 2. Check frontend is running: `curl http://localhost:3000`
 3. Check CORS: backend must include `http://localhost:3000` in allowed origins (configured in `main.py`)
 4. Check browser console for CORS or network errors
+
+---
+
+## Lint Policy
+
+### CI — Strict Lint
+
+In CI pipelines (GitHub Actions, etc.) always use:
+
+```bash
+cd frontend
+npm ci
+npm run lint:ci        # next lint --max-warnings=0
+```
+
+`lint:ci` runs ESLint through Next.js and **fails the build on any warning or error**. This is the authoritative lint gate.
+
+### Restricted / Sandboxed Environments
+
+Some environments (air-gapped hosts, sandboxed build agents) cannot reach the npm registry to install devDependencies. For these, use:
+
+```bash
+cd frontend
+npm run lint:maybe
+```
+
+`lint:maybe` checks whether `eslint` and `eslint-config-next` are installed:
+
+- **Both present** → delegates to `lint:ci` and propagates its exit code.
+- **One or both missing** → prints which dependency is absent and exits 0 (non-blocking).
+
+> [!IMPORTANT]
+> `lint:maybe` should never be used as the primary CI gate. Its skip behavior is intentional only for environments where `npm install` is impossible.
+
+### Interpreting "lint skipped" Messages
+
+If you see output like:
+
+```
+[lint:maybe] Skipping lint — missing devDependencies: eslint, eslint-config-next.
+```
+
+This means the environment lacks the listed packages. To resolve:
+
+1. Ensure npm registry access (see `.npmrc` below).
+2. Run `npm install` (or `npm ci`) in `frontend/`.
+3. Re-run the lint command.
+
+### Private Registry (`.npmrc`)
+
+If your environment uses a private npm registry, create or update `frontend/.npmrc`:
+
+```ini
+registry=https://your-registry.example.com/
+//your-registry.example.com/:_authToken=${NPM_TOKEN}
+```
+
+### Local Verification
+
+```powershell
+cd frontend
+npm install
+npm run lint:ci          # must pass with zero warnings
+npm run lint:maybe       # should delegate to lint:ci successfully
+npm run test
+npx tsc --noEmit         # type-check
+```
+
+### Files to Commit
+
+After making lint tooling changes, ensure these are committed together:
+
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `frontend/scripts/lint-maybe.mjs`
+- `docs/ops-troubleshooting.md`

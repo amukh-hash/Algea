@@ -46,10 +46,10 @@ def _build_broker(broker_type: str):
         print("[orchestrate] Using IBKR live broker adapter (from env vars)")
         return IBKRBrokerAdapter.from_env()
     else:
-        from backend.app.orchestrator.broker import PaperBrokerStub
+        from backend.app.orchestrator.broker_paper import PersistentPaperBroker
 
-        print("[orchestrate] Using paper broker stub")
-        return PaperBrokerStub()
+        print("[orchestrate] Using persistent paper broker (file-backed)")
+        return PersistentPaperBroker()
 
 
 def main() -> None:

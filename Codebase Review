@@ -1,0 +1,52 @@
+# 📊 Algaie Trading Platform - Layman's Guide
+
+Welcome to the Algaie Codebase! This document explains the architecture and daily operations of the system in plain English.
+
+## 🎯 The Big Picture
+**Algaie** is a sophisticated swing-trading system that uses Machine Learning to predict and execute trades. 
+- **What it does:** It pulls daily market data, calculates metrics, uses a "Teacher" AI model (Chronos) to gauge market risk, and a "Selector" AI model (a Stock-Transformer) to pick the best assets to trade.
+- **How it trades:** It connects to Interactive Brokers (IBKR) to automatically execute trades across three distinct portfolios (called "Sleeves").
+- **How you manage it:** It comes with a web dashboard (and a desktop app wrapper) to monitor live executions, review past runs, and check system health.
+
+---
+
+## 📁 Core Directories & What They Do
+
+### `backend/` ⚙️ The Engine Room
+This is a standard Python-based FastAPI server combined with heavy data science pipelines.
+- **`app/api/`**: The "waiters" of the server. They listen for requests from the frontend dashboard and serve up data (like telemetry, health status, and execution logs).
+- **`scripts/`**: The operational heavy lifters. This folder contains scripts to ingest new market data, compile it into clean datasets, train the AI models, and run nightly predictions.
+- **`app/orchestrator/`**: The overarching conductor that coordinates data pipelines and trading jobs.
+
+### `algaie/` 📚 The Shared Library
+This is the core Python package containing the shared, reusable logic for trading and AI:
+- **`data/` & `features/`**: The logic defining how raw stock data is cleaned and how useful signals (features) are extracted.
+- **`models/` & `training/`**: The blueprints for the AI models themselves.
+- **`execution/` & `portfolio/`**: The logic that decides exactly *how much* to buy and simulates trading to test the strategies cleanly.
+
+### `sleeves/` 👔 The Trading Portfolios
+A "sleeve" is a specific trading strategy given a slice of the total cash.
+- **`cooc_reversal_futures/`**: The `Core` sleeve. It aims to trade futures contracts (like the S&P 500 or Nasdaq indices) based on reversal signals.
+- *Note: Two other sleeves run alongside this: the **VRP** (trading SPY options) and the **Selector** (trading individual stocks picked by the AI).*
+
+### `frontend/` & `src-tauri/` 🖥️ The Human Interface
+- **`frontend/`**: A modern web app built with React (Next.js) and Tailwind CSS. It gives you a sleek dashboard to view live trading operations (`/execution route`) and analyze past AI predictions (`/research route`).
+- **`src-tauri/`**: A wrapper that packages the React frontend and the Python backend into one convenient, clickable Windows Desktop App.
+
+### Root `scripts/` folder 🚀 The Launch Codes
+These scripts are used to start the daily trading operations.
+- **`run_three_sleeves_ibkr.py`**: The master script that connects to your Interactive Brokers account, reads the AI's suggestions, and safely places the orders.
+- **`start_trading.ps1` & `ALGAIE_DASHBOARD.bat`**: Helper scripts to launch the application components locally without having to remember long terminal commands.
+
+---
+
+## 🏭 The Daily Process (A Day in the Life)
+
+Here is exactly what the codebase does every day as the market turns:
+
+1. **Ingest & Clean (Nightly):** After the market closes, the python scripts download the latest daily price bars for hundreds of liquid stocks. They clean the data and adjust for splits/dividends.
+2. **Extract Signals:** The system calculates technical momentum, market breadth, and volatility (the "Features").
+3. **The Teacher's Take:** A time-series AI called Chronos looks at the data to judge market dispersion and downside tail-risk (the "Priors").
+4. **The Selector's Pick:** The main Stock-Transformer AI takes the features and the teacher's risk priors, and ranks the entire stock universe. It suggests the Top 10 to Buy (Long) and Bottom 10 to Sell (Short) for the next week.
+5. **Execution (Morning):** Around 9:30 AM New York time, the launch scripts connect to Interactive Brokers. They cross-check the AI's suggestions against the available cash, verify risk limits across the three Sleeves, and send the orders into the Live (or Paper) market. 
+6. **Monitoring:** Throughout the day, the React frontend displays live updates and metrics, allowing you to easily track how the strategies are performing.

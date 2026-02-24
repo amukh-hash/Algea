@@ -1,0 +1,24 @@
+{
+  "asof_date": "2026-02-24",
+  "generated_at": "2026-02-24T14:24:40.701494+00:00",
+  "note": "TODO: wire to production sleeve signal entrypoint",
+  "run_type": "premarket",
+  "session": "premarket",
+  "signals": [
+    {
+      "score": 1.0,
+      "symbol": "SPY"
+    },
+    {
+      "score": -1.0,
+      "symbol": "QQQ"
+    },
+    {
+      "score": 1.0,
+      "symbol": "IWM"
+    }
+  ],
+  "sleeve": "core",
+  "status": "ok",
+  "stub": true
+}

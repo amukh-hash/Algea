@@ -1,0 +1,12 @@
+{
+  "run_id": "539c685f-8887-4251-ac1d-4615cb57e0b0",
+  "asof_date": "2026-02-24",
+  "session": "open",
+  "ran_jobs": [],
+  "skipped_jobs": [
+    "order_build_and_route"
+  ],
+  "failed_jobs": [
+    "risk_checks_global"
+  ]
+}

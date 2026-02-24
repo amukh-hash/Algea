@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import tsx --test tests/",
     "desktop:dev": "npx tauri dev",
     "desktop:build": "npx tauri build",
     "lint:ci": "next lint --max-warnings=0",
@@ -28,9 +28,10 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.24",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.15",
     "postcss": "^8.5.6",
-    "typescript": "^5.6.3",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.15"
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.3"
   }
 }

@@ -5,7 +5,7 @@ import { api, LWPoint } from "@/lib/api";
 import { MetricPoint, TelemetryEvent } from "@/lib/types";
 import { CHART_HISTORY_LIMIT, EVENT_HISTORY_LIMIT, MAX_SIMULTANEOUS_STREAMS, METRIC_HISTORY_LIMIT } from "./constants";
 import { useEventSource } from "./useEventSource";
-import { useToast } from "@/components/ui/toast";
+import { useToasts } from "@/components/ui/ToastProvider";
 
 let activeStreams = 0;
 const summary = { state: "closed", lastUpdate: null as number | null };
@@ -34,7 +34,7 @@ export function useRunStream(runId: string | null, paused = false) {
   const [lastEventId, setLastEventId] = useState<number>(0);
   const queueRef = useRef<{ type: "metric" | "event"; payload: MetricPoint | TelemetryEvent; id: number }[]>([]);
   const pausedQueue = useRef<typeof queueRef.current>([]);
-  const { push } = useToast();
+  const { addToast } = useToasts();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,7 +59,7 @@ export function useRunStream(runId: string | null, paused = false) {
     metric: (evt) => {
       const id = Number(evt.lastEventId || 0);
       if (id && id <= lastEventId) return;
-      if (id > lastEventId + 1 && lastEventId > 0) push({ message: `Gap detected on ${runId}` });
+      if (id > lastEventId + 1 && lastEventId > 0) addToast({ type: "warning", title: "Gap detected", description: `Stream gap on ${runId}` });
       if (id) setLastEventId(id);
       queueRef.current.push({ type: "metric", payload: JSON.parse(evt.data), id });
     },
@@ -75,9 +75,9 @@ export function useRunStream(runId: string | null, paused = false) {
 
   useEffect(() => {
     activeStreams += 1;
-    if (activeStreams > MAX_SIMULTANEOUS_STREAMS) push({ message: `High stream count (${activeStreams})` });
+    if (activeStreams > MAX_SIMULTANEOUS_STREAMS) addToast({ type: "warning", title: "High Stream count", description: `Many active streams (${activeStreams})` });
     return () => { activeStreams -= 1; };
-  }, [push]);
+  }, [addToast]);
 
   useEffect(() => {
     updateSummary({ state: stream.state, lastUpdate: stream.lastMessageAt });

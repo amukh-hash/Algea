@@ -1,0 +1,13 @@
+﻿{
+  "account_id": "PAPER001",
+  "starting_equity": 100000.0,
+  "cash": 89334.7,
+  "positions": [
+    {"symbol": "RTYM6", "qty": 2, "avg_cost": 2666.15}
+  ],
+  "fills": [
+    {"id": "seed-001", "ts": "2026-02-23T10:30:00+00:00", "symbol": "RTYM6", "qty": 2, "price": 2666.15, "side": "BUY", "commission": 0}
+  ],
+  "realized_pnl": 0.0,
+  "last_updated": "2026-02-23T15:30:00+00:00"
+}

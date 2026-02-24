@@ -1,0 +1,10 @@
+{
+  "run_id": "5321b4cd-a82f-4887-92c7-744ec52622fb",
+  "asof_date": "2026-02-24",
+  "session": "preclose",
+  "ran_jobs": [],
+  "skipped_jobs": [],
+  "failed_jobs": [
+    "risk_checks_global"
+  ]
+}

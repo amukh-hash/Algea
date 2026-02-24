@@ -1,0 +1,11 @@
+[
+  {
+    "asof": "2026-02-24",
+    "ticker": "RTYM26",
+    "quantity": 2,
+    "side": "buy",
+    "reason": "COOC open heuristic",
+    "limit_price": null,
+    "client_order_id": "cooc_2026-02-24_RTY_open"
+  }
+]

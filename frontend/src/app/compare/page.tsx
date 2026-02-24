@@ -46,6 +46,46 @@ function ComparePageInner() {
           <div className="space-y-2">
             {series.map((s, idx) => <div key={s.key} className="rounded border border-border bg-surface-1 p-2 text-sm"><label><input type="checkbox" defaultChecked /> <span className="text-secondary">Run {idx + 1}</span> {s.name}</label></div>)}
           </div>
+
+          {/* Summary statistics table */}
+          {series.length > 0 && series.some((s) => s.data.length > 1) && (
+            <div className="rounded border border-border bg-surface-1 p-4">
+              <h3 className="text-sm font-semibold mb-3">Summary Statistics ({metric})</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-muted text-left">
+                    <th className="pb-2">Run</th>
+                    <th className="pb-2 text-right">Points</th>
+                    <th className="pb-2 text-right">Min</th>
+                    <th className="pb-2 text-right">Max</th>
+                    <th className="pb-2 text-right">Last</th>
+                    <th className="pb-2 text-right">Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {series.map((s) => {
+                    if (s.data.length === 0) return null;
+                    const vals = s.data.map((d) => d.value);
+                    const min = Math.min(...vals);
+                    const max = Math.max(...vals);
+                    const last = vals[vals.length - 1];
+                    return (
+                      <tr key={s.key} className="border-b border-border/30">
+                        <td className="py-1.5 font-mono">{s.name}</td>
+                        <td className="py-1.5 text-right">{s.data.length}</td>
+                        <td className="py-1.5 text-right">{min.toFixed(4)}</td>
+                        <td className="py-1.5 text-right">{max.toFixed(4)}</td>
+                        <td className={`py-1.5 text-right font-semibold ${last >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          {last.toFixed(4)}
+                        </td>
+                        <td className="py-1.5 text-right text-muted">{(max - min).toFixed(4)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>

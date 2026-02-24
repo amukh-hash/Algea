@@ -1,0 +1,12 @@
+{
+  "run_id": "5e2f5125-90d5-40ed-bfcb-ee041406d8ad",
+  "asof_date": "2026-02-23",
+  "session": "close",
+  "ran_jobs": [
+    "eod_reports"
+  ],
+  "skipped_jobs": [
+    "fills_reconcile"
+  ],
+  "failed_jobs": []
+}

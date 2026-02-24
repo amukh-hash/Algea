@@ -1,4 +1,4 @@
-import { CHART_WINDOW, EVENT_WINDOW, METRIC_WINDOW } from "./useRunStream";
+import { CHART_HISTORY_LIMIT as CHART_WINDOW, EVENT_HISTORY_LIMIT as EVENT_WINDOW, METRIC_HISTORY_LIMIT as METRIC_WINDOW } from "./constants";
 
 export function shouldAcceptEvent(lastSeenId: number, incomingId: number) {
   return incomingId > lastSeenId;

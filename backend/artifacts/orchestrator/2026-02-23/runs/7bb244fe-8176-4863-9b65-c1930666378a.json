@@ -1,0 +1,12 @@
+{
+  "run_id": "7bb244fe-8176-4863-9b65-c1930666378a",
+  "asof_date": "2026-02-23",
+  "session": "intraday",
+  "ran_jobs": [],
+  "skipped_jobs": [
+    "data_refresh_intraday",
+    "fills_reconcile",
+    "signals_generate_selector"
+  ],
+  "failed_jobs": []
+}

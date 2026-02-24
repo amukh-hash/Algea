@@ -1,8 +1,8 @@
 {
   "asof_date": "2026-02-18",
-  "generated_at": "2026-02-18T16:55:13.840624+00:00",
-  "run_type": "intraday",
-  "session": "intraday",
+  "generated_at": "2026-02-18T21:46:06.268988+00:00",
+  "run_type": "premarket",
+  "session": "premarket",
   "signals": [
     {
       "score": 0.709205,

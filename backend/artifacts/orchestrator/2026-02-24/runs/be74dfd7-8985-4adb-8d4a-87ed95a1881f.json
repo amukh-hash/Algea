@@ -1,0 +1,10 @@
+{
+  "run_id": "be74dfd7-8985-4adb-8d4a-87ed95a1881f",
+  "asof_date": "2026-02-24",
+  "session": "overnight",
+  "ran_jobs": [
+    "eod_reports"
+  ],
+  "skipped_jobs": [],
+  "failed_jobs": []
+}

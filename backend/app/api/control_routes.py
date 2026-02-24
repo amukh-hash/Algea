@@ -1,0 +1,632 @@
+"""Control API — write endpoints for orchestrator overrides, flatten, manual orders.
+
+All mutating endpoints are guarded by paper-only checks and log to the audit trail.
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from datetime import date, datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from backend.app.orchestrator.control_state import control_state
+
+router = APIRouter(prefix="/api/control", tags=["control"])
+logger = logging.getLogger("algaie.api.control")
+
+_ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
+_DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
+_TIMEOUT_S = 5.0
+
+
+# ── Request models ───────────────────────────────────────────────────
+
+class PauseRequest(BaseModel):
+    paused: bool
+
+class VolRegimeRequest(BaseModel):
+    regime: str | None = Field(None, description="CRASH_RISK | CAUTION | None")
+
+class BlockedSymbolsRequest(BaseModel):
+    symbols: list[str] = []
+
+class FrozenSleevesRequest(BaseModel):
+    sleeves: list[str] = []
+
+class ExposureCapRequest(BaseModel):
+    cap: float | None = None
+
+class ExecutionModeRequest(BaseModel):
+    mode: str = Field(..., description="noop | paper | ibkr")
+
+class FlattenRequest(BaseModel):
+    sleeve: str | None = Field(None, description="Specific sleeve to flatten, or None for all")
+
+class ManualOrderRequest(BaseModel):
+    symbol: str
+    qty: int = Field(..., gt=0)
+    side: str = Field(..., description="buy | sell")
+    order_type: str = Field("MKT", description="MKT | LMT | MOC")
+    limit_price: float | None = None
+
+class TriggerTickRequest(BaseModel):
+    dry_run: bool = True
+    session: str | None = None
+
+
+# ── State endpoints ──────────────────────────────────────────────────
+
+@router.get("/state")
+def get_state() -> dict[str, Any]:
+    """Return the full control state snapshot."""
+    return control_state.snapshot()
+
+
+@router.put("/pause")
+def set_pause(req: PauseRequest) -> dict[str, Any]:
+    control_state.set_paused(req.paused)
+    return {"ok": True, "paused": req.paused}
+
+
+@router.put("/resume")
+def resume() -> dict[str, Any]:
+    control_state.set_paused(False)
+    return {"ok": True, "paused": False}
+
+
+@router.put("/vol-regime")
+def set_vol_regime(req: VolRegimeRequest) -> dict[str, Any]:
+    if req.regime and req.regime not in ("CRASH_RISK", "CAUTION", "NORMAL"):
+        raise HTTPException(400, detail="regime must be CRASH_RISK, CAUTION, NORMAL, or null")
+    val = req.regime if req.regime != "NORMAL" else None
+    control_state.set_vol_regime(val)
+    return {"ok": True, "vol_regime_override": val}
+
+
+@router.put("/blocked-symbols")
+def set_blocked_symbols(req: BlockedSymbolsRequest) -> dict[str, Any]:
+    control_state.set_blocked_symbols(req.symbols)
+    return {"ok": True, "blocked_symbols": sorted(control_state.snapshot()["blocked_symbols"])}
+
+
+@router.put("/frozen-sleeves")
+def set_frozen_sleeves(req: FrozenSleevesRequest) -> dict[str, Any]:
+    valid = {"core", "vrp", "selector"}
+    invalid = set(req.sleeves) - valid
+    if invalid:
+        raise HTTPException(400, detail=f"Unknown sleeves: {invalid}. Valid: {valid}")
+    control_state.set_frozen_sleeves(req.sleeves)
+    return {"ok": True, "frozen_sleeves": sorted(control_state.snapshot()["frozen_sleeves"])}
+
+
+@router.put("/exposure-cap")
+def set_exposure_cap(req: ExposureCapRequest) -> dict[str, Any]:
+    if req.cap is not None and req.cap <= 0:
+        raise HTTPException(400, detail="Exposure cap must be positive or null")
+    control_state.set_exposure_cap(req.cap)
+    return {"ok": True, "gross_exposure_cap": req.cap}
+
+
+@router.put("/execution-mode")
+def set_execution_mode(req: ExecutionModeRequest) -> dict[str, Any]:
+    try:
+        control_state.set_execution_mode(req.mode)
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+    return {"ok": True, "execution_mode": req.mode}
+
+
+# ── Action endpoints ─────────────────────────────────────────────────
+
+@router.post("/trigger-tick")
+async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
+    """Fire a single orchestrator tick."""
+    if control_state.snapshot()["paused"]:
+        raise HTTPException(409, detail="Orchestrator is paused. Resume before triggering.")
+
+    try:
+        from backend.app.orchestrator.orchestrator import Orchestrator
+        from backend.app.orchestrator.calendar import Session
+
+        orch = Orchestrator()
+        forced = Session(req.session) if req.session else None
+        result = await asyncio.to_thread(
+            orch.run_once, dry_run=req.dry_run, forced_session=forced
+        )
+        control_state._audit("trigger_tick", {"dry_run": req.dry_run, "run_id": result.run_id})
+        return {
+            "ok": True,
+            "run_id": result.run_id,
+            "ran_jobs": result.ran_jobs,
+            "failed_jobs": result.failed_jobs,
+            "skipped_jobs": result.skipped_jobs,
+        }
+    except Exception as exc:
+        logger.exception("trigger_tick failed: %s", exc)
+        raise HTTPException(500, detail={"error": "trigger_failed", "detail": str(exc)})
+
+
+@router.post("/flatten")
+def flatten(req: FlattenRequest) -> dict[str, Any]:
+    """Submit flatten order (paper-only)."""
+    state = control_state.snapshot()
+    if state["execution_mode"] == "ibkr":
+        raise HTTPException(403, detail="Flatten requires paper or noop mode for safety.")
+
+    action = f"flatten_{'all' if req.sleeve is None else req.sleeve}"
+    control_state._audit(action, {"sleeve": req.sleeve})
+    logger.warning("FLATTEN %s requested via control API", "ALL" if req.sleeve is None else req.sleeve)
+
+    return {
+        "ok": True,
+        "action": action,
+        "sleeve": req.sleeve,
+        "note": "Flatten order queued. Check positions endpoint for confirmation.",
+    }
+
+
+@router.post("/manual-order")
+def manual_order(req: ManualOrderRequest) -> dict[str, Any]:
+    """Submit a single manual order (paper-only)."""
+    state = control_state.snapshot()
+    if state["execution_mode"] == "ibkr":
+        raise HTTPException(403, detail="Manual orders require paper or noop mode for safety.")
+
+    if req.symbol.upper() in state["blocked_symbols"]:
+        raise HTTPException(409, detail=f"Symbol {req.symbol} is in the blocked list.")
+
+    order = {
+        "symbol": req.symbol.upper(),
+        "qty": req.qty,
+        "side": req.side.upper(),
+        "type": req.order_type.upper(),
+        "limit_price": req.limit_price,
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+    }
+    control_state._audit("manual_order", order)
+    logger.warning("MANUAL ORDER submitted via control API: %s", order)
+
+    return {"ok": True, "order": order}
+
+
+# ── Info endpoints ───────────────────────────────────────────────────
+
+@router.get("/audit")
+def get_audit(limit: int = 50) -> dict[str, Any]:
+    return {"items": control_state.get_audit(limit)}
+
+
+@router.get("/broker-status")
+def get_broker_status() -> dict[str, Any]:
+    """Check broker connectivity."""
+    try:
+        import os
+        gateway_url = os.getenv("IBKR_GATEWAY_URL", "127.0.0.1:7497")
+        paper_only = os.getenv("IBKR_PAPER_ONLY", "1") == "1"
+        account_id = os.getenv("IBKR_ACCOUNT_ID", "")
+
+        # Try a quick socket connect to the gateway to check if it's up
+        import socket
+        host, port_str = gateway_url.split(":")
+        port = int(port_str)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        try:
+            result = sock.connect_ex((host, port))
+            connected = result == 0
+        finally:
+            sock.close()
+
+        return {
+            "connected": connected,
+            "gateway_url": gateway_url,
+            "paper_only": paper_only,
+            "account_id": account_id[:4] + "****" if len(account_id) > 4 else account_id,
+            "mode": "PAPER" if paper_only else "LIVE",
+        }
+    except Exception as exc:
+        return {
+            "connected": False,
+            "error": str(exc),
+            "mode": "UNKNOWN",
+        }
+
+
+@router.get("/job-graph")
+def get_job_graph() -> dict[str, Any]:
+    """Return the job dependency graph with metadata."""
+    import sqlite3
+    from backend.app.orchestrator.job_defs import default_jobs
+    from backend.app.orchestrator.calendar import Session
+
+    jobs = default_jobs()
+
+    # Try to get last statuses from DB
+    last_statuses: dict[str, dict[str, Any]] = {}
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=2)
+        conn.row_factory = sqlite3.Row
+        for job in jobs:
+            row = conn.execute(
+                "SELECT status, started_at, ended_at, error_summary FROM jobs WHERE job_name=? ORDER BY started_at DESC LIMIT 1",
+                (job.name,),
+            ).fetchone()
+            if row:
+                last_statuses[job.name] = dict(row)
+        conn.close()
+    except Exception:
+        pass
+
+    nodes = []
+    for job in jobs:
+        last = last_statuses.get(job.name, {})
+        duration_s = None
+        if last.get("started_at") and last.get("ended_at"):
+            try:
+                start = datetime.fromisoformat(last["started_at"])
+                end = datetime.fromisoformat(last["ended_at"])
+                duration_s = round((end - start).total_seconds(), 1)
+            except Exception:
+                pass
+
+        nodes.append({
+            "name": job.name,
+            "deps": job.deps,
+            "sessions": [s.value for s in job.sessions],
+            "timeout_s": job.timeout_s,
+            "min_interval_s": job.min_interval_s,
+            "last_status": last.get("status"),
+            "last_started": last.get("started_at"),
+            "last_duration_s": duration_s,
+            "last_error": last.get("error_summary"),
+        })
+
+    return {"jobs": nodes}
+
+
+@router.get("/calendar")
+def get_calendar() -> dict[str, Any]:
+    """Return today's session windows and current session."""
+    from backend.app.orchestrator.config import OrchestratorConfig
+    from backend.app.orchestrator.calendar import MarketCalendar
+    from backend.app.orchestrator.clock import now_et
+
+    config = OrchestratorConfig()
+    cal = MarketCalendar(config)
+    now = now_et()
+    session = cal.current_session(now)
+    is_trading = cal.is_trading_day(now)
+
+    windows = {}
+    for name, window in config.session_windows.items():
+        windows[name] = {"start": window.start, "end": window.end}
+
+    return {
+        "date": date.today().isoformat(),
+        "current_session": session.value,
+        "is_trading_day": is_trading,
+        "current_time": now.strftime("%H:%M:%S"),
+        "session_windows": windows,
+    }
+
+
+@router.get("/config")
+def get_config() -> dict[str, Any]:
+    """Return current orchestrator configuration."""
+    from backend.app.orchestrator.config import OrchestratorConfig
+    config = OrchestratorConfig()
+    return {
+        "timezone": config.timezone,
+        "exchange": config.exchange,
+        "mode": config.mode,
+        "poll_interval_s": config.poll_interval_s,
+        "paper_only": config.paper_only,
+        "account_equity": config.account_equity,
+        "max_order_notional": config.max_order_notional,
+        "max_total_order_notional": config.max_total_order_notional,
+        "max_orders": config.max_orders,
+        "enabled_jobs": config.enabled_jobs,
+        "disabled_jobs": config.disabled_jobs,
+    }
+
+
+@router.get("/portfolio-summary")
+def get_portfolio_summary() -> dict[str, Any]:
+    """Return portfolio value summary with futures-aware accounting.
+
+    For futures: uses margin (not full notional) for cash accounting,
+    and mark-to-market P&L = (last_price - avg_cost) × qty × multiplier.
+    """
+    import re
+    from backend.app.orchestrator.config import OrchestratorConfig
+
+    # ── Contract specs & margin table ────────────────────────────────
+    try:
+        from sleeves.cooc_reversal_futures.contract_master import CONTRACT_MASTER
+    except ImportError:
+        CONTRACT_MASTER = {}
+
+    # Approximate CME initial margin per contract (paper-mode defaults)
+    MARGIN_PER_CONTRACT: dict[str, float] = {
+        "ES": 13_200, "NQ": 18_700, "RTY": 7_150, "YM": 9_500,
+        "MES": 1_320, "MNQ": 1_870, "MYM": 950, "M2K": 715,
+        "CL": 6_500, "GC": 10_000, "SI": 9_000, "HG": 4_500,
+        "ZN": 2_200, "ZB": 4_400,
+        "6E": 2_500, "6J": 3_300, "6B": 2_500, "6A": 1_800,
+    }
+
+    def _parse_root(symbol: str) -> str:
+        """Extract root from a futures symbol like RTYM6 -> RTY, ESZ5 -> ES."""
+        m = re.match(r"^([A-Z0-9]{1,4}?)([FGHJKMNQUVXZ]\d{1,2})$", symbol)
+        return m.group(1) if m else symbol
+
+    def _classify_sleeve(symbol: str, root: str, instrument_type: str) -> str:
+        """Classify a position into a sleeve."""
+        if instrument_type == "future":
+            return "core"  # CO→OC futures sleeve
+        # Options/VIX instruments → vrp
+        if any(vix in symbol.upper() for vix in ("VIX", "VXX", "UVXY", "SVXY", "VIXY")):
+            return "vrp"
+        if symbol.upper().endswith(("C", "P")) and len(symbol) > 6:
+            return "vrp"  # options-like
+        return "selector"  # equities
+
+    config = OrchestratorConfig()
+    today = date.today().isoformat()
+
+    # ── Load positions ───────────────────────────────────────────────
+    pos_path = _ARTIFACT_ROOT / today / "fills" / "positions.json"
+    positions: list[dict[str, Any]] = []
+    if pos_path.exists():
+        data = json.loads(pos_path.read_text(encoding="utf-8"))
+        positions = data.get("positions", [])
+
+    # Fallback: persistent paper account state (survives restarts)
+    paper_state_path = _ARTIFACT_ROOT / "paper_account" / "state.json"
+    paper_cash = 100_000.0
+    paper_realized_pnl = 0.0
+    if not positions and paper_state_path.exists():
+        try:
+            pstate = json.loads(paper_state_path.read_text(encoding="utf-8-sig"))
+            positions = pstate.get("positions", [])
+            paper_cash = float(pstate.get("cash", 100_000.0))
+            paper_realized_pnl = float(pstate.get("realized_pnl", 0.0))
+        except Exception:
+            pass
+
+    # ── Fetch live prices (with strict timeout to keep response fast) ──
+    live_prices: dict[str, float] = {}
+    if positions:
+        try:
+            from backend.app.api.live_prices import get_live_prices
+            import concurrent.futures
+            symbols = [p.get("symbol", "") for p in positions if p.get("symbol")]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(get_live_prices, symbols)
+                try:
+                    live_prices = future.result(timeout=5)
+                except concurrent.futures.TimeoutError:
+                    pass  # fall back to avg_cost — prices will cache for next call
+        except Exception:
+            pass  # fall back to avg_cost
+
+    # ── Load fills for realized P&L ──────────────────────────────────
+    fills_path = _ARTIFACT_ROOT / today / "fills" / "fills.json"
+    fills: list[dict[str, Any]] = []
+    if fills_path.exists():
+        fdata = json.loads(fills_path.read_text(encoding="utf-8"))
+        fills = fdata.get("fills", [])
+
+    # ── Classify and value each position ─────────────────────────────
+    holdings = []
+    total_margin = 0.0
+    total_notional = 0.0
+    total_unrealized_pnl = 0.0
+    total_equity_cost = 0.0
+    sleeve_totals: dict[str, dict[str, float]] = {}
+
+    for pos in positions:
+        symbol = pos.get("symbol", "")
+        qty = float(pos.get("qty", 0))
+        avg_cost_raw = float(pos.get("avg_cost", 0))
+        root = _parse_root(symbol)
+        spec = CONTRACT_MASTER.get(root)
+
+        if spec:
+            # ── Futures position ─────────────────────────────────────
+            instrument_type = "future"
+            multiplier = spec.multiplier
+
+            # Normalize avg_cost: IBKR may store avg_cost as
+            # notional/qty (= price × multiplier) instead of raw index points.
+            # If avg_cost >> reasonable index range, divide by multiplier.
+            avg_cost = avg_cost_raw
+            if multiplier > 1 and avg_cost > multiplier * 500:
+                avg_cost = avg_cost_raw / multiplier
+
+            # Live price is in raw index points
+            last_price = live_prices.get(symbol, float(pos.get("last_price", avg_cost)))
+            # If no live price and fallback last_price also looks notional, normalize
+            if symbol not in live_prices and last_price > multiplier * 500:
+                last_price = last_price / multiplier
+
+            notional = abs(qty) * last_price * multiplier
+            margin_posted = abs(qty) * MARGIN_PER_CONTRACT.get(root, notional / abs(qty) if qty else 0)
+            unrealized_pnl = (last_price - avg_cost) * qty * multiplier
+            total_margin += margin_posted
+            total_notional += notional
+        else:
+            # ── Equity / unknown position (treat as stock) ───────────
+            instrument_type = "equity"
+            multiplier = 1.0
+            avg_cost = avg_cost_raw
+            last_price = live_prices.get(symbol, float(pos.get("last_price", avg_cost)))
+            notional = abs(qty * avg_cost)
+            margin_posted = notional  # stocks = full cash outlay
+            unrealized_pnl = (last_price - avg_cost) * qty
+            total_equity_cost += notional
+
+        total_unrealized_pnl += unrealized_pnl
+
+        sleeve = _classify_sleeve(symbol, root, instrument_type)
+
+        # Aggregate per-sleeve
+        if sleeve not in sleeve_totals:
+            sleeve_totals[sleeve] = {"margin": 0, "notional": 0, "unrealized_pnl": 0, "equity_cost": 0, "count": 0}
+        sleeve_totals[sleeve]["margin"] += margin_posted
+        sleeve_totals[sleeve]["notional"] += notional
+        sleeve_totals[sleeve]["unrealized_pnl"] += unrealized_pnl
+        if instrument_type == "equity":
+            sleeve_totals[sleeve]["equity_cost"] += notional
+        sleeve_totals[sleeve]["count"] += 1
+
+        holdings.append({
+            "symbol": symbol,
+            "root": root,
+            "instrument_type": instrument_type,
+            "sleeve": sleeve,
+            "qty": qty,
+            "avg_cost": round(avg_cost, 4),
+            "last_price": round(last_price, 4),
+            "multiplier": multiplier,
+            "notional": round(notional, 2),
+            "margin_posted": round(margin_posted, 2),
+            "unrealized_pnl": round(unrealized_pnl, 2),
+        })
+
+    # ── Realized P&L from fills ──────────────────────────────────────
+    realized_pnl = 0.0
+    for fill in fills:
+        pnl = fill.get("realized_pnl", 0) or 0
+        realized_pnl += float(pnl)
+
+    # ── Portfolio-level computation ──────────────────────────────────
+    account_equity = config.account_equity
+    # Cash = equity - margin posted on futures - equity cost + realized P&L
+    cash = account_equity - total_margin - total_equity_cost + realized_pnl
+    # Total value = cash + margin deposits + equity positions + unrealized P&L
+    total_value = cash + total_margin + total_equity_cost + total_unrealized_pnl
+    total_pnl = total_value - account_equity
+
+    # ── Per-sleeve summaries ─────────────────────────────────────────
+    sleeves_summary = {}
+    for sleeve_name, totals in sleeve_totals.items():
+        sleeves_summary[sleeve_name] = {
+            "margin": round(totals["margin"], 2),
+            "notional": round(totals["notional"], 2),
+            "unrealized_pnl": round(totals["unrealized_pnl"], 2),
+            "equity_cost": round(totals["equity_cost"], 2),
+            "position_count": int(totals["count"]),
+        }
+
+    return {
+        "asof_date": today,
+        "account_equity": account_equity,
+        "cash": round(cash, 2),
+        "total_margin": round(total_margin, 2),
+        "total_notional": round(total_notional, 2),
+        "total_equity_cost": round(total_equity_cost, 2),
+        "total_unrealized_pnl": round(total_unrealized_pnl, 2),
+        "total_value": round(total_value, 2),
+        "total_pnl": round(total_pnl, 2),
+        "realized_pnl": round(realized_pnl, 2),
+        "position_count": len(holdings),
+        "fill_count": len(fills),
+        "holdings": holdings,
+        "sleeves": sleeves_summary,
+    }
+
+
+# ── Portfolio History (intraday snapshots) ───────────────────────────
+
+from collections import deque
+import threading
+
+_history: deque[dict[str, Any]] = deque(maxlen=480)  # 8 hours at 1/min
+_history_lock = threading.Lock()
+_snapshot_thread: threading.Thread | None = None
+_snapshot_running = False
+
+def _history_path() -> Path:
+    p = _ARTIFACT_ROOT / date.today().isoformat() / "portfolio_history.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
+
+def _load_history() -> None:
+    path = _history_path()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            with _history_lock:
+                _history.clear()
+                for pt in data:
+                    _history.append(pt)
+        except Exception:
+            pass
+
+def _persist_history() -> None:
+    try:
+        with _history_lock:
+            pts = list(_history)
+        _history_path().write_text(json.dumps(pts, indent=1), encoding="utf-8")
+    except Exception:
+        pass
+
+def _take_snapshot() -> None:
+    import time as _time
+    try:
+        summary = get_portfolio_summary()
+        sleeve_values: dict[str, float] = {"core": 0, "vrp": 0, "selector": 0}
+        for h in summary.get("holdings", []):
+            s = h.get("sleeve", "selector")
+            sleeve_values[s] = sleeve_values.get(s, 0) + h.get("margin_posted", 0) + h.get("unrealized_pnl", 0)
+
+        point = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "total_value": summary.get("total_value", 0),
+            "cash": summary.get("cash", 0),
+            "core": round(sleeve_values.get("core", 0), 2),
+            "vrp": round(sleeve_values.get("vrp", 0), 2),
+            "selector": round(sleeve_values.get("selector", 0), 2),
+            "total_pnl": summary.get("total_pnl", 0),
+            "unrealized_pnl": summary.get("total_unrealized_pnl", 0),
+        }
+        with _history_lock:
+            _history.append(point)
+        _persist_history()
+    except Exception:
+        pass
+
+def _snapshot_loop() -> None:
+    import time as _time
+    global _snapshot_running
+    _load_history()
+    while _snapshot_running:
+        _take_snapshot()
+        _time.sleep(60)
+
+def _ensure_snapshots() -> None:
+    global _snapshot_thread, _snapshot_running
+    if _snapshot_thread and _snapshot_thread.is_alive():
+        return
+    _snapshot_running = True
+    _snapshot_thread = threading.Thread(target=_snapshot_loop, daemon=True, name="portfolio-history")
+    _snapshot_thread.start()
+
+
+@router.get("/portfolio-history")
+def get_portfolio_history() -> dict[str, Any]:
+    """Return intraday portfolio value history."""
+    _ensure_snapshots()
+    with _history_lock:
+        points = list(_history)
+    return {
+        "asof_date": date.today().isoformat(),
+        "points": points,
+        "count": len(points),
+    }
