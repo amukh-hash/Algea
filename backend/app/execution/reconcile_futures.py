@@ -9,6 +9,8 @@ import logging
 from datetime import date
 from typing import Any, Dict, List, Optional
 
+from backend.app.schemas.fill_position import FILLS_SCHEMA_VERSION, POSITIONS_SCHEMA_VERSION
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +43,13 @@ def reconcile_day(
     dict
         Reconciliation report.
     """
+    for f in fills:
+        if "schema_version" in f and f.get("schema_version") != FILLS_SCHEMA_VERSION:
+            raise ValueError(f"unsupported fills schema version: {f.get('schema_version')}")
+    for p in positions:
+        if "schema_version" in p and p.get("schema_version") != POSITIONS_SCHEMA_VERSION:
+            raise ValueError(f"unsupported positions schema version: {p.get('schema_version')}")
+
     n_open_intents = len(open_intents) if open_intents else 0
     n_close_intents = len(close_intents) if close_intents else 0
     n_fills = len(fills)
@@ -48,9 +57,9 @@ def reconcile_day(
     # -----------------------------------------------------------------------
     # Fill coverage
     # -----------------------------------------------------------------------
-    open_intent_tickers = {i["ticker"] for i in (open_intents or [])}
-    close_intent_tickers = {i["ticker"] for i in (close_intents or [])}
-    filled_tickers = {f["ticker"] for f in fills}
+    open_intent_tickers = {i.get("ticker") or i.get("symbol") for i in (open_intents or [])}
+    close_intent_tickers = {i.get("ticker") or i.get("symbol") for i in (close_intents or [])}
+    filled_tickers = {f.get("ticker") or f.get("symbol") for f in fills}
 
     open_fill_coverage = (
         len(open_intent_tickers & filled_tickers) / len(open_intent_tickers)
@@ -68,12 +77,13 @@ def reconcile_day(
     # -----------------------------------------------------------------------
     partial_fills: List[dict] = []
     for intent in (open_intents or []) + (close_intents or []):
-        ticker = intent["ticker"]
-        intended_qty = abs(intent["quantity"])
+        ticker = intent.get("ticker") or intent.get("symbol")
+        intended_qty = abs(float(intent.get("quantity", intent.get("qty", 0.0))))
         filled_qty = sum(
-            abs(f["quantity"])
+            abs(float(f.get("quantity", f.get("qty", 0.0))))
             for f in fills
-            if f["ticker"] == ticker and f["side"] == intent["side"]
+            if (f.get("ticker") or f.get("symbol")) == ticker
+            and str(f.get("side", "")).lower() == str(intent.get("side", "")).lower()
         )
         if 0 < filled_qty < intended_qty:
             partial_fills.append({
@@ -86,9 +96,7 @@ def reconcile_day(
     # -----------------------------------------------------------------------
     # Residual positions (should be zero for intraday strategy)
     # -----------------------------------------------------------------------
-    residual_positions = [
-        p for p in positions if abs(p.get("quantity", 0)) > 0
-    ]
+    residual_positions = [p for p in positions if abs(float(p.get("quantity", p.get("qty", 0.0)))) > 0]
 
     # -----------------------------------------------------------------------
     # Contract mismatch detection
@@ -96,14 +104,15 @@ def reconcile_day(
     contract_mismatches: List[dict] = []
     all_intent_tickers = open_intent_tickers | close_intent_tickers
     for f in fills:
-        if f["ticker"] not in all_intent_tickers:
+        fill_ticker = f.get("ticker") or f.get("symbol")
+        if fill_ticker not in all_intent_tickers:
             # Check if it matches a root from our intents
             is_root_match = any(
-                f["ticker"].startswith(t[:2]) for t in all_intent_tickers
+                str(fill_ticker).startswith(str(t)[:2]) for t in all_intent_tickers if t
             )
             if is_root_match:
                 contract_mismatches.append({
-                    "fill_ticker": f["ticker"],
+                    "fill_ticker": fill_ticker,
                     "intended_tickers": sorted(all_intent_tickers),
                     "note": "filled contract differs from intended",
                 })
@@ -111,7 +120,7 @@ def reconcile_day(
     # -----------------------------------------------------------------------
     # Commission summary
     # -----------------------------------------------------------------------
-    total_commission = sum(f.get("commission", 0.0) for f in fills)
+    total_commission = sum(float(f.get("commission", 0.0)) for f in fills)
 
     # -----------------------------------------------------------------------
     # Report

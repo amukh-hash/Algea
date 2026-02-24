@@ -160,6 +160,17 @@ class BacktestEngine:
             for ticker in portfolio.positions:
                 if ticker not in target_tickers:
                     exit_tickers.add(ticker)
-        if not exit_tickers or targets.empty:
+        if not exit_tickers:
             return targets
+        if targets.empty:
+            # return explicit zero-weight liquidation targets
+            return pd.DataFrame(
+                {
+                    "date": [pd.Timestamp(asof)] * len(exit_tickers),
+                    "ticker": sorted(exit_tickers),
+                    "target_weight": [0.0] * len(exit_tickers),
+                    "score": [0.0] * len(exit_tickers),
+                    "rank": [0.0] * len(exit_tickers),
+                }
+            )
         return targets[~targets["ticker"].isin(exit_tickers)].copy()

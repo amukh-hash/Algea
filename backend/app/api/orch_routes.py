@@ -176,8 +176,11 @@ async def get_fills(asof: str | None = None) -> dict[str, Any]:
 # ── Serve any artifact file ──────────────────────────────────────────
 @router.get("/artifacts/{day}/{path:path}")
 async def get_artifact(day: str, path: str) -> FileResponse:
-    full = _ARTIFACT_ROOT / day / path
-    if not full.exists() or not full.is_file():
+    root = (_ARTIFACT_ROOT / day).resolve()
+    full = (root / path).resolve()
+    if not str(full).startswith(str(root)):
+        raise HTTPException(400, detail="invalid artifact path")
+    if not full.exists() or not full.is_file() or full.is_symlink():
         raise HTTPException(404, detail="Artifact not found")
     mime = "application/json" if full.suffix == ".json" else "text/plain"
     return FileResponse(full, media_type=mime)

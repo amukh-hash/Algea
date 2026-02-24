@@ -56,6 +56,7 @@ class Portfolio:
         """Log a closed trade and return the realized PnL."""
         realized = (exit_px - position.avg_cost) * position.quantity
         position.realized_pnl += realized
+        denom = abs(position.avg_cost * position.quantity) if position.quantity else 0.0
         self.trade_log.append(
             {
                 "entry_date": position.entry_date,
@@ -65,7 +66,7 @@ class Portfolio:
                 "entry_px": position.avg_cost,
                 "exit_px": exit_px,
                 "pnl": realized,
-                "ret": realized / (position.avg_cost * position.quantity) if position.quantity else 0.0,
+                "ret": realized / denom if denom else 0.0,
                 "hold_days": (exit_date - position.entry_date).days,
                 "reason": reason,
             }
@@ -87,8 +88,9 @@ class Portfolio:
             self.cash -= signed_qty * fill.price
             return
 
-        new_qty = position.quantity + signed_qty
-        if position.quantity == 0:
+        old_qty = position.quantity
+        new_qty = old_qty + signed_qty
+        if old_qty == 0:
             position.avg_cost = fill.price
             position.entry_date = asof
         if new_qty == 0:
@@ -96,15 +98,40 @@ class Portfolio:
             self.cash += position.quantity * fill.price
             self.positions.pop(fill.ticker, None)
             return
-        if (position.quantity > 0 > new_qty) or (position.quantity < 0 < new_qty):
+
+        # Flip side: close old, open new remainder at fill price
+        if (old_qty > 0 > new_qty) or (old_qty < 0 < new_qty):
             self._record_trade(position, asof, fill.price, "flip")
             position.quantity = new_qty
             position.avg_cost = fill.price
             position.entry_date = asof
-        else:
+
+        # Same side increase: weighted average cost update
+        elif (old_qty > 0 and signed_qty > 0) or (old_qty < 0 and signed_qty < 0):
             total_cost = position.avg_cost * position.quantity + fill.price * signed_qty
             position.quantity = new_qty
             position.avg_cost = total_cost / position.quantity
+
+        # Partial reduction: realize proportional pnl; keep remaining avg_cost unchanged
+        else:
+            reduced_qty = min(abs(old_qty), abs(signed_qty))
+            pnl = (fill.price - position.avg_cost) * (reduced_qty if old_qty > 0 else -reduced_qty)
+            position.realized_pnl += pnl
+            self.trade_log.append(
+                {
+                    "entry_date": position.entry_date,
+                    "exit_date": asof,
+                    "ticker": position.ticker,
+                    "qty": reduced_qty if old_qty > 0 else -reduced_qty,
+                    "entry_px": position.avg_cost,
+                    "exit_px": fill.price,
+                    "pnl": pnl,
+                    "ret": pnl / (abs(position.avg_cost * reduced_qty) if reduced_qty else 1.0),
+                    "hold_days": (asof - position.entry_date).days,
+                    "reason": "partial_exit",
+                }
+            )
+            position.quantity = new_qty
         self.cash -= signed_qty * fill.price
 
     def build_order_intents(

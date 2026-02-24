@@ -4,6 +4,7 @@ import io
 import json
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from datetime import datetime
@@ -63,10 +64,13 @@ class JobRunner:
             attempts += 1
             started = datetime.now().timestamp()
             try:
-                result = self._run_handler(job, context, stdout_path, stderr_path)
-                runtime = datetime.now().timestamp() - started
-                if runtime > job.timeout_s:
-                    raise TimeoutError(f"job exceeded timeout ({runtime:.2f}s > {job.timeout_s}s)")
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(self._run_handler, job, context, stdout_path, stderr_path)
+                    try:
+                        result = fut.result(timeout=job.timeout_s)
+                    except FutureTimeoutError as exc:
+                        fut.cancel()
+                        raise TimeoutError(f"job exceeded timeout ({job.timeout_s}s)") from exc
                 return result
             except Exception as exc:
                 stderr_path.write_text(f"{type(exc).__name__}: {exc}\n", encoding="utf-8")

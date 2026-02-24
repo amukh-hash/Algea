@@ -16,6 +16,7 @@ from .job_defs import Job, default_jobs, filtered_jobs
 from .locks import LockManager
 from .runner import JobRunner
 from .state_store import StateStore
+from .control_state import control_state
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +74,14 @@ class Orchestrator:
 
     def run_once(self, asof: date | datetime | None = None, forced_session: Session | None = None, dry_run: bool = False) -> TickResult:
         now = now_et()
+        control_snapshot = control_state.snapshot()
         asof_date = normalize_asof_date(asof)
         day_root = self._day_root(asof_date)
         session = forced_session or self.calendar.current_session(now)
         self._write_heartbeat(day_root, now, session, "tick_start")
+
+        if bool(control_snapshot.get("paused", False)):
+            return TickResult("paused", asof_date.isoformat(), session.value, [], [], [])
 
         if not forced_session and not self.calendar.is_trading_day(now) and session != Session.OVERNIGHT:
             return TickResult("no_trading_day", asof_date.isoformat(), session.value, [], [], [])
@@ -135,9 +140,12 @@ class Orchestrator:
                         "session": session.value,
                         "artifact_root": str(day_root),
                         "mode": self.config.mode,
+                        "tick_id": run_id,
                         "dry_run": dry_run,
                         "broker": self.broker,
                         "config": self.config,
+                        "control_snapshot": control_snapshot,
+                        "control_snapshot_id": control_snapshot.get("snapshot_id"),
                     },
                     day_root / "jobs",
                 )

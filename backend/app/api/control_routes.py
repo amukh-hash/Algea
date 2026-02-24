@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,14 @@ logger = logging.getLogger("algaie.api.control")
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
 _TIMEOUT_S = 5.0
+
+
+def _require_auth() -> None:
+    if os.getenv("AUTH_REQUIRED", "0") != "1":
+        return
+    # lightweight guard for current router call style:
+    # callers in tests can disable via AUTH_REQUIRED=0.
+    raise HTTPException(status_code=401, detail="auth_required")
 
 
 # ── Request models ───────────────────────────────────────────────────
@@ -69,18 +78,21 @@ def get_state() -> dict[str, Any]:
 
 @router.put("/pause")
 def set_pause(req: PauseRequest) -> dict[str, Any]:
+    _require_auth()
     control_state.set_paused(req.paused)
     return {"ok": True, "paused": req.paused}
 
 
 @router.put("/resume")
 def resume() -> dict[str, Any]:
+    _require_auth()
     control_state.set_paused(False)
     return {"ok": True, "paused": False}
 
 
 @router.put("/vol-regime")
 def set_vol_regime(req: VolRegimeRequest) -> dict[str, Any]:
+    _require_auth()
     if req.regime and req.regime not in ("CRASH_RISK", "CAUTION", "NORMAL"):
         raise HTTPException(400, detail="regime must be CRASH_RISK, CAUTION, NORMAL, or null")
     val = req.regime if req.regime != "NORMAL" else None
@@ -90,12 +102,14 @@ def set_vol_regime(req: VolRegimeRequest) -> dict[str, Any]:
 
 @router.put("/blocked-symbols")
 def set_blocked_symbols(req: BlockedSymbolsRequest) -> dict[str, Any]:
+    _require_auth()
     control_state.set_blocked_symbols(req.symbols)
     return {"ok": True, "blocked_symbols": sorted(control_state.snapshot()["blocked_symbols"])}
 
 
 @router.put("/frozen-sleeves")
 def set_frozen_sleeves(req: FrozenSleevesRequest) -> dict[str, Any]:
+    _require_auth()
     valid = {"core", "vrp", "selector"}
     invalid = set(req.sleeves) - valid
     if invalid:
@@ -106,6 +120,7 @@ def set_frozen_sleeves(req: FrozenSleevesRequest) -> dict[str, Any]:
 
 @router.put("/exposure-cap")
 def set_exposure_cap(req: ExposureCapRequest) -> dict[str, Any]:
+    _require_auth()
     if req.cap is not None and req.cap <= 0:
         raise HTTPException(400, detail="Exposure cap must be positive or null")
     control_state.set_exposure_cap(req.cap)
@@ -114,6 +129,7 @@ def set_exposure_cap(req: ExposureCapRequest) -> dict[str, Any]:
 
 @router.put("/execution-mode")
 def set_execution_mode(req: ExecutionModeRequest) -> dict[str, Any]:
+    _require_auth()
     try:
         control_state.set_execution_mode(req.mode)
     except ValueError as e:
@@ -125,6 +141,7 @@ def set_execution_mode(req: ExecutionModeRequest) -> dict[str, Any]:
 
 @router.post("/trigger-tick")
 async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
+    _require_auth()
     """Fire a single orchestrator tick."""
     if control_state.snapshot()["paused"]:
         raise HTTPException(409, detail="Orchestrator is paused. Resume before triggering.")
@@ -153,6 +170,7 @@ async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
 
 @router.post("/flatten")
 def flatten(req: FlattenRequest) -> dict[str, Any]:
+    _require_auth()
     """Submit flatten order (paper-only)."""
     state = control_state.snapshot()
     if state["execution_mode"] == "ibkr":

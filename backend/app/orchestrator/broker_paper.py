@@ -16,6 +16,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from backend.app.schemas.fill_position import (
+    FILLS_SCHEMA_VERSION,
+    POSITIONS_SCHEMA_VERSION,
+    normalize_fill,
+    normalize_position,
+)
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_STATE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "paper_account"
@@ -173,8 +180,13 @@ class PersistentPaperBroker:
 
     def get_positions(self) -> dict:
         with self._lock:
+            positions = [
+                normalize_position(p.to_dict(), source="paper").to_dict()
+                for p in self._positions.values() if p.qty != 0
+            ]
             return {
-                "positions": [p.to_dict() for p in self._positions.values() if p.qty != 0]
+                "schema_version": POSITIONS_SCHEMA_VERSION,
+                "positions": positions,
             }
 
     def get_fills(self, since_ts: str | None) -> dict:
@@ -182,7 +194,8 @@ class PersistentPaperBroker:
             fills = self._fills
             if since_ts:
                 fills = [f for f in fills if f.ts >= since_ts]
-            return {"fills": [f.to_dict() for f in fills], "since": since_ts}
+            normalized = [normalize_fill(f.to_dict(), source="paper").to_dict() for f in fills]
+            return {"schema_version": FILLS_SCHEMA_VERSION, "fills": normalized, "since": since_ts}
 
     def get_quote(self, symbol: str) -> float | None:
         """Return cached price or fetch live via yfinance."""

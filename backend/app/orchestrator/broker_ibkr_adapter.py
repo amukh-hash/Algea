@@ -12,6 +12,12 @@ from typing import Any
 
 from algaie.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig
 from algaie.trading.orders import OrderIntent
+from backend.app.schemas.fill_position import (
+    FILLS_SCHEMA_VERSION,
+    POSITIONS_SCHEMA_VERSION,
+    normalize_fill,
+    normalize_position,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +44,17 @@ class IBKRBrokerAdapter:
         if not order_list:
             return {"status": "accepted", "order_count": 0, "routed": []}
 
-        today = date.today()
+        asof = str(orders.get("asof_date", ""))
         intents = []
         for o in order_list:
             intents.append(
                 OrderIntent(
-                    asof=today,
+                    asof=datetime.fromisoformat(asof).date() if asof else date(1970, 1, 1),
                     ticker=str(o["symbol"]),
                     quantity=float(o["qty"]),
                     side=str(o["side"]),
                     reason="orchestrator",
+                    client_order_id=o.get("client_order_id"),
                 )
             )
 
@@ -77,11 +84,12 @@ class IBKRBrokerAdapter:
             "positions": [
                 {
                     "symbol": p.ticker,
-                    "qty": p.quantity,
+                    "quantity": p.quantity,
                     "avg_cost": p.avg_cost,
                 }
                 for p in positions
-            ]
+            ],
+            "schema_version": POSITIONS_SCHEMA_VERSION,
         }
 
     def get_fills(self, since_ts: str | None) -> dict:
@@ -94,20 +102,19 @@ class IBKRBrokerAdapter:
                 pass
 
         fills = self._broker.get_fills(time_min=time_min)
-        return {
-            "fills": [
-                {
-                    "ticker": f.ticker,
-                    "qty": f.quantity,
-                    "price": f.price,
-                    "side": f.side,
-                    "order_id": f.order_id,
-                    "commission": f.commission,
-                }
-                for f in fills
-            ],
-            "since": since_ts,
-        }
+        normalized = [normalize_fill(
+            {
+                "ticker": f.ticker,
+                "qty": f.quantity,
+                "price": f.price,
+                "side": f.side,
+                "order_id": f.order_id,
+                "commission": f.commission,
+                "execution_time": str(f.execution_time) if f.execution_time else None,
+            },
+            source="ibkr",
+        ).to_dict() for f in fills]
+        return {"fills": normalized, "since": since_ts, "schema_version": FILLS_SCHEMA_VERSION}
 
     def get_quote(self, symbol: str) -> float | None:
         """Fetch latest price for a symbol via IBKR historical data.
