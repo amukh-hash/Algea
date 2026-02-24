@@ -335,16 +335,35 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
         asof = date.fromisoformat(_asof(ctx))
         signals_df = _load_selector_signals(asof, top_n=10)
 
-        # Convert DataFrame signals to target weights
+        # Convert DataFrame signals to signed target weights.
+        # ``_load_selector_signals`` emits positive weights for both long and
+        # short rows with side carrying direction; orchestrator routing expects
+        # direction in ``target_weight`` itself.
         targets = []
         if signals_df is not None and len(signals_df) > 0:
             for _, row in signals_df.iterrows():
+                side = str(row.get("side", "")).strip().lower()
+                raw_weight = abs(float(row.get("weight", 0.0)))
+                signed_weight = -raw_weight if side == "sell" else raw_weight
                 targets.append({
                     "symbol": str(row.get("symbol", "")),
-                    "target_weight": round(float(row.get("weight", 0.0)), 6),
+                    "target_weight": round(signed_weight, 6),
                     "score": round(float(row.get("score_final", 0.0)), 6),
-                    "side": str(row.get("side", "")),
+                    "side": side,
                 })
+
+            # Keep selector sleeve risk budget bounded under the orchestrator
+            # global limits (default max_gross=1.5). A 10x10 L/S basket from
+            # selector comes in at gross 2.0, so scale to a configurable gross
+            # target (default 1.0).
+            cfg = _load_config(ctx)
+            selector_gross_target = _cfg_float(cfg, "selector_target_gross", 1.0)
+            gross = sum(abs(float(t.get("target_weight", 0.0))) for t in targets)
+            if gross > 0 and selector_gross_target > 0:
+                scale = min(1.0, selector_gross_target / gross)
+                if scale < 1.0:
+                    for target in targets:
+                        target["target_weight"] = round(float(target["target_weight"]) * scale, 6)
 
         p = _paths(ctx)
         sig_path = p["signals"] / "selector_signals.json"
