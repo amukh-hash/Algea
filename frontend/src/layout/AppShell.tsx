@@ -9,12 +9,15 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { SystemHealthBar } from "@/components/SystemHealthBar";
 
 const nav = [
-  { href: "/execution", label: "Execution", key: "1" },
-  { href: "/orchestrator", label: "Orchestrator", key: "2" },
-  { href: "/portfolio", label: "Portfolio", key: "3" },
-  { href: "/research", label: "Research", key: "4" },
-  { href: "/compare", label: "Compare", key: "5" },
-  { href: "/settings", label: "Settings", key: "6" },
+  { href: "/overview", label: "Overview", key: "1" },
+  { href: "/sleeves", label: "Sleeves", key: "2" },
+  { href: "/performance", label: "Performance", key: "3" },
+  { href: "/risk", label: "Risk", key: "4" },
+  { href: "/inputs", label: "Inputs", key: "5" },
+  { href: "/jobs", label: "Jobs", key: "6" },
+  { href: "/artifacts", label: "Artifacts", key: "7" },
+  { href: "/execution", label: "Execution", key: "8" },
+  { href: "/orchestrator", label: "Orchestrator", key: "9" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -51,11 +54,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const crumbs = useMemo(() => {
     if (path.startsWith("/runs/")) return ["Research", "Runs", path.split("/").at(-1) ?? "run"];
-    if (path.startsWith("/compare")) return ["Research", "Compare"];
+    if (path.startsWith("/overview") || path.startsWith("/ops")) return ["Overview / Ops Health"];
+    if (path.startsWith("/sleeves")) return ["Sleeves Dashboard"];
+    if (path.startsWith("/performance")) return ["Portfolio Performance"];
+    if (path.startsWith("/risk")) return ["Risk & Constraints"];
+    if (path.startsWith("/inputs")) return ["Data / Market Inputs"];
+    if (path.startsWith("/jobs")) return ["Jobs / Orchestrator"];
+    if (path.startsWith("/artifacts")) return ["Artifacts / Raw"];
     if (path === "/execution") return ["Execution"];
     if (path === "/orchestrator") return ["Orchestrator"];
-    if (path === "/portfolio") return ["Portfolio"];
-    if (path === "/settings") return ["Settings"];
     return ["Research"];
   }, [path]);
 
@@ -79,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="text-[0.6rem] text-muted uppercase tracking-widest mb-1">Shortcuts</div>
           <div className="text-[0.6rem] text-secondary space-y-0.5">
             <div>⌘K — Command Palette</div>
-            <div>1-6 — Navigate sections</div>
+            <div>1-9 — Navigate sections</div>
           </div>
         </div>
       </aside>
