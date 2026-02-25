@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,18 @@ from .calendar import Session
 logger = logging.getLogger(__name__)
 
 JobHandler = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+def _mode(ctx: dict[str, Any]) -> str:
+    return str(ctx.get("mode", "noop")).lower()
+
+
+def _allow_stub_signals(ctx: dict[str, Any]) -> bool:
+    import os
+
+    if os.getenv("ORCH_ALLOW_STUB_SIGNALS", "0") != "1":
+        return False
+    return _mode(ctx) == "noop" or bool(ctx.get("dry_run", False))
 
 
 @dataclass
@@ -165,12 +178,20 @@ def handle_data_refresh_intraday(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 def _generic_signal_handler(ctx: dict[str, Any], sleeve: str, symbols: list[str], run_type: str = "premarket") -> dict[str, Any]:
+    if not _allow_stub_signals(ctx):
+        raise RuntimeError(
+            f"stub signal generation blocked for sleeve={sleeve} mode={_mode(ctx)}; "
+            "set ORCH_ALLOW_STUB_SIGNALS=1 in noop mode for development"
+        )
+
     p = _paths(ctx)
     sig_path = p["signals"] / f"{sleeve}_signals.json"
     tgt_path = p["targets"] / f"{sleeve}_targets.json"
 
     signal_payload = {
+        "schema_version": "signals.v1",
         "status": "ok",
+        "is_stub": True,
         "asof_date": _asof(ctx),
         "session": _session(ctx),
         "sleeve": sleeve,
@@ -178,10 +199,12 @@ def _generic_signal_handler(ctx: dict[str, Any], sleeve: str, symbols: list[str]
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "signals": [{"symbol": s, "score": 1.0 if i % 2 == 0 else -1.0} for i, s in enumerate(symbols)],
         "stub": True,
-        "note": "TODO: wire to production sleeve signal entrypoint",
+        "note": "stub signal entrypoint for development-only noop mode",
     }
     target_payload = {
+        "schema_version": "targets.v1",
         "status": "ok",
+        "is_stub": True,
         "asof_date": _asof(ctx),
         "sleeve": sleeve,
         "targets": _targets_for(symbols, gross=0.03),
@@ -200,7 +223,7 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
     """Core sleeve: CO->OC reversal futures signals.
 
     Delegates to ``run_paper_cycle_ibkr.phase_open`` when available.
-    Falls back to the stub _generic_signal_handler if strategy imports fail.
+    Falls back to the stub _generic_signal_handler only in explicit noop/dev mode.
     """
     try:
         import sys
@@ -217,9 +240,8 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
         config_path = str(_root / "backend" / "configs" / "cooc_reversal_futures.yaml")
         inputs_path = str(_root / "data_cache" / "canonical_futures_daily.parquet")
 
-        mode = ctx.get("mode", "noop")
-        if ctx.get("dry_run", True):
-            mode = "noop"  # never route orders from signal generation
+        # phase_open currently supports only noop|ibkr
+        mode = "noop" if ctx.get("dry_run", True) else "ibkr"
 
         phase_open(
             cfg=_load_sleeve_cfg(config_path),
@@ -233,15 +255,19 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
         tgt_path = p["targets"] / "core_targets.json"
         sig_path = p["signals"] / "core_signals.json"
         _write_json(sig_path, {
+            "schema_version": "signals.v1",
             "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
             "sleeve": "core", "source": "phase_open",
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "is_stub": False,
         })
         # Core sleeve manages its own orders; provide zero-weight targets
         # so downstream risk checks don't flag missing files
         _write_json(tgt_path, {
+            "schema_version": "targets.v1",
             "status": "ok", "asof_date": _asof(ctx), "sleeve": "core",
             "targets": [],  # Core manages its own execution
+            "is_stub": False,
         })
 
         return {
@@ -250,8 +276,10 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
             "metrics": {"source": "phase_open"},
         }
     except Exception as exc:
-        logger.warning("Core signal handler falling back to stub: %s", exc)
-        return _generic_signal_handler(ctx, "core", ["SPY", "QQQ", "IWM"])
+        logger.exception("Core signal handler failed: %s", exc)
+        if _allow_stub_signals(ctx):
+            return _generic_signal_handler(ctx, "core", ["SPY", "QQQ", "IWM"])
+        raise
 
 
 def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
@@ -294,15 +322,19 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
         sig_path = p["signals"] / "vrp_signals.json"
         tgt_path = p["targets"] / "vrp_targets.json"
         _write_json(sig_path, {
+            "schema_version": "signals.v1",
             "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
             "sleeve": "vrp", "source": "run_vrp",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "vrp_result": vrp_result,
+            "is_stub": False,
         })
         # VRP is always noop, provide empty targets
         _write_json(tgt_path, {
+            "schema_version": "targets.v1",
             "status": "ok", "asof_date": _asof(ctx), "sleeve": "vrp",
             "targets": [],  # VRP currently noop
+            "is_stub": False,
         })
 
         return {
@@ -311,8 +343,10 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
             "metrics": {"source": "run_vrp", "mode": "noop"},
         }
     except Exception as exc:
-        logger.warning("VRP signal handler falling back to stub: %s", exc)
-        return _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])
+        logger.exception("VRP signal handler failed: %s", exc)
+        if _allow_stub_signals(ctx):
+            return _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])
+        raise
 
 
 def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
@@ -369,14 +403,18 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
         sig_path = p["signals"] / "selector_signals.json"
         tgt_path = p["targets"] / "selector_targets.json"
         _write_json(sig_path, {
+            "schema_version": "signals.v1",
             "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
             "sleeve": "selector", "run_type": run_type, "source": "_load_selector_signals",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "signals": targets,
+            "is_stub": False,
         })
         _write_json(tgt_path, {
+            "schema_version": "targets.v1",
             "status": "ok", "asof_date": _asof(ctx), "sleeve": "selector",
             "targets": targets,
+            "is_stub": False,
         })
 
         return {
@@ -385,8 +423,20 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
             "metrics": {"n_symbols": len(targets), "run_type": run_type, "source": "_load_selector_signals"},
         }
     except Exception as exc:
-        logger.warning("Selector signal handler falling back to stub: %s", exc)
-        return _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"], run_type=run_type)
+        logger.exception("Selector signal handler failed: %s", exc)
+        if _allow_stub_signals(ctx):
+            return _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"], run_type=run_type)
+        raise
+
+
+def _load_artifact(path: Path, expected_version: str) -> dict[str, Any]:
+    payload = _read_json(path)
+    version = payload.get("schema_version", expected_version)
+    if version != expected_version:
+        raise RuntimeError(
+            f"artifact schema mismatch for {path.name}: expected={expected_version} got={version}"
+        )
+    return payload
 
 
 def _load_targets_required(ctx: dict[str, Any]) -> tuple[dict[str, Path], list[str]]:
@@ -508,6 +558,14 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
 def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     _require_ctx(ctx, "mode", "dry_run", "broker")
     p = _paths(ctx)
+    control = ctx.get("control_snapshot") if isinstance(ctx.get("control_snapshot"), dict) else {}
+    if bool(control.get("paused", False)):
+        raise RuntimeError("cannot route orders: control pause enabled")
+    if control.get("execution_mode") == "noop":
+        ctx = {**ctx, "mode": "noop"}
+    if control.get("execution_mode") in {"paper", "ibkr"}:
+        ctx = {**ctx, "mode": str(control.get("execution_mode"))}
+
     report_path = p["reports"] / "risk_checks.json"
     if not report_path.exists():
         raise RuntimeError("cannot route orders: risk report missing")
@@ -523,6 +581,25 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if missing:
         raise RuntimeError(f"cannot build orders: missing targets for {missing}")
 
+    # Fail-closed route gate: every upstream signal/target artifact must be
+    # explicitly non-stub and status=ok.
+    allow_stub_for_dry_run = bool(ctx.get("dry_run", False))
+    for sleeve in ["core", "vrp", "selector"]:
+        sig_path = p["signals"] / f"{sleeve}_signals.json"
+        if not sig_path.exists():
+            raise RuntimeError(f"cannot route orders: missing signal artifact for {sleeve}")
+        sig = _load_artifact(sig_path, "signals.v1")
+        if sig.get("status") != "ok":
+            raise RuntimeError(f"cannot route orders: signal artifact invalid for {sleeve}")
+        if bool(sig.get("is_stub", sig.get("stub", False))) and not allow_stub_for_dry_run:
+            raise RuntimeError(f"cannot route orders: signal artifact invalid for {sleeve}")
+
+        tgt = _load_artifact(target_paths[sleeve], "targets.v1")
+        if tgt.get("status") != "ok":
+            raise RuntimeError(f"cannot route orders: target artifact invalid for {sleeve}")
+        if bool(tgt.get("is_stub", tgt.get("stub", False))) and not allow_stub_for_dry_run:
+            raise RuntimeError(f"cannot route orders: target artifact invalid for {sleeve}")
+
     cfg = _load_config(ctx)
     account_equity = _cfg_float(cfg, "account_equity", _cfg_float(cfg, "account_notional", 1_000_000))
     rounding = _cfg_float(cfg, "order_notional_rounding", 100)
@@ -534,7 +611,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
 
     combined: dict[str, float] = {}
     for _, tpath in target_paths.items():
-        targets = _read_json(tpath).get("targets", [])
+        targets = _load_artifact(tpath, "targets.v1").get("targets", [])
         for row in targets:
             sym = str(row.get("symbol", "")).strip()
             if not sym:
@@ -602,7 +679,11 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError(f"missing price for {missing_prices} in non-dry-run mode")
 
     orders: list[dict[str, Any]] = []
+    blocked_symbols = {str(s).upper() for s in control.get("blocked_symbols", [])} if isinstance(control.get("blocked_symbols", []), list) else set()
+
     for sym, weight in sorted(combined.items()):
+        if sym.upper() in blocked_symbols:
+            continue
         if sym not in resolved_prices:
             continue
         price, price_source = resolved_prices[sym]
@@ -620,6 +701,9 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
                 "symbol": sym,
                 "qty": qty,
                 "side": "BUY" if delta_notional > 0 else "SELL",
+                "client_order_id": hashlib.sha1(
+                    f"{_asof(ctx)}|{ctx.get('tick_id','') or ''}|{sym}|{'BUY' if delta_notional > 0 else 'SELL'}|{qty}".encode("utf-8")
+                ).hexdigest()[:20],
                 "type": "MKT",
                 "tif": "DAY",
                 "est_price": round(price, 8),
@@ -635,6 +719,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     payload = {
         "asof_date": _asof(ctx),
         "session": _session(ctx),
+        "control_snapshot_id": control.get("snapshot_id"),
         "mode": ctx["mode"],
         "dry_run": is_dry_run,
         "risk_report_path": str(report_path),
@@ -673,6 +758,8 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if total_abs_notional > max_total_order_notional:
         reject_reasons.append("max_total_order_notional_exceeded")
 
+    # Empty order list is a valid "no rebalance needed" outcome.
+    reject_reasons = [reason for reason in reject_reasons if reason != "empty_order_list"]
     if reject_reasons:
         rejected_path = p["orders"] / "rejected.json"
         _write_json(
@@ -715,9 +802,15 @@ def handle_fills_reconcile(ctx: dict[str, Any]) -> dict[str, Any]:
     fills = ctx["broker"].get_fills(None)
     fills_path = p["fills"] / "fills.json"
     pos_path = p["fills"] / "positions.json"
-    _write_json(fills_path, fills if isinstance(fills, dict) else {"fills": fills})
+    fills_payload = fills if isinstance(fills, dict) else {"fills": fills}
+    if isinstance(fills_payload, dict) and "schema_version" not in fills_payload:
+        fills_payload["schema_version"] = "fills.v1"
+    _write_json(fills_path, fills_payload)
     positions = ctx["broker"].get_positions()
-    _write_json(pos_path, positions if isinstance(positions, dict) else {"positions": positions})
+    positions_payload = positions if isinstance(positions, dict) else {"positions": positions}
+    if isinstance(positions_payload, dict) and "schema_version" not in positions_payload:
+        positions_payload["schema_version"] = "positions.v1"
+    _write_json(pos_path, positions_payload)
     return {"status": "ok", "artifacts": {"fills": str(fills_path), "positions": str(pos_path)}}
 
 

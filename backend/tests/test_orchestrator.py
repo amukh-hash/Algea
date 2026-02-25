@@ -26,6 +26,11 @@ from backend.app.orchestrator.orchestrator import Orchestrator
 from backend.app.orchestrator.state_store import StateStore
 
 
+@pytest.fixture(autouse=True)
+def _allow_stub_signals_env(monkeypatch):
+    monkeypatch.setenv("ORCH_ALLOW_STUB_SIGNALS", "1")
+
+
 class SpyBroker(PaperBrokerStub):
     def __init__(self, account_id: str = "DU111111", is_paper: bool = True, price_map: dict[str, float] | None = None) -> None:
         super().__init__(account_id=account_id, is_paper=is_paper, price_map=price_map or {})
@@ -140,11 +145,16 @@ def test_open_dry_run_writes_orders_without_routing(tmp_path):
 def test_order_routing_rejects_oversized_notional(tmp_path):
     root = tmp_path / "artifacts" / "2026-02-17"
     (root / "targets").mkdir(parents=True, exist_ok=True)
+    (root / "signals").mkdir(parents=True, exist_ok=True)
     (root / "reports").mkdir(parents=True, exist_ok=True)
 
     for sleeve in ["core", "vrp", "selector"]:
         (root / "targets" / f"{sleeve}_targets.json").write_text(
-            json.dumps({"targets": [{"symbol": "SPY", "target_weight": 1.0}]}, indent=2),
+            json.dumps({"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": [{"symbol": "SPY", "target_weight": 1.0}]}, indent=2),
+            encoding="utf-8",
+        )
+        (root / "signals" / f"{sleeve}_signals.json").write_text(
+            json.dumps({"schema_version": "signals.v1", "status": "ok", "is_stub": False}, indent=2),
             encoding="utf-8",
         )
     (root / "reports" / "risk_checks.json").write_text(
@@ -258,11 +268,16 @@ def test_price_missing_hard_fail_in_live_mode(tmp_path):
     """handle_order_build_and_route must raise if price missing and dry_run=False."""
     root = tmp_path / "artifacts" / "2026-02-17"
     (root / "targets").mkdir(parents=True, exist_ok=True)
+    (root / "signals").mkdir(parents=True, exist_ok=True)
     (root / "reports").mkdir(parents=True, exist_ok=True)
 
     for sleeve in ["core", "vrp", "selector"]:
         (root / "targets" / f"{sleeve}_targets.json").write_text(
-            json.dumps({"targets": [{"symbol": "ZZZ", "target_weight": 0.01}]}, indent=2),
+            json.dumps({"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": [{"symbol": "ZZZ", "target_weight": 0.01}]}, indent=2),
+            encoding="utf-8",
+        )
+        (root / "signals" / f"{sleeve}_signals.json").write_text(
+            json.dumps({"schema_version": "signals.v1", "status": "ok", "is_stub": False}, indent=2),
             encoding="utf-8",
         )
     (root / "reports" / "risk_checks.json").write_text(
@@ -304,11 +319,16 @@ def test_price_missing_fallback_in_dry_run(tmp_path):
     """In dry-run, synthetic fallback should be used when no real price exists."""
     root = tmp_path / "artifacts" / "2026-02-17"
     (root / "targets").mkdir(parents=True, exist_ok=True)
+    (root / "signals").mkdir(parents=True, exist_ok=True)
     (root / "reports").mkdir(parents=True, exist_ok=True)
 
     for sleeve in ["core", "vrp", "selector"]:
         (root / "targets" / f"{sleeve}_targets.json").write_text(
-            json.dumps({"targets": [{"symbol": "ZZZ", "target_weight": 0.01}]}, indent=2),
+            json.dumps({"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": [{"symbol": "ZZZ", "target_weight": 0.01}]}, indent=2),
+            encoding="utf-8",
+        )
+        (root / "signals" / f"{sleeve}_signals.json").write_text(
+            json.dumps({"schema_version": "signals.v1", "status": "ok", "is_stub": False}, indent=2),
             encoding="utf-8",
         )
     (root / "reports" / "risk_checks.json").write_text(
