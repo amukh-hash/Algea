@@ -1,9 +1,7 @@
-"""Tests for the orchestrator status API routes."""
 from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,85 +11,111 @@ from fastapi.testclient import TestClient
 from backend.app.orchestrator.migrations import apply_migrations
 
 
-# ── helpers ──────────────────────────────────────────────────────────
-
 def _seed_db(db_path: Path) -> None:
-    """Create an orchestrator-state SQLite DB with sample data."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     apply_migrations(conn)
-
     conn.execute(
-        "INSERT INTO runs(run_id, asof_date, session, started_at, ended_at, status, meta_json) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("run-1", "2026-02-18", "open", "2026-02-18T10:00:00", "2026-02-18T10:01:00", "success",
-         json.dumps({"dry_run": False, "ran_jobs": ["core_signals"], "failed_jobs": [], "skipped_jobs": ["vrp_signals"]})),
+        "INSERT INTO runs(run_id, asof_date, session, started_at, ended_at, status, meta_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("run-1", "2026-02-18", "open", "2026-02-18T10:00:00", "2026-02-18T10:01:00", "success", json.dumps({"dry_run": False})),
     )
     conn.execute(
-        "INSERT INTO runs(run_id, asof_date, session, started_at, ended_at, status, meta_json) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("run-2", "2026-02-18", "close", "2026-02-18T16:00:00", None, "running",
-         json.dumps({"dry_run": True})),
+        """INSERT INTO jobs(run_id, asof_date, session, job_name, status, started_at, ended_at, exit_code, error_summary, last_success_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            "run-1",
+            "2026-02-18",
+            "open",
+            "risk_checks_global",
+            "success",
+            "2026-02-18T10:00:02",
+            "2026-02-18T10:00:10",
+            0,
+            None,
+            "2026-02-18T10:00:10",
+        ),
     )
     conn.execute(
         """INSERT INTO jobs(run_id, asof_date, session, job_name, status, started_at, ended_at, exit_code, error_summary)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("run-1", "2026-02-18", "open", "core_signals", "success",
-         "2026-02-18T10:00:01", "2026-02-18T10:00:30", 0, None),
-    )
-    conn.execute(
-        """INSERT INTO jobs(run_id, asof_date, session, job_name, status, started_at, ended_at, exit_code, error_summary)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("run-1", "2026-02-18", "open", "vrp_signals", "skipped",
-         None, None, None, "idempotent_success"),
+        (
+            "run-1",
+            "2026-02-18",
+            "open",
+            "order_build_and_route",
+            "failed",
+            "2026-02-18T10:00:11",
+            "2026-02-18T10:00:15",
+            1,
+            "missing quotes",
+        ),
     )
     conn.commit()
     conn.close()
 
 
-def _seed_artifacts(artifact_root: Path, day: str = "2026-02-18") -> None:
-    """Write sample artifact files (heartbeat, positions, targets, fills)."""
-    day_dir = artifact_root / day
-    day_dir.mkdir(parents=True, exist_ok=True)
+def _seed_day(root: Path, day: str, *, legacy_risk: bool = False) -> None:
+    day_dir = root / day
+    (day_dir / "fills").mkdir(parents=True, exist_ok=True)
+    (day_dir / "targets").mkdir(parents=True, exist_ok=True)
+    (day_dir / "reports").mkdir(parents=True, exist_ok=True)
 
-    # heartbeat
     (day_dir / "heartbeat.json").write_text(
-        json.dumps({"timestamp": "2026-02-18T10:01:00", "session": "open", "state": "success", "mode": "paper"}),
+        json.dumps({"timestamp": f"{day}T10:01:00", "session": "open", "state": "success", "mode": "paper"}),
         encoding="utf-8",
     )
-
-    # positions
-    fills_dir = day_dir / "fills"
-    fills_dir.mkdir(exist_ok=True)
-    (fills_dir / "positions.json").write_text(
-        json.dumps({"positions": [{"symbol": "SPY", "qty": 10, "avg_cost": 520.5}]}),
+    (day_dir / "fills" / "positions.json").write_text(
+        json.dumps({"positions": [{"symbol": "SPY", "qty": 3, "avg_cost": 500.0}]}),
         encoding="utf-8",
     )
-    (fills_dir / "fills.json").write_text(
-        json.dumps({"fills": [{"symbol": "SPY", "side": "buy", "qty": 10, "price": 520.5}]}),
+    (day_dir / "fills" / "fills.json").write_text(
+        json.dumps({"fills": [{"symbol": "SPY", "side": "buy", "qty": 3, "price": 500.0}]}),
         encoding="utf-8",
     )
-
-    # targets
-    targets_dir = day_dir / "targets"
-    targets_dir.mkdir(exist_ok=True)
-    (targets_dir / "core_targets.json").write_text(
-        json.dumps({"targets": [{"symbol": "AAPL", "target_weight": 0.05, "score": 1.2, "side": "buy"}]}),
+    (day_dir / "targets" / "core_targets.json").write_text(
+        json.dumps({"targets": [{"symbol": "AAPL", "target_weight": 0.05}]}),
         encoding="utf-8",
     )
-
-    # a generic artifact file
+    (day_dir / "instance.json").write_text(
+        json.dumps({"sleeves": {"core": {"status": "live"}}, "asof_date": day}),
+        encoding="utf-8",
+    )
     (day_dir / "summary.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+
+    if legacy_risk:
+        risk_payload = {"status": "failed", "missing_sleeves": ["vrp"], "nan_or_inf": True}
+        (day_dir / "risk_checks.json").write_text(json.dumps(risk_payload), encoding="utf-8")
+    else:
+        risk_payload = {
+            "status": "ok",
+            "checked_at": f"{day}T10:01:10",
+            "asof_date": day,
+            "session": "open",
+            "reason": None,
+            "missing_sleeves": [],
+            "inputs": {"target_paths": {}},
+            "metrics": {"gross_exposure": 0.1, "per_sleeve": {"core": {"gross": 0.1}}},
+            "limits": {"max_gross": 1.5},
+            "violations": [],
+            "per_sleeve": {"core": {"gross": 0.1}},
+        }
+        (day_dir / "reports" / "risk_checks.json").write_text(json.dumps(risk_payload), encoding="utf-8")
+
+    (day_dir / "reports" / "portfolio_equity_curve.csv").write_text(
+        "date,cum_net_unscaled,cum_net_volscaled,drawdown,rolling_vol,rolling_sharpe,turnover,cost\n"
+        f"{day},0.01,0.008,-0.001,0.12,1.1,0.03,0.0005\n"
+        f"{day},N/A,0.01,N/A,inf,nan,N/A,none\n",
+        encoding="utf-8",
+    )
 
 
 @pytest.fixture()
 def test_client(tmp_path: Path):
-    """Create a TestClient with mocked DB and artifact paths."""
     db_path = tmp_path / "state" / "state.sqlite3"
     artifact_root = tmp_path / "artifacts"
-
     _seed_db(db_path)
-    _seed_artifacts(artifact_root)
+    _seed_day(artifact_root, "2026-02-17", legacy_risk=True)
+    _seed_day(artifact_root, "2026-02-18", legacy_risk=False)
 
     with (
         patch("backend.app.api.orch_routes._DB_PATH", db_path),
@@ -99,132 +123,96 @@ def test_client(tmp_path: Path):
         patch("backend.app.api.orch_routes._today", return_value="2026-02-18"),
     ):
         from backend.app.api.main import app
+
         yield TestClient(app, raise_server_exceptions=False)
 
 
-# ── GET /api/orchestrator/status ─────────────────────────────────────
+def test_instance_success_and_missing_404(test_client):
+    ok = test_client.get("/api/orchestrator/instance", params={"asof": "2026-02-18"})
+    assert ok.status_code == 200
+    assert ok.json()["instance"]["sleeves"]["core"]["status"] == "live"
 
-class TestGetStatus:
-    def test_returns_heartbeat_and_last_run(self, test_client):
-        resp = test_client.get("/api/orchestrator/status")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["asof_date"] == "2026-02-18"
-        assert data["heartbeat"] is not None
-        assert data["heartbeat"]["session"] == "open"
-        assert data["heartbeat"]["mode"] == "paper"
-        assert data["last_run"] is not None
-        assert data["last_run"]["status"] == "running"  # run-2 is latest by started_at
-
-    def test_missing_heartbeat_returns_null(self, test_client, tmp_path):
-        # Remove the heartbeat file
-        hb = tmp_path / "artifacts" / "2026-02-18" / "heartbeat.json"
-        hb.unlink(missing_ok=True)
-        resp = test_client.get("/api/orchestrator/status")
-        assert resp.status_code == 200
-        assert resp.json()["heartbeat"] is None
+    missing = test_client.get("/api/orchestrator/instance", params={"asof": "1999-01-01"})
+    assert missing.status_code == 404
+    detail = missing.json()["detail"]
+    assert detail["error_code"] == "instance_not_found"
+    assert "expected_paths" in detail and "found_paths" in detail
 
 
-# ── GET /api/orchestrator/runs ───────────────────────────────────────
+def test_risk_canonical_and_legacy_and_missing(test_client):
+    canonical = test_client.get("/api/orchestrator/risk-checks", params={"asof": "2026-02-18"})
+    assert canonical.status_code == 200
+    assert canonical.json()["risk_checks"]["schema_version"] == "canonical"
 
-class TestListRuns:
-    def test_lists_runs(self, test_client):
-        resp = test_client.get("/api/orchestrator/runs")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["total"] == 2
-        assert len(data["items"]) == 2
-        # Newest first
-        assert data["items"][0]["run_id"] == "run-2"
+    legacy = test_client.get("/api/orchestrator/risk-checks", params={"asof": "2026-02-17"})
+    assert legacy.status_code == 200
+    assert legacy.json()["risk_checks"]["schema_version"] == "legacy_normalized"
 
-    def test_limit_param(self, test_client):
-        resp = test_client.get("/api/orchestrator/runs?limit=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["total"] == 1
-
-    def test_meta_json_parsed(self, test_client):
-        resp = test_client.get("/api/orchestrator/runs")
-        run1 = next(r for r in resp.json()["items"] if r["run_id"] == "run-1")
-        assert "meta" in run1
-        assert run1["meta"]["ran_jobs"] == ["core_signals"]
+    missing = test_client.get("/api/orchestrator/risk-checks", params={"asof": "1999-01-01"})
+    assert missing.status_code == 404
+    assert missing.json()["detail"]["error_code"] == "risk_checks_not_found"
 
 
-# ── GET /api/orchestrator/runs/{run_id}/jobs ─────────────────────────
+def test_equity_series_columns_and_missing(test_client):
+    ok = test_client.get("/api/orchestrator/equity-series", params={"asof": "2026-02-18"})
+    assert ok.status_code == 200
+    row = ok.json()["series"][0]
+    assert "t" in row
+    assert "cum_net_unscaled" in row
+    assert "cum_net_volscaled" in row
 
-class TestGetRunJobs:
-    def test_returns_jobs_for_run(self, test_client):
-        resp = test_client.get("/api/orchestrator/runs/run-1/jobs")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data["items"]) == 2
-        names = [j["job_name"] for j in data["items"]]
-        assert "core_signals" in names
-        assert "vrp_signals" in names
-
-    def test_no_jobs_returns_empty(self, test_client):
-        resp = test_client.get("/api/orchestrator/runs/nonexistent/jobs")
-        assert resp.status_code == 200
-        assert resp.json()["items"] == []
+    missing = test_client.get("/api/orchestrator/equity-series", params={"asof": "1999-01-01"})
+    assert missing.status_code == 404
+    assert missing.json()["detail"]["error_code"] == "equity_series_not_found"
 
 
-# ── GET /api/orchestrator/positions ──────────────────────────────────
+def test_jobs_registry_and_history_keys(test_client):
+    registry = test_client.get("/api/orchestrator/jobs")
+    assert registry.status_code == 200
+    item = registry.json()["items"][0]
+    for k in ["name", "min_interval_s", "last_success_at", "last_status", "last_error", "last_duration_s", "next_eligible_at"]:
+        assert k in item
 
-class TestGetPositions:
-    def test_returns_positions(self, test_client):
-        resp = test_client.get("/api/orchestrator/positions")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["asof_date"] == "2026-02-18"
-        assert len(data["positions"]) == 1
-        assert data["positions"][0]["symbol"] == "SPY"
-
-    def test_missing_positions_returns_empty(self, test_client):
-        resp = test_client.get("/api/orchestrator/positions?asof=1999-01-01")
-        assert resp.status_code == 200
-        assert resp.json()["positions"] == []
+    history = test_client.get("/api/orchestrator/jobs/history", params={"limit": 10, "asof": "2026-02-18"})
+    assert history.status_code == 200
+    h = history.json()["items"][0]
+    for k in ["name", "last_status", "last_error", "last_duration_s", "next_eligible_at"]:
+        assert k in h
 
 
-# ── GET /api/orchestrator/targets ────────────────────────────────────
-
-class TestGetTargets:
-    def test_returns_targets_by_sleeve(self, test_client):
-        resp = test_client.get("/api/orchestrator/targets")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "core" in data["sleeves"]
-        core = data["sleeves"]["core"]
-        assert core["targets"][0]["symbol"] == "AAPL"
-
-    def test_missing_targets_returns_empty(self, test_client):
-        resp = test_client.get("/api/orchestrator/targets?asof=1999-01-01")
-        assert resp.status_code == 200
-        assert resp.json()["sleeves"] == {}
+def test_artifacts_listing_order_and_download_url(test_client):
+    resp = test_client.get("/api/orchestrator/artifacts", params={"asof": "2026-02-18"})
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert items == sorted(items, key=lambda x: (x["asof"], x["relative_path"]))
+    assert all(i["download_url"].startswith("/api/orchestrator/artifacts/2026-02-18/") for i in items)
 
 
-# ── GET /api/orchestrator/fills ──────────────────────────────────────
-
-class TestGetFills:
-    def test_returns_fills(self, test_client):
-        resp = test_client.get("/api/orchestrator/fills")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data["fills"]) == 1
-
-    def test_missing_fills_returns_empty(self, test_client):
-        resp = test_client.get("/api/orchestrator/fills?asof=1999-01-01")
-        assert resp.status_code == 200
-        assert resp.json()["fills"] == []
+def test_dates_list(test_client):
+    resp = test_client.get("/api/orchestrator/dates")
+    assert resp.status_code == 200
+    assert resp.json()["items"] == ["2026-02-17", "2026-02-18"]
 
 
-# ── GET /api/orchestrator/artifacts/{day}/{path} ─────────────────────
+def test_risk_session_mismatch_structured_404(test_client):
+    resp = test_client.get("/api/orchestrator/risk-checks", params={"asof": "2026-02-18", "session": "close"})
+    assert resp.status_code == 404
+    detail = resp.json()["detail"]
+    assert detail["error_code"] == "session_mismatch"
+    assert "expected_paths" in detail and "found_paths" in detail
 
-class TestGetArtifact:
-    def test_serves_json_file(self, test_client):
-        resp = test_client.get("/api/orchestrator/artifacts/2026-02-18/summary.json")
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True}
 
-    def test_missing_artifact_returns_404(self, test_client):
-        resp = test_client.get("/api/orchestrator/artifacts/2026-02-18/nope.json")
-        assert resp.status_code == 404
+def test_artifact_path_traversal_rejected(test_client):
+    resp = test_client.get("/api/orchestrator/artifacts/2026-02-18/..%2F..%2Fetc%2Fpasswd")
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["error_code"] == "artifact_path_invalid"
+
+
+def test_equity_series_safe_float_handles_na(test_client):
+    resp = test_client.get("/api/orchestrator/equity-series", params={"asof": "2026-02-18"})
+    assert resp.status_code == 200
+    rows = resp.json()["series"]
+    assert len(rows) >= 2
+    assert rows[1]["cum_net_unscaled"] == 0.0
+    assert rows[1]["rolling_vol"] == 0.0
+

@@ -17,12 +17,21 @@ export class TimeoutError extends Error {
 export class ApiError extends Error {
     status: number;
     body: string;
+    detail: unknown;
 
     constructor(url: string, status: number, body: string) {
         super(`API ${status}: ${body}`);
         this.name = "ApiError";
         this.status = status;
         this.body = body;
+        let detail: unknown = null;
+        try {
+            const parsed = JSON.parse(body);
+            detail = parsed?.detail ?? parsed;
+        } catch {
+            detail = null;
+        }
+        this.detail = detail;
     }
 }
 
