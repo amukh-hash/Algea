@@ -71,7 +71,7 @@ from sleeves.cooc_reversal_futures.pipeline.validation import (
 from sleeves.cooc_reversal_futures.pipeline.export import export_production_pack
 from sleeves.cooc_reversal_futures.roll import active_contract_for_day, roll_week_flag
 from sleeves.cooc_reversal_futures.sleeve import COOCReversalFuturesSleeve
-from algaie.data.options.vrp_features import VolRegime
+from algea.data.options.vrp_features import VolRegime
 
 ET = ZoneInfo("America/New_York")
 

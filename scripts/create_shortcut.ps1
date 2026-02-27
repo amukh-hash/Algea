@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 $WshShell = New-Object -ComObject WScript.Shell
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
-$ShortcutFile = Join-Path $DesktopPath "Algaie Dashboard.lnk"
+$ShortcutFile = Join-Path $DesktopPath "Algea Dashboard v4.0.lnk"
 $TargetFile = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "ALGAIE_DASHBOARD.bat"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
@@ -12,7 +12,7 @@ $Shortcut = $WshShell.CreateShortcut($ShortcutFile)
 $Shortcut.TargetPath = $TargetFile
 $Shortcut.WorkingDirectory = $RepoRoot
 $Shortcut.WindowStyle = 7  # Minimized (so the launcher window hides away)
-$Shortcut.Description = "Launch Algaie Trading Stack (Backend, Orchestrator, Frontend)"
+$Shortcut.Description = "Launch Algea Trading Stack v4.0 (Backend, Orchestrator, Frontend)"
 $Shortcut.IconLocation = "shell32.dll,306"  # A generic 'graph/chart' looking icon from system
 $Shortcut.Save()
 

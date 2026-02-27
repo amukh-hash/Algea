@@ -8,16 +8,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from algaie.core.config import load_config
-from algaie.core.paths import ArtifactPaths, ensure_artifact_dirs
-from algaie.data.eligibility.build import build_eligibility
-from algaie.data.features.build import build_features
-from algaie.data.signals.build import build_signals
-from algaie.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
-from algaie.trading.broker_alpaca import AlpacaPaperBroker
-from algaie.trading.portfolio import Portfolio, Position
-from algaie.trading.reconciliation import reconcile_positions
-from algaie.trading.risk import PortfolioTargetBuilder, PortfolioTargetConfig
+from algea.core.config import load_config
+from algea.core.paths import ArtifactPaths, ensure_artifact_dirs
+from algea.data.eligibility.build import build_eligibility
+from algea.data.features.build import build_features
+from algea.data.signals.build import build_signals
+from algea.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
+from algea.trading.broker_alpaca import AlpacaPaperBroker
+from algea.trading.portfolio import Portfolio, Position
+from algea.trading.reconciliation import reconcile_positions
+from algea.trading.risk import PortfolioTargetBuilder, PortfolioTargetConfig
 from backend.scripts._cli_utils import prepare_run, write_artifact_log
 
 

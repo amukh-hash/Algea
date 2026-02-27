@@ -13,14 +13,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from algaie.trading.broker_base import BrokerAccount, BrokerPosition
-from algaie.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig, _mask_account
-from algaie.trading.ibkr_contracts import (
+from algea.trading.broker_base import BrokerAccount, BrokerPosition
+from algea.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig, _mask_account
+from algea.trading.ibkr_contracts import (
     EXCHANGE_MAP,
     build_future_contract,
     parse_active_contract_symbol,
 )
-from algaie.trading.orders import Fill, Order, OrderIntent
+from algea.trading.orders import Fill, Order, OrderIntent
 
 
 # ---------------------------------------------------------------------------

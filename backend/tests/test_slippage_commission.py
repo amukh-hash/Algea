@@ -1,8 +1,8 @@
 import pandas as pd
 
-from algaie.research.backtest_engine import BacktestConfig, BacktestEngine
-from algaie.trading.costs import CommissionModel, SlippageModel
-from algaie.trading.risk import PortfolioTargetConfig
+from algea.research.backtest_engine import BacktestConfig, BacktestEngine
+from algea.trading.costs import CommissionModel, SlippageModel
+from algea.trading.risk import PortfolioTargetConfig
 
 
 def test_slippage_and_commission_reduce_equity():

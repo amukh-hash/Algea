@@ -147,7 +147,7 @@ def run_phase15(
             from sleeves.cooc_reversal_futures.pipeline.ibkr_hist_provider import (
                 IBKRHistoricalDataProvider,
             )
-            from algaie.trading.ibkr_client import IbkrClient
+            from algea.trading.ibkr_client import IbkrClient
             from sleeves.cooc_reversal_futures.pipeline.ingest import ingest_bronze
             import os
 

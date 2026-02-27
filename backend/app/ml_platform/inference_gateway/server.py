@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Any
+from dataclasses import dataclass, field
+import torch
 
 from ..config import MLPlatformConfig
 from ..models.chronos2.loader import Chronos2Loader
@@ -28,6 +31,18 @@ from .health import health_payload
 from .protocol import InferenceRequestBase, InferenceResponse
 
 
+
+@dataclass(order=True)
+class PrioritizedTask:
+    priority: int
+    req: InferenceRequestBase = field(compare=False)
+    handler: Callable = field(compare=False)
+    future: asyncio.Future = field(compare=False)
+    endpoint_name: str = field(compare=False)
+
+DEVICE_HEAVY = torch.device("cuda:0")
+DEVICE_FAST = torch.device("cuda:1")
+
 class InferenceGatewayServer:
     def __init__(self, cfg: MLPlatformConfig | None = None):
         self.cfg = cfg or MLPlatformConfig()
@@ -38,29 +53,39 @@ class InferenceGatewayServer:
 
         store = ModelRegistryStore(self.cfg.registry_db_path, self.cfg.model_root)
 
-        self.chronos2_service = Chronos2Service(Chronos2Loader(store), self.cfg.trace_root)
+        # -------------------------------------------------------------
+        # Phase 2: Explicit Hardware Registries 
+        # -------------------------------------------------------------
+        self.device_heavy = DEVICE_HEAVY # RTX 3090 Ti
+        self.device_fast = DEVICE_FAST   # RTX 4070 Super
+
+        self.queue_heavy: asyncio.PriorityQueue | None = None
+        self.queue_fast: asyncio.PriorityQueue | None = None
+
+        # cuda:1 Workloads (FAST)
+        self.chronos2_service = Chronos2Service(Chronos2Loader(store), self.cfg.trace_root, device=str(self.device_fast))
         try:
             self.chronos2_service.load_alias("prod")
             self.model_status["chronos2:prod"] = {"status": "loaded"}
         except Exception as exc:
             self.model_status["chronos2:prod"] = {"status": f"error:{exc}"}
 
-        self.smoe_service = SMoEService(SMoELoader(store), self.cfg.trace_root)
+        self.smoe_service = SMoEService(SMoELoader(store), self.cfg.trace_root, device=str(self.device_fast))
         try:
             self.smoe_service.load_alias("prod")
             self.model_status["selector_smoe:prod"] = {"status": "loaded"}
         except Exception as exc:
             self.model_status["selector_smoe:prod"] = {"status": f"optional_missing:{exc}"}
 
-        self.vol_surface_service = VolSurfaceService(VolSurfaceLoader(store), self.cfg.trace_root)
+        self.vol_surface_service = VolSurfaceService(VolSurfaceLoader(store), self.cfg.trace_root, device=str(self.device_fast))
         try:
             self.vol_surface_service.load_alias("prod")
             self.model_status["vol_surface:prod"] = {"status": "loaded"}
         except Exception as exc:
             self.model_status["vol_surface:prod"] = {"status": f"optional_missing:{exc}"}
 
-
-        self.itransformer_service = ITransformerService(ITransformerLoader(store), self.cfg.trace_root)
+        # cuda:0 Workloads (HEAVY)
+        self.itransformer_service = ITransformerService(ITransformerLoader(store), self.cfg.trace_root, device=str(self.device_heavy))
         try:
             self.itransformer_service.load_alias("prod")
             self.model_status["itransformer:prod"] = {"status": "loaded"}
@@ -70,7 +95,8 @@ class InferenceGatewayServer:
         self.register("chronos2_forecast", self._chronos2_handler)
         self.register("smoe_rank", self._smoe_handler)
 
-        self.rl_policy_service = RLPolicyService(RLPolicyLoader(store), self.cfg.trace_root)
+        # cuda:1 Workloads (FAST)
+        self.rl_policy_service = RLPolicyService(RLPolicyLoader(store), self.cfg.trace_root, device=str(self.device_fast))
         try:
             self.rl_policy_service.load_alias("prod")
             self.model_status["rl_policy:prod"] = {"status": "loaded"}
@@ -78,7 +104,7 @@ class InferenceGatewayServer:
             self.model_status["rl_policy:prod"] = {"status": f"optional_missing:{exc}"}
 
         self.register("vol_surface_forecast", self._vol_surface_handler)
-        self.vol_surface_grid_service = VolSurfaceGridService(VolSurfaceGridLoader(store), self.cfg.trace_root)
+        self.vol_surface_grid_service = VolSurfaceGridService(VolSurfaceGridLoader(store), self.cfg.trace_root, device=str(self.device_fast))
         try:
             self.vol_surface_grid_service.load_alias("prod")
             self.model_status["vol_surface_grid:prod"] = {"status": "loaded"}
@@ -201,6 +227,7 @@ class InferenceGatewayServer:
         self.endpoints[endpoint] = True
 
     def infer(self, endpoint: str, req: InferenceRequestBase) -> InferenceResponse:
+        """Fallback synchronous method if needed."""
         if endpoint not in self._handlers:
             raise KeyError(f"unregistered endpoint: {endpoint}")
         start = time.perf_counter()
@@ -218,6 +245,63 @@ class InferenceGatewayServer:
             warnings=out.get("warnings", []),
         )
 
+    async def async_worker(self, queue: asyncio.PriorityQueue, device_name: str) -> None:
+        """Dedicated async worker loop isolating standard ThreadPool processing per GPU queue."""
+        loop = asyncio.get_running_loop()
+        while True:
+            task: PrioritizedTask = await queue.get()
+            try:
+                start = time.perf_counter()
+                out = await loop.run_in_executor(None, task.handler, task.req)
+                elapsed = (time.perf_counter() - start) * 1000
+                self.latency_p95_ms[task.endpoint_name] = elapsed
+                
+                resp = InferenceResponse(
+                    model_name=out.get("model_name", task.endpoint_name),
+                    model_version=out.get("model_version", "unknown"),
+                    outputs=out.get("outputs", {}),
+                    uncertainty=float(out.get("uncertainty", 1.0)),
+                    calibration_score=float(out.get("calibration_score", 0.0)),
+                    ood_score=float(out.get("ood_score", 0.0)),
+                    latency_ms=elapsed,
+                    warnings=out.get("warnings", []),
+                )
+                if not task.future.done():
+                    task.future.set_result(resp)
+            except Exception as e:
+                if not task.future.done():
+                    task.future.set_exception(e)
+            finally:
+                queue.task_done()
+
+    async def async_infer(self, endpoint: str, req: InferenceRequestBase, priority: int = 1) -> InferenceResponse:
+        """Non-blocking Priority submission wrapping."""
+        if endpoint not in self._handlers:
+            raise KeyError(f"unregistered endpoint: {endpoint}")
+            
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        
+        # Route logic
+        if endpoint in ["itransformer_signal"]:
+            queue = self.queue_heavy
+        else:
+            queue = self.queue_fast
+            
+        if queue is None:
+            # Fallback for sync contexts outside of FastAPI loop
+            return self.infer(endpoint, req)
+            
+        ptask = PrioritizedTask(
+            priority=priority,
+            req=req,
+            handler=self._handlers[endpoint],
+            future=future,
+            endpoint_name=endpoint
+        )
+        await queue.put(ptask)
+        return await future
+
     def get_health(self) -> dict:
         return health_payload(self.endpoints, self.latency_p95_ms, self.model_status)
 
@@ -230,19 +314,19 @@ class InferenceGatewayServer:
     def list_models(self) -> dict:
         return self.model_status
 
-    def chronos2_http_forecast(self, req: TSFMRequest) -> dict:
+    async def chronos2_http_forecast(self, req: TSFMRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.instrument_id, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
-        resp = self.infer("chronos2_forecast", wrapped)
+        resp = await self.async_infer("chronos2_forecast", wrapped, priority=1)
         return {"model_name": "chronos2", "model_version": resp.model_version, "forecast": resp.outputs.get("forecast", {}), "uncertainty": resp.outputs.get("uncertainty", {}), "ood_score": resp.ood_score, "calibration_score": resp.calibration_score, "latency_ms": resp.latency_ms, "warnings": resp.warnings}
 
-    def smoe_http_rank(self, req: SMoERankRequest) -> dict:
+    async def smoe_http_rank(self, req: SMoERankRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id="selector", features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
-        resp = self.infer("smoe_rank", wrapped)
+        resp = await self.async_infer("smoe_rank", wrapped, priority=1)
         return {"model_name": "selector_smoe", "model_version": resp.model_version, "scores": resp.outputs.get("scores", {}), "router_entropy_mean": resp.outputs.get("router_entropy_mean", 0.0), "expert_utilization": resp.outputs.get("expert_utilization", {}), "load_balance_score": resp.outputs.get("load_balance_score", 0.0), "context_sensitivity_score": resp.outputs.get("context_sensitivity_score", 0.0), "expert_collapse_score": resp.outputs.get("expert_collapse_score", 0.0), "specialization_by_bucket": resp.outputs.get("specialization_by_bucket", {}), "latency_ms": resp.latency_ms, "warnings": resp.warnings}
 
-    def vol_surface_http_forecast(self, req: VolSurfaceRequest) -> dict:
+    async def vol_surface_http_forecast(self, req: VolSurfaceRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.underlying_symbol, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
-        resp = self.infer("vol_surface_forecast", wrapped)
+        resp = await self.async_infer("vol_surface_forecast", wrapped, priority=2)
         return {
             "model_name": "vol_surface",
             "model_version": resp.model_version,
@@ -256,9 +340,9 @@ class InferenceGatewayServer:
 
 
 
-    def rl_policy_http_act(self, req: RLPolicyRequest) -> dict:
+    async def rl_policy_http_act(self, req: RLPolicyRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.sleeve, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
-        resp = self.infer("rl_policy_act", wrapped)
+        resp = await self.async_infer("rl_policy_act", wrapped, priority=1)
         return {
             "model_name": "rl_policy",
             "model_version": resp.model_version,
@@ -273,9 +357,9 @@ class InferenceGatewayServer:
             "warnings": resp.warnings,
         }
 
-    def itransformer_http_signal(self, req: ITransformerSignalRequest) -> dict:
+    async def itransformer_http_signal(self, req: ITransformerSignalRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id="statarb", features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
-        resp = self.infer("itransformer_signal", wrapped)
+        resp = await self.async_infer("itransformer_signal", wrapped, priority=5)
         return {
             "model_name": "itransformer",
             "model_version": resp.model_version,
@@ -292,7 +376,19 @@ class InferenceGatewayServer:
         except Exception as exc:  # pragma: no cover
             raise RuntimeError("fastapi unavailable for HTTP app") from exc
 
-        app = FastAPI(title="ML Inference Gateway")
+        from contextlib import asynccontextmanager
+        
+        @asynccontextmanager
+        async def lifespan(app: FastAPI):
+            self.queue_heavy = asyncio.PriorityQueue()
+            self.queue_fast = asyncio.PriorityQueue()
+            task_heavy = asyncio.create_task(self.async_worker(self.queue_heavy, "cuda:0"))
+            task_fast = asyncio.create_task(self.async_worker(self.queue_fast, "cuda:1"))
+            yield
+            task_heavy.cancel()
+            task_fast.cancel()
+
+        app = FastAPI(title="ML Inference Gateway", lifespan=lifespan)
 
         @app.get("/healthz")
         def _healthz() -> dict:
@@ -310,29 +406,29 @@ class InferenceGatewayServer:
             return self.list_models()
 
         @app.post("/v1/chronos2/forecast")
-        def _forecast(req: TSFMRequest) -> dict:
-            return self.chronos2_http_forecast(req)
+        async def _forecast(req: TSFMRequest) -> dict:
+            return await self.chronos2_http_forecast(req)
 
         @app.post("/v1/selector/smoe_rank")
-        def _smoe(req: SMoERankRequest) -> dict:
-            return self.smoe_http_rank(req)
+        async def _smoe(req: SMoERankRequest) -> dict:
+            return await self.smoe_http_rank(req)
 
         @app.post("/v1/vrp/vol_surface_forecast")
-        def _vol(req: VolSurfaceRequest) -> dict:
-            return self.vol_surface_http_forecast(req)
+        async def _vol(req: VolSurfaceRequest) -> dict:
+            return await self.vol_surface_http_forecast(req)
 
         @app.post("/v1/vrp/vol_surface_grid_forecast")
-        def _vol_grid(req: VolSurfaceGridRequest) -> dict:
+        async def _vol_grid(req: VolSurfaceGridRequest) -> dict:
             wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.underlying_symbol, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
-            resp = self.infer("vol_surface_grid_forecast", wrapped)
+            resp = await self.async_infer("vol_surface_grid_forecast", wrapped, priority=2)
             return {"model_name": "vol_surface_grid", "model_version": resp.model_version, "grid_forecast": resp.outputs.get("grid_forecast", {}), "mask_coverage": resp.outputs.get("mask_coverage", 0.0), "uncertainty_proxy": resp.outputs.get("uncertainty_proxy", 1.0), "drift_score": resp.outputs.get("drift_score", resp.ood_score), "latency_ms": resp.latency_ms, "warnings": resp.warnings}
 
         @app.post("/v1/statarb/itransformer_signal")
-        def _itra(req: ITransformerSignalRequest) -> dict:
-            return self.itransformer_http_signal(req)
+        async def _itra(req: ITransformerSignalRequest) -> dict:
+            return await self.itransformer_http_signal(req)
 
         @app.post("/v1/rl/policy_act")
-        def _rl(req: RLPolicyRequest) -> dict:
-            return self.rl_policy_http_act(req)
+        async def _rl(req: RLPolicyRequest) -> dict:
+            return await self.rl_policy_http_act(req)
 
         return app

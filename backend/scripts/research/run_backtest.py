@@ -9,16 +9,16 @@ from typing import Optional
 
 import pandas as pd
 
-from algaie.core.config import PipelineConfig, load_config
-from algaie.core.paths import ArtifactPaths, ensure_artifact_dirs
-from algaie.data.eligibility.build import build_eligibility
-from algaie.data.features.build import build_features
-from algaie.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
-from algaie.data.signals.build import build_signals
-from algaie.research.backtest_engine import BacktestConfig, BacktestEngine
-from algaie.trading.costs import CommissionModel, SlippageModel
-from algaie.research.walk_forward import build_walk_forward_splits
-from algaie.trading.risk import PortfolioTargetConfig
+from algea.core.config import PipelineConfig, load_config
+from algea.core.paths import ArtifactPaths, ensure_artifact_dirs
+from algea.data.eligibility.build import build_eligibility
+from algea.data.features.build import build_features
+from algea.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
+from algea.data.signals.build import build_signals
+from algea.research.backtest_engine import BacktestConfig, BacktestEngine
+from algea.trading.costs import CommissionModel, SlippageModel
+from algea.research.walk_forward import build_walk_forward_splits
+from algea.trading.risk import PortfolioTargetConfig
 from backend.scripts._cli_utils import prepare_run, write_artifact_log
 
 

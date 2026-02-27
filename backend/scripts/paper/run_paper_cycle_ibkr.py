@@ -38,10 +38,10 @@ from sleeves.cooc_reversal_futures.signal_mode import (
     resolve_signal_mode,
 )
 
-from algaie.data.options.vrp_features import VolRegime
-from algaie.trading.broker_ibkr import IBKRLiveBroker
-from algaie.trading.orders import OrderIntent
-from algaie.trading.paper_guards_futures import (
+from algea.data.options.vrp_features import VolRegime
+from algea.trading.broker_ibkr import IBKRLiveBroker
+from algea.trading.orders import OrderIntent
+from algea.trading.paper_guards_futures import (
     GuardResult,
     PaperGuardConfig,
     apply_paper_guards,

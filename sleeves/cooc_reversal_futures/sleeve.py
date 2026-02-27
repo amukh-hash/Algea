@@ -7,8 +7,8 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from algaie.data.options.vrp_features import VolRegime
-from algaie.trading.meta_allocator import SleeveResult
+from algea.data.options.vrp_features import VolRegime
+from algea.trading.meta_allocator import SleeveResult
 
 from .config import COOCReversalConfig
 from .contract_master import CONTRACT_MASTER
@@ -29,12 +29,12 @@ class COOCReversalFuturesSleeve:
 
     Integration notes discovered while exploring repository:
     - There is no global BaseSleeve class yet; production sleeves are strategy classes
-      (e.g. ``algaie.execution.options.vrp_strategy.VRPStrategy``).
+      (e.g. ``algea.execution.options.vrp_strategy.VRPStrategy``).
     - Meta allocation currently passes ``SleeveResult`` objects into
-      ``algaie.trading.meta_allocator.MetaAllocator.combine``.
+      ``algea.trading.meta_allocator.MetaAllocator.combine``.
     - Regime states come from ``VolRegime`` enum: NORMAL_CARRY/CAUTION/CRASH_RISK.
-    - Model registry exists under ``algaie.models.foundation.registry``.
-    - Broker abstraction exists at ``algaie.trading.broker_base`` with concrete IBKR adapters.
+    - Model registry exists under ``algea.models.foundation.registry``.
+    - Broker abstraction exists at ``algea.trading.broker_base`` with concrete IBKR adapters.
     """
 
     def __init__(self, config: COOCReversalConfig | None = None) -> None:

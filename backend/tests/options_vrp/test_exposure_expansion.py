@@ -13,13 +13,13 @@ import numpy as np
 import pandas as pd
 from datetime import date, timedelta
 
-from algaie.execution.options.config import VRPConfig
-from algaie.data.options.vrp_features import VolRegime
-from algaie.trading.meta_allocator import (
+from algea.execution.options.config import VRPConfig
+from algea.data.options.vrp_features import VolRegime
+from algea.trading.meta_allocator import (
     MetaAllocator, SleeveResult, AllocationResult, AllocatorState,
     AllocatorInvariantError, AllocationContext,
 )
-from algaie.trading.entry_filter import (
+from algea.trading.entry_filter import (
     EntrySignals, EntryDecision, evaluate_entry,
 )
 

@@ -13,8 +13,8 @@ from typing import Any, Dict, List
 import pandas as pd
 import pytest
 
-from algaie.trading.orders import OrderIntent
-from algaie.trading.paper_guards_futures import (
+from algea.trading.orders import OrderIntent
+from algea.trading.paper_guards_futures import (
     GuardResult,
     PaperGuardConfig,
     apply_paper_guards,

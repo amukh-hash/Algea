@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algaie.data.options.schema import ChainValidationError, validate_chain
+from algea.data.options.schema import ChainValidationError, validate_chain
 
 
 def _make_chain(n: int = 20, **overrides) -> pd.DataFrame:

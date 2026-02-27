@@ -1,10 +1,10 @@
 {
   "timestamp": "2026-02-05T00:51:59.828340",
   "config": {
-    "gold_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\daily_parquet",
+    "gold_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data_canonical\\daily_parquet",
     "gold_glob": "*.parquet",
-    "silver_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\prices",
-    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\breadth_daily.parquet",
+    "silver_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\prices",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data_canonical\\breadth_daily.parquet",
     "gold_sample_k": 5,
     "gold_min_ok_frac": 1.0,
     "gold_required_cols": [
@@ -27,8 +27,8 @@
     "as_of_date": "2026-02-05",
     "min_coverage": 0.98,
     "input_mode": "token",
-    "codec_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\checkpoints\\codec_v1.json",
-    "preproc_json_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\preprocessing\\preproc_v1.json",
+    "codec_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\checkpoints\\codec_v1.json",
+    "preproc_json_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\preprocessing\\preproc_v1.json",
     "report_path": "backend\\reports\\preflight_report.json"
   },
   "gold": {

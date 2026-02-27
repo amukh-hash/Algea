@@ -9,16 +9,56 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+import uuid
+from dataclasses import dataclass, field
+from enum import IntEnum
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/api/orchestrator", tags=["orchestrator"])
-logger = logging.getLogger("algaie.api.orchestrator")
+logger = logging.getLogger("algea.api.orchestrator")
 
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
 _TIMEOUT_S = 5.0
+
+class TaskPriority(IntEnum):
+    URGENT = 1
+    HIGH = 2
+    BACKGROUND = 5
+
+@dataclass(order=True)
+class AsyncJob:
+    priority: int
+    submit_time: float
+    job_id: str = field(compare=False)
+    payload: dict[str, Any] = field(compare=False)
+
+_job_queue: asyncio.PriorityQueue[AsyncJob] = asyncio.PriorityQueue()
+_job_status: dict[str, dict[str, Any]] = {}
+
+async def _job_worker():
+    while True:
+        try:
+            job = await _job_queue.get()
+            _job_status[job.job_id]["status"] = "running"
+            try:
+                # Emulate task execution matching target priority GPU
+                # i.e background_heavy -> cuda:0, critical_realtime -> cuda:1
+                await asyncio.sleep(0.1)
+                _job_status[job.job_id]["status"] = "completed"
+            except Exception as e:
+                _job_status[job.job_id]["status"] = "failed"
+                _job_status[job.job_id]["error"] = str(e)
+            finally:
+                _job_queue.task_done()
+        except asyncio.CancelledError:
+            break
+
+@router.on_event("startup")
+async def startup_job_worker():
+    asyncio.create_task(_job_worker())
 
 
 def _db() -> sqlite3.Connection:
@@ -517,6 +557,26 @@ async def get_jobs() -> dict[str, Any]:
 @router.get("/jobs/registry")
 async def get_jobs_registry() -> dict[str, Any]:
     return await _with_timeout(_job_registry_sync)
+
+
+@router.post("/jobs/enqueue")
+async def enqueue_job(payload: dict[str, Any], priority: int = TaskPriority.BACKGROUND) -> dict[str, Any]:
+    job_id = str(uuid.uuid4())
+    job = AsyncJob(priority=priority, submit_time=datetime.now().timestamp(), job_id=job_id, payload=payload)
+    _job_status[job_id] = {
+        "status": "pending",
+        "priority": priority,
+        "submitted_at": job.submit_time
+    }
+    await _job_queue.put(job)
+    return {"job_id": job_id, "status": "pending"}
+
+
+@router.get("/jobs/status/{job_id}")
+async def get_job_status(job_id: str) -> dict[str, Any]:
+    if job_id not in _job_status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return _job_status[job_id]
 
 
 @router.get("/jobs/history")

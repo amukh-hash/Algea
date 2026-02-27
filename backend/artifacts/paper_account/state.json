@@ -1,7 +1,7 @@
 {
   "account_id": "PAPER001",
   "starting_equity": 100000.0,
-  "cash": 99923.24,
+  "cash": 99875.01,
   "positions": [
     {
       "symbol": "RTYM6",
@@ -10,103 +10,103 @@
     },
     {
       "symbol": "ASTS",
-      "qty": 136.0,
-      "avg_cost": 83.5325
+      "qty": 224.0,
+      "avg_cost": 84.419375
     },
     {
       "symbol": "CCOI",
-      "qty": -607.0,
-      "avg_cost": 18.54950577
+      "qty": -1011.0,
+      "avg_cost": 18.54570722
     },
     {
       "symbol": "DAVA",
-      "qty": 2375.0,
-      "avg_cost": 4.73602105
+      "qty": 3899.0,
+      "avg_cost": 4.8079328
     },
     {
       "symbol": "DUOL",
-      "qty": -102.0,
-      "avg_cost": 111.28333333
+      "qty": -188.0,
+      "avg_cost": 100.12010638
     },
     {
       "symbol": "IBTA",
-      "qty": -546.0,
-      "avg_cost": 20.62666667
+      "qty": -830.0,
+      "avg_cost": 22.6106747
     },
     {
       "symbol": "LAKE",
-      "qty": -1181.0,
-      "avg_cost": 9.51996613
+      "qty": -1975.0,
+      "avg_cost": 9.49183797
     },
     {
       "symbol": "LRN",
-      "qty": -133.0,
-      "avg_cost": 83.79834586
+      "qty": -221.0,
+      "avg_cost": 84.59737556
     },
     {
       "symbol": "LW",
-      "qty": -240.0,
-      "avg_cost": 46.96
+      "qty": -398.0,
+      "avg_cost": 47.15452261
     },
     {
       "symbol": "MARA",
-      "qty": -1314.0,
-      "avg_cost": 8.56424658
+      "qty": -2100.0,
+      "avg_cost": 8.9332
     },
     {
       "symbol": "MBLY",
-      "qty": -1282.0,
-      "avg_cost": 8.77648986
+      "qty": -2140.0,
+      "avg_cost": 8.76586916
     },
     {
       "symbol": "METC",
-      "qty": 631.0,
-      "avg_cost": 17.8177813
+      "qty": 1135.0,
+      "avg_cost": 16.52435242
     },
     {
       "symbol": "NEXT",
-      "qty": -2106.0,
-      "avg_cost": 5.34323837
+      "qty": -3542.0,
+      "avg_cost": 5.29530209
     },
     {
       "symbol": "OPEN",
-      "qty": 2258.0,
-      "avg_cost": 4.98333038
+      "qty": 3694.0,
+      "avg_cost": 5.07533297
     },
     {
       "symbol": "RCAT",
-      "qty": 894.0,
-      "avg_cost": 12.58381432
+      "qty": 1472.0,
+      "avg_cost": 12.74330843
     },
     {
       "symbol": "RGTI",
-      "qty": 622.0,
-      "avg_cost": 18.07038585
+      "qty": 1046.0,
+      "avg_cost": 17.9243021
     },
     {
       "symbol": "SGML",
-      "qty": 697.0,
-      "avg_cost": 16.1366858
+      "qty": 1159.0,
+      "avg_cost": 16.17587576
     },
     {
       "symbol": "SRPT",
-      "qty": 592.0,
-      "avg_cost": 19.03297297
+      "qty": 1022.0,
+      "avg_cost": 18.3711546
     },
     {
       "symbol": "TE",
-      "qty": 1540.0,
-      "avg_cost": 7.30415584
+      "qty": 2568.0,
+      "avg_cost": 7.30249221
     },
     {
       "symbol": "TTD",
-      "qty": -501.0,
-      "avg_cost": 22.44649701
+      "qty": -815.0,
+      "avg_cost": 23.02190798
     },
     {
       "symbol": "WOLF",
-      "qty": 550.0,
-      "avg_cost": 20.46312727
+      "qty": 922.0,
+      "avg_cost": 20.35696312
     }
   ],
   "fills": [
@@ -658,8 +658,368 @@
       "price": 20.52,
       "side": "BUY",
       "commission": 0.0
+    },
+    {
+      "id": "aadc058a",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "ASTS",
+      "qty": 44.0,
+      "price": 85.79,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "3fcbb77d",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "CCOI",
+      "qty": 202.0,
+      "price": 18.54,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "7c2a229d",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "DAVA",
+      "qty": 762.0,
+      "price": 4.92,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "a0f27619",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "DUOL",
+      "qty": 43.0,
+      "price": 86.88,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "c53c5ac4",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "IBTA",
+      "qty": 142.0,
+      "price": 26.425,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "f80cd015",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "LAKE",
+      "qty": 397.0,
+      "price": 9.45,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "3e6337da",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "LRN",
+      "qty": 44.0,
+      "price": 85.805,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "98aed0e3",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "LW",
+      "qty": 79.0,
+      "price": 47.45,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "d2b185ed",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "MARA",
+      "qty": 393.0,
+      "price": 9.55,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "31ef035b",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "MBLY",
+      "qty": 429.0,
+      "price": 8.75,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "50109510",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "METC",
+      "qty": 252.0,
+      "price": 14.905,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "cb4a6c79",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "NEXT",
+      "qty": 718.0,
+      "price": 5.225,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "a362b987",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "OPEN",
+      "qty": 718.0,
+      "price": 5.22,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "46f4faa1",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "RCAT",
+      "qty": 289.0,
+      "price": 12.99,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "00e89e1f",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "RGTI",
+      "qty": 212.0,
+      "price": 17.71,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "40c48c8c",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "SGML",
+      "qty": 231.0,
+      "price": 16.235,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "cf764dda",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "SRPT",
+      "qty": 215.0,
+      "price": 17.46,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "2a6199a2",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "TE",
+      "qty": 514.0,
+      "price": 7.3,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "5339263d",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "TTD",
+      "qty": 157.0,
+      "price": 23.94,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "e8e3ed7f",
+      "ts": "2026-02-27T14:25:48.026111+00:00",
+      "symbol": "WOLF",
+      "qty": 186.0,
+      "price": 20.2,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "0e01191e",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "ASTS",
+      "qty": 44.0,
+      "price": 85.79,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "4b2526c4",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "CCOI",
+      "qty": 202.0,
+      "price": 18.54,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "327bff2c",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "DAVA",
+      "qty": 762.0,
+      "price": 4.92,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "b5320a44",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "DUOL",
+      "qty": 43.0,
+      "price": 86.88,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "f11d97e8",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "IBTA",
+      "qty": 142.0,
+      "price": 26.425,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "e137ab59",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "LAKE",
+      "qty": 397.0,
+      "price": 9.45,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "8d3bff22",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "LRN",
+      "qty": 44.0,
+      "price": 85.805,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "fece4f97",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "LW",
+      "qty": 79.0,
+      "price": 47.45,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "2fbe5d40",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "MARA",
+      "qty": 393.0,
+      "price": 9.55,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "5939d783",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "MBLY",
+      "qty": 429.0,
+      "price": 8.75,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "7bd42e23",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "METC",
+      "qty": 252.0,
+      "price": 14.905,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "c459e095",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "NEXT",
+      "qty": 718.0,
+      "price": 5.225,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "08cac041",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "OPEN",
+      "qty": 718.0,
+      "price": 5.22,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "a3ebde74",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "RCAT",
+      "qty": 289.0,
+      "price": 12.99,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "259f1d94",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "RGTI",
+      "qty": 212.0,
+      "price": 17.71,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "1bf68e42",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "SGML",
+      "qty": 231.0,
+      "price": 16.235,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "5594ae2c",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "SRPT",
+      "qty": 215.0,
+      "price": 17.46,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "00b5d0b2",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "TE",
+      "qty": 514.0,
+      "price": 7.3,
+      "side": "BUY",
+      "commission": 0.0
+    },
+    {
+      "id": "41610271",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "TTD",
+      "qty": 157.0,
+      "price": 23.94,
+      "side": "SELL",
+      "commission": 0.0
+    },
+    {
+      "id": "e1b0bcbb",
+      "ts": "2026-02-27T14:35:48.724759+00:00",
+      "symbol": "WOLF",
+      "qty": 186.0,
+      "price": 20.2,
+      "side": "BUY",
+      "commission": 0.0
     }
   ],
   "realized_pnl": 0.0,
-  "last_updated": "2026-02-26T14:35:36.540135+00:00"
+  "last_updated": "2026-02-27T14:35:48.724759+00:00"
 }

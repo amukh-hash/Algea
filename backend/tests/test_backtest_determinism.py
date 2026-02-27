@@ -1,7 +1,7 @@
 import pandas as pd
 
-from algaie.research.backtest_engine import BacktestConfig, BacktestEngine
-from algaie.trading.risk import PortfolioTargetConfig
+from algea.research.backtest_engine import BacktestConfig, BacktestEngine
+from algea.trading.risk import PortfolioTargetConfig
 
 
 def test_backtest_determinism():

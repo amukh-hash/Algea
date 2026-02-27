@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from algaie.execution.options.config import VRPConfig
+from algea.execution.options.config import VRPConfig
 from backend.app.risk.live_guard import LiveGuard, LiveGuardDecision
 
 

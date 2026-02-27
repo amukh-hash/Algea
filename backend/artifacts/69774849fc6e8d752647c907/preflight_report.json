@@ -4,7 +4,7 @@
     "gold_dir": "backend\\data_canonical\\daily_parquet",
     "gold_glob": "*.parquet",
     "silver_dir": "backend\\data_canonical\\marketframe_daily",
-    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\breadth.parquet",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\breadth.parquet",
     "universe_root": "backend\\data_canonical\\universe\\universe_frame_v2",
     "selector_features_root": "backend\\data_canonical\\features\\selector_features_v2",
     "priors_root": "backend\\priors",
@@ -119,7 +119,7 @@
   },
   "universe_frame_v2": {
     "ok": true,
-    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\universe\\universe_frame_v2",
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data_canonical\\universe\\universe_frame_v2",
     "n_files": 20,
     "sampled_files": 5,
     "breadth": {
@@ -199,7 +199,7 @@
   },
   "selector_featureframe_v2": {
     "ok": true,
-    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data_canonical\\features\\selector_features_v2",
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data_canonical\\features\\selector_features_v2",
     "n_files": 5,
     "sampled_files": 5,
     "breadth": {

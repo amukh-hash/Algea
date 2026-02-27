@@ -7,7 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algaie.data.market.covariates import build_and_persist_covariates
+from algea.data.market.covariates import build_and_persist_covariates
 
 def main():
     per_ticker = ROOT / "backend" / "data" / "canonical" / "per_ticker"

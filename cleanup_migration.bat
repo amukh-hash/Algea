@@ -1,12 +1,12 @@
 @echo off
 REM ============================================================
-REM  Algaie Post-Migration Cleanup Script
-REM  Run from the Algaie project root on your Windows machine
+REM  Algea Post-Migration Cleanup Script
+REM  Run from the Algea project root on your Windows machine
 REM ============================================================
 
 echo.
 echo ========================================
-echo   Algaie Migration Cleanup
+echo   Algea Migration Cleanup
 echo ========================================
 echo.
 

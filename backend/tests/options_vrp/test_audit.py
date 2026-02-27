@@ -5,7 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from algaie.eval.vrp_audit import VRPDailyAudit
+from algea.eval.vrp_audit import VRPDailyAudit
 
 
 class TestVRPDailyAudit:

@@ -1,4 +1,4 @@
-# register_scheduled_task.ps1 — Register a Windows Scheduled Task for Algaie trading
+# register_scheduled_task.ps1 — Register a Windows Scheduled Task for Algea trading
 # Must be run as Administrator (elevated prompt).
 #
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\register_scheduled_task.ps1
@@ -7,7 +7,7 @@
 # before PREMARKET (7:00 AM). The task runs under the current user account.
 
 param(
-    [string]$TaskName = "Algaie-TradingStack",
+    [string]$TaskName = "Algea-TradingStack",
     [string]$StartTime = "06:30",          # 6:30 AM local time (before 7:00 PREMARKET)
     [string]$Broker = "stub",              # "stub" for paper, "ibkr" for live
     [switch]$Remove                         # pass -Remove to unregister the task
@@ -30,7 +30,7 @@ if (-not (Test-Path $scriptPath)) {
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " Registering Algaie Scheduled Task"      -ForegroundColor Cyan
+Write-Host " Registering Algea Scheduled Task"      -ForegroundColor Cyan
 Write-Host " Task:     $TaskName"                      -ForegroundColor Cyan
 Write-Host " Time:     $StartTime (weekdays)"          -ForegroundColor Cyan
 Write-Host " Broker:   $Broker"                        -ForegroundColor Cyan
@@ -66,7 +66,7 @@ try {
         -Trigger $trigger `
         -Settings $settings `
         -Principal $principal `
-        -Description "Launches Algaie trading stack (API + Orchestrator + Frontend) before market open." `
+        -Description "Launches Algea trading stack (API + Orchestrator + Frontend) before market open." `
         -Force
 
     Write-Host "`n✓ Task '$TaskName' registered successfully!" -ForegroundColor Green

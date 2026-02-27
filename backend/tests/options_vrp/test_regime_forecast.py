@@ -9,14 +9,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algaie.data.options.vrp_features import (
+from algea.data.options.vrp_features import (
     RegimeThresholds,
     VolRegime,
     classify_regime,
     classify_regime_series,
     compute_regime_features,
 )
-from algaie.execution.options.config import VRPConfig
+from algea.execution.options.config import VRPConfig
 
 
 _FIXTURE_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "stress_window.csv"

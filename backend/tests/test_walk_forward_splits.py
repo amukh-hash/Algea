@@ -1,6 +1,6 @@
 import pandas as pd
 
-from algaie.research.walk_forward import build_walk_forward_splits
+from algea.research.walk_forward import build_walk_forward_splits
 
 
 def test_walk_forward_splits_holdout_and_no_overlap():

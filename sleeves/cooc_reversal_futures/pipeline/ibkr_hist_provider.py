@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from algaie.trading.ibkr_client import IbkrClient
-from algaie.trading.ibkr_contracts import build_future_contract
+from algea.trading.ibkr_client import IbkrClient
+from algea.trading.ibkr_contracts import build_future_contract
 
 from .ingest import FuturesDataProvider
 from ..contract_master import CONTRACT_MASTER
@@ -91,7 +91,7 @@ class IBKRHistoricalDataProvider(FuturesDataProvider):
 
         for seg_start, seg_end, contract_sym in segments:
             logger.info("  Segment %s→%s : %s", seg_start, seg_end, contract_sym)
-            from algaie.trading.ibkr_contracts import parse_active_contract_symbol
+            from algea.trading.ibkr_contracts import parse_active_contract_symbol
 
             root_parsed, expiry = parse_active_contract_symbol(contract_sym)
 

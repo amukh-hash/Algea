@@ -19,7 +19,7 @@ import torch.nn.functional as F
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algaie.models.ranker.mlp_selector import MLPSelector
+from algea.models.ranker.mlp_selector import MLPSelector
 
 
 def test_forward_shapes():
@@ -87,7 +87,7 @@ def test_compatibility_with_transformer():
     mlp_out = mlp(x, mask)
 
     try:
-        from algaie.models.ranker.rank_transformer import RankTransformer
+        from algea.models.ranker.rank_transformer import RankTransformer
         transformer = RankTransformer(d_input=d, d_model=32, n_head=2, n_layers=1)
         transformer_out = transformer(x, mask)
         assert "score" in transformer_out
@@ -106,7 +106,7 @@ def test_cuda():
         print("  ⊘ CUDA not available, skipping")
         return
 
-    from algaie.core.device import get_device
+    from algea.core.device import get_device
     dev = get_device()
     d = 12
     model = MLPSelector(d_input=d, hidden=64, depth=2).to(dev)

@@ -2,7 +2,7 @@ from datetime import date
 
 import pandas as pd
 
-from algaie.data.eligibility.build import build_eligibility
+from algea.data.eligibility.build import build_eligibility
 
 
 def test_eligibility_asof_stable():

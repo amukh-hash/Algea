@@ -18,13 +18,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algaie.portfolio.portfolio_rules import PortfolioConfig, construct_portfolio
-from algaie.portfolio.cost_model import (
+from algea.portfolio.portfolio_rules import PortfolioConfig, construct_portfolio
+from algea.portfolio.cost_model import (
     CostConfig,
     apply_costs,
     compute_turnover_and_cost,
 )
-from algaie.portfolio.vol_scaling import VolTargetConfig, compute_leverage, apply_leverage
+from algea.portfolio.vol_scaling import VolTargetConfig, compute_leverage, apply_leverage
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -646,7 +646,7 @@ class TestDecisionFrequency:
 
     def test_decision_frequency_subsamples(self):
         """decision_frequency=5 should use ~1/5 of dates."""
-        from algaie.training.selector_dataset import SelectorDataset
+        from algea.training.selector_dataset import SelectorDataset
 
         n_dates = 100
         dates = pd.bdate_range("2024-01-02", periods=n_dates)
@@ -673,7 +673,7 @@ class TestDecisionFrequency:
 
     def test_decision_frequency_1_identity(self):
         """decision_frequency=1 should keep all dates."""
-        from algaie.training.selector_dataset import SelectorDataset
+        from algea.training.selector_dataset import SelectorDataset
 
         n_dates = 50
         dates = pd.bdate_range("2024-01-02", periods=n_dates)

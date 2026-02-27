@@ -15,12 +15,22 @@ const Chart = dynamic(() => import("@/components/TimeSeriesChartLW").then((m) =>
 
 export default function ExecutionPage() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 5000);
+    return () => clearInterval(t);
+  }, []);
 
   const [paused, setPaused] = useState(false);
   const [q, setQ] = useState("");
   const [display, setDisplay] = useState<"cards" | "list">("cards");
-  const { data, isLoading, refetch } = useQuery({ queryKey: ["execution-runs", q], queryFn: () => api.listRuns(q || "Sleeve", 40) });
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["execution-runs", q],
+    queryFn: () => api.listRuns(q || "Sleeve", 40),
+    refetchInterval: paused ? false : 5000,
+  });
   const runs = data?.items ?? [];
   const family = runs.filter((r) => r.tags.includes("family"));
   const other = runs.filter((r) => !r.tags.includes("family"));
@@ -33,7 +43,7 @@ export default function ExecutionPage() {
       <PageHeader title="Trading Ops" subtitle="Live execution and recent sleeve runs" actions={<><Button onClick={() => setPaused((v) => !v)}>{paused ? "Resume" : "Pause live updates"}</Button><Button onClick={() => refetch()}>Refresh snapshot</Button></>} />
       <div className="sticky top-[90px] z-10 grid grid-cols-2 gap-3 rounded-md border border-border bg-surface-1 p-3 text-sm md:grid-cols-4">
         <div><div className="text-muted">Connection</div><div>Live stream</div></div>
-        <div><div className="text-muted">Last update</div><div>{mounted ? new Date().toLocaleTimeString() : "--:--:--"}</div></div>
+        <div><div className="text-muted">Last update</div><div>{now ? now.toLocaleTimeString() : "--:--:--"}</div></div>
         <div><div className="text-muted">Running runs</div><div>{running}</div></div>
         <div><div className="text-muted">Warnings/errors</div><div>{warnings}</div></div>
       </div>

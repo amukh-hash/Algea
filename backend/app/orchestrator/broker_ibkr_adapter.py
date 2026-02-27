@@ -1,7 +1,7 @@
 """Bridge between the existing IBKRLiveBroker and the orchestrator BrokerAdapter protocol.
 
 This adapter lets the orchestrator talk to a *real* IBKR paper/live account
-through the already-proven ``algaie.trading.broker_ibkr.IBKRLiveBroker``.
+through the already-proven ``algea.trading.broker_ibkr.IBKRLiveBroker``.
 """
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ import os
 from datetime import date, datetime
 from typing import Any
 
-from algaie.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig
-from algaie.trading.orders import OrderIntent
+from algea.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig
+from algea.trading.orders import OrderIntent
 from backend.app.schemas.fill_position import (
     FILLS_SCHEMA_VERSION,
     POSITIONS_SCHEMA_VERSION,

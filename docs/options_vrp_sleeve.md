@@ -97,8 +97,8 @@ TailAdjustedSharpe = (E[Rp] - rf) / max(Vol_p, λ · ES95_p) - m · MaxDD
 
 ### Backtest
 ```python
-from algaie.execution.options.config import VRPConfig
-from algaie.execution.options.vrp_strategy import VRPStrategy
+from algea.execution.options.config import VRPConfig
+from algea.execution.options.vrp_strategy import VRPStrategy
 
 config = VRPConfig(underlyings=("SPY",), delta_target=0.15)
 strategy = VRPStrategy(config)
@@ -112,7 +112,7 @@ python -m pytest backend/tests/options_vrp/ -v
 
 ### Risk Report
 ```python
-from algaie.eval.vrp_report import build_vrp_report
+from algea.eval.vrp_report import build_vrp_report
 report = build_vrp_report(as_of_date, backtest=backtest_result, positions=pf)
 print(report.to_dict())
 ```

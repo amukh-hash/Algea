@@ -1,6 +1,6 @@
-# Algaie Pipeline Runbook (Hardened v2.0)
+# Algea Pipeline Runbook (Hardened v2.0)
 
-This runbook documents the strictly enforced data pipeline for Algaie. All artifacts must pass the `phase0_preflight.py` check before training or inference can proceed.
+This runbook documents the strictly enforced data pipeline for Algea. All artifacts must pass the `phase0_preflight.py` check before training or inference can proceed.
 
 ## 1. Pipeline Modes & Environment Variables
 

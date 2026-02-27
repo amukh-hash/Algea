@@ -4,9 +4,9 @@ Tests for gamma danger-zone guard.
 import pytest
 from datetime import date
 
-from algaie.execution.options.config import VRPConfig
-from algaie.execution.options.risk_guards import check_danger_zone
-from algaie.execution.options.structures import (
+from algea.execution.options.config import VRPConfig
+from algea.execution.options.risk_guards import check_danger_zone
+from algea.execution.options.structures import (
     DerivativesPosition,
     OptionLeg,
     StructureType,

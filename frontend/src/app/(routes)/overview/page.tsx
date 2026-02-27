@@ -18,8 +18,8 @@ function healthFrom(risk: any, history: any[]) {
 
 export default function OverviewPage() {
   const { asof } = useOpsFilters();
-  const history = useQuery({ queryKey: ["job-history", asof], queryFn: () => orchApi.getJobHistory(100, asof || undefined) });
-  const risk = useQuery({ queryKey: ["risk", asof], queryFn: () => (asof ? orchApi.getRiskChecks(asof) : orchApi.getLatestRiskChecks()) });
+  const history = useQuery({ queryKey: ["job-history", asof], queryFn: () => orchApi.getJobHistory(100, asof || undefined), refetchInterval: 15000 });
+  const risk = useQuery({ queryKey: ["risk", asof], queryFn: () => (asof ? orchApi.getRiskChecks(asof) : orchApi.getLatestRiskChecks()), refetchInterval: 15000 });
   const health = healthFrom(risk.data?.risk_checks, history.data?.items ?? []);
 
   return (

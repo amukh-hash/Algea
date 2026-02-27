@@ -51,7 +51,7 @@ class TestScalerFitApplyParity:
     """Verify time-zscore differs across dates and train scaler works on new dates."""
 
     def test_z_cs_differs_across_dates(self):
-        from algaie.data.priors.feature_utils import (
+        from algea.data.priors.feature_utils import (
             add_date_regime_features,
             compute_date_cross_sectional_stats,
             fit_time_zscore_scaler,
@@ -74,7 +74,7 @@ class TestScalerFitApplyParity:
         )
 
     def test_train_scaler_applied_to_test_date(self):
-        from algaie.data.priors.feature_utils import (
+        from algea.data.priors.feature_utils import (
             add_date_regime_features,
             compute_date_cross_sectional_stats,
             fit_time_zscore_scaler,
@@ -107,7 +107,7 @@ class TestInferenceParity:
     """Saved scaler in manifest reproduces training-time z_cs values."""
 
     def test_manifest_scaler_reproduces_z_cs(self):
-        from algaie.data.priors.feature_utils import (
+        from algea.data.priors.feature_utils import (
             add_date_regime_features,
             compute_date_cross_sectional_stats,
             fit_time_zscore_scaler,
@@ -158,7 +158,7 @@ class TestGateDirection:
     """Higher stress (positive z_cs) with default sign → lower gate weight w."""
 
     def test_stress_lowers_w(self):
-        from algaie.models.ranker.baseline_scorer import compute_gate_weights
+        from algea.models.ranker.baseline_scorer import compute_gate_weights
 
         n = 100
         df_calm = pd.DataFrame({
@@ -216,7 +216,7 @@ class TestGateDirection:
 
     def test_gamma_cs_zero_disables_cs(self):
         """When gamma_cs=0, z_cs_tail_30_std has no effect."""
-        from algaie.models.ranker.baseline_scorer import compute_gate_weights
+        from algea.models.ranker.baseline_scorer import compute_gate_weights
 
         n = 50
         df1 = pd.DataFrame({
@@ -242,7 +242,7 @@ class TestNoLeakage:
 
     def test_distinct_distributions_give_different_mu(self):
         """If we fit on two very different data sets, mu should differ."""
-        from algaie.data.priors.feature_utils import (
+        from algea.data.priors.feature_utils import (
             compute_date_cross_sectional_stats,
             fit_time_zscore_scaler,
         )
@@ -287,7 +287,7 @@ class TestNoLeakage:
 
     def test_train_scaler_excludes_future(self):
         """Scaler fitted on train dates must not see val/test dates."""
-        from algaie.data.priors.feature_utils import (
+        from algea.data.priors.feature_utils import (
             compute_date_cross_sectional_stats,
             fit_time_zscore_scaler,
         )
@@ -378,7 +378,7 @@ class TestGateMonotonicity:
     """Verify that sigmoid_gate is monotonically decreasing for g1>0."""
 
     def test_sigmoid_decreasing_basic(self):
-        from algaie.models.ranker.baseline_scorer import sigmoid_gate
+        from algea.models.ranker.baseline_scorer import sigmoid_gate
         gate_input = np.linspace(-3.0, 3.0, 100)
         w = sigmoid_gate(gate_input, g0=0.0, g1=1.0)
         diffs = np.diff(w)
@@ -387,7 +387,7 @@ class TestGateMonotonicity:
         )
 
     def test_sigmoid_decreasing_with_offset(self):
-        from algaie.models.ranker.baseline_scorer import sigmoid_gate
+        from algea.models.ranker.baseline_scorer import sigmoid_gate
         gate_input = np.linspace(-5.0, 5.0, 200)
         for g0 in [-2.0, 0.0, 1.0, 3.0]:
             for g1 in [0.5, 1.0, 2.0]:
@@ -398,7 +398,7 @@ class TestGateMonotonicity:
                 )
 
     def test_sanity_check_helper_passes(self):
-        from algaie.models.ranker.baseline_scorer import (
+        from algea.models.ranker.baseline_scorer import (
             sanity_check_gate_monotonicity, sigmoid_gate,
         )
         gi = np.linspace(-3, 3, 200)
@@ -406,7 +406,7 @@ class TestGateMonotonicity:
         assert sanity_check_gate_monotonicity(w, gi, g1=1.0) is True
 
     def test_sanity_check_helper_detects_violation(self):
-        from algaie.models.ranker.baseline_scorer import sanity_check_gate_monotonicity
+        from algea.models.ranker.baseline_scorer import sanity_check_gate_monotonicity
         # Fabricate a violation: w positively correlated with gate_input
         gi = np.linspace(0, 5, 100)
         w = gi / 5.0  # w increases with gi — wrong!
@@ -444,7 +444,7 @@ class TestCSSignDirection:
         return pd.DataFrame(rows)
 
     def test_positive_cs_sign_stress_lowers_w(self):
-        from algaie.models.ranker.baseline_scorer import compute_gate_weights
+        from algea.models.ranker.baseline_scorer import compute_gate_weights
         df = self._make_two_date_df()
         w = compute_gate_weights(
             df, g0=0.0, g1=1.0,
@@ -459,7 +459,7 @@ class TestCSSignDirection:
         )
 
     def test_negative_cs_sign_flips_ordering(self):
-        from algaie.models.ranker.baseline_scorer import compute_gate_weights
+        from algea.models.ranker.baseline_scorer import compute_gate_weights
         df = self._make_two_date_df()
         w = compute_gate_weights(
             df, g0=0.0, g1=1.0,
@@ -482,7 +482,7 @@ class TestEffectiveTermCorrelation:
     """Verify corr(w, cs_term) is negative for stress_up + positive gamma_cs."""
 
     def test_corr_w_cs_term_negative(self):
-        from algaie.models.ranker.baseline_scorer import (
+        from algea.models.ranker.baseline_scorer import (
             compute_gate_weights, compute_gate_input,
         )
         rng = np.random.RandomState(77)

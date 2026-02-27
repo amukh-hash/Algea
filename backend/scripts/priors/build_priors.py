@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from algaie.data.priors.build import build_priors, write_priors
-from algaie.models.foundation.chronos2 import FoundationModelConfig
+from algea.data.priors.build import build_priors, write_priors
+from algea.models.foundation.chronos2 import FoundationModelConfig
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 

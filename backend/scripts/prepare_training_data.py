@@ -21,7 +21,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algaie.data.eligibility.universe_builder import UniverseBuilder, UniverseConfig
+from algea.data.eligibility.universe_builder import UniverseBuilder, UniverseConfig
 from backend.scripts._cli_utils import normalise_ohlcv_columns
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

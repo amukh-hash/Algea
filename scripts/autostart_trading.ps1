@@ -1,5 +1,5 @@
 # autostart_trading.ps1 — Headless launcher for Windows Task Scheduler
-# Starts the full Algaie trading stack (API + Orchestrator + Frontend dev server)
+# Starts the full Algea trading stack (API + Orchestrator + Frontend dev server)
 # Designed to run unattended before market open.
 #
 # Usage (manual): powershell -ExecutionPolicy Bypass -File scripts\autostart_trading.ps1

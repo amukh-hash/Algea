@@ -11,7 +11,7 @@ import { TrueCurvePanel } from "@/components/TrueCurvePanel";
 
 export default function PerformancePage() {
   const { asof } = useOpsFilters();
-  const curve = useQuery({ queryKey: ["portfolio-curve", asof], queryFn: () => asof ? orchApi.getEquitySeries(asof) : Promise.resolve({ asof: "", asof_date: "", scope: "portfolio", source: "", series: [] }) });
+  const curve = useQuery({ queryKey: ["portfolio-curve", asof], queryFn: () => asof ? orchApi.getEquitySeries(asof) : Promise.resolve({ asof: "", asof_date: "", scope: "portfolio", source: "", series: [] }), refetchInterval: 60000 });
 
   return (
     <div className="space-y-4">

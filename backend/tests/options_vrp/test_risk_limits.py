@@ -5,14 +5,14 @@ from datetime import date
 
 import pytest
 
-from algaie.execution.options.config import VRPConfig
-from algaie.execution.options.structures import (
+from algea.execution.options.config import VRPConfig
+from algea.execution.options.structures import (
     DerivativesPosition,
     DerivativesPositionFrame,
     OptionLeg,
     StructureType,
 )
-from algaie.trading.derivatives_risk import (
+from algea.trading.derivatives_risk import (
     check_risk_limits,
     compute_capital_at_risk,
     compute_max_loss,

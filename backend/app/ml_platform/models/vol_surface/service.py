@@ -13,7 +13,8 @@ from .types import VolSurfaceRequest, VolSurfaceResponse
 
 
 class VolSurfaceService:
-    def __init__(self, loader, trace_root: Path, timeout_ms: int = 500):
+    def __init__(self, loader, trace_root: Path, timeout_ms: int = 500, device: str = "cpu"):
+        self.device = device
         self.loader = loader
         self.trace_root = trace_root
         self.timeout_ms = timeout_ms

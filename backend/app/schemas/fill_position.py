@@ -46,6 +46,8 @@ class PositionRecord:
     avg_cost: float
     asof_date: str | None
     source: str
+    predicted_probability: float | None = None
+    confidence_bin: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -55,6 +57,8 @@ class PositionRecord:
             "avg_cost": self.avg_cost,
             "asof_date": self.asof_date,
             "source": self.source,
+            "predicted_probability": self.predicted_probability,
+            "confidence_bin": self.confidence_bin,
         }
 
 
@@ -88,6 +92,8 @@ def normalize_position(raw: dict[str, Any], source: str, asof_date: str | None =
         avg_cost=avg_cost,
         asof_date=asof_date,
         source=source,
+        predicted_probability=float(raw.get("predicted_probability")) if raw.get("predicted_probability") is not None else None,
+        confidence_bin=raw.get("confidence_bin"),
     )
 
 

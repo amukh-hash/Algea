@@ -12,7 +12,8 @@ from .types import SMoERankRequest, SMoERankResponse
 
 
 class SMoEService:
-    def __init__(self, loader, trace_root: Path, microbatch_size: int = 64):
+    def __init__(self, loader, trace_root: Path, microbatch_size: int = 64, device: str = "cpu"):
+        self.device = device
         self.loader = loader
         self.trace_root = trace_root
         self.microbatch_size = microbatch_size

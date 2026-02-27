@@ -39,13 +39,13 @@ from torch.utils.data import DataLoader
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algaie.data.priors.selector_schema import MODEL_FEATURE_COLS
-from algaie.eval.selector_metrics import (
+from algea.data.priors.selector_schema import MODEL_FEATURE_COLS
+from algea.eval.selector_metrics import (
     compute_bucketed_metrics,
     compute_priors_baseline_score,
     per_date_metrics,
 )
-from algaie.training.selector_dataset import (
+from algea.training.selector_dataset import (
     SelectorDataset,
     selector_collate_fn,
 )
@@ -168,7 +168,7 @@ def train_fold(
     device: torch.device,
 ) -> dict:
     """Train a single fold and return val/test metrics."""
-    from algaie.models.ranker.mlp_selector import MLPSelector
+    from algea.models.ranker.mlp_selector import MLPSelector
 
     # Import pairwise_ranking_loss from the training script
     sys.path.insert(0, str(ROOT / "backend" / "scripts"))
@@ -323,7 +323,7 @@ def main():
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    from algaie.core.device import get_device
+    from algea.core.device import get_device
     device = get_device()
 
     # Load data

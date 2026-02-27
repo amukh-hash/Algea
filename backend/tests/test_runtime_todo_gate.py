@@ -5,7 +5,7 @@ import re
 def test_runtime_todo_gate():
     deny = re.compile(r"TODO|FIXME|XXX|NotImplementedError")
     allow = {"tests", "docs", "deprecated", "lagllama.py", "foundation/base.py", "broker_base.py"}
-    roots = [Path("backend/app/orchestrator"), Path("backend/app/api"), Path("algaie/trading")]
+    roots = [Path("backend/app/orchestrator"), Path("backend/app/api"), Path("algea/trading")]
     for root in roots:
         for p in root.rglob("*.py"):
             s = str(p)

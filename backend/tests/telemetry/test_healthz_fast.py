@@ -17,6 +17,6 @@ def test_healthz_fast_and_shape():
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
-    assert body["app"] == "algaie"
+    assert body["app"] == "algea"
     assert "orchestrator" in body
     assert elapsed_ms < 500

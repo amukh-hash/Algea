@@ -1,7 +1,7 @@
 ============================= test session starts =============================
 platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\Aishik\AppData\Local\Programs\Python\Python311\python.exe
 cachedir: .pytest_cache
-rootdir: C:\Users\Aishik\Documents\Workshop\Algaie
+rootdir: C:\Users\Aishik\Documents\Workshop\Algea
 configfile: pyproject.toml
 plugins: anyio-4.12.1
 collecting ... collected 37 items

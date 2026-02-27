@@ -5,9 +5,9 @@ from datetime import date, timedelta
 
 np.random.seed(42)
 
-from algaie.execution.options.config import VRPConfig
-from algaie.trading.meta_allocator import MetaAllocator, SleeveResult, AllocationContext
-from algaie.data.options.vrp_features import VolRegime
+from algea.execution.options.config import VRPConfig
+from algea.trading.meta_allocator import MetaAllocator, SleeveResult, AllocationContext
+from algea.data.options.vrp_features import VolRegime
 from backend.app.evaluation.vrp_validation import run_validation
 
 cfg = VRPConfig()

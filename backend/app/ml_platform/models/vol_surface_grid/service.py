@@ -10,7 +10,8 @@ from .types import VolSurfaceGridRequest, VolSurfaceGridResponse
 
 
 class VolSurfaceGridService:
-    def __init__(self, loader, trace_root: Path):
+    def __init__(self, loader, trace_root: Path, device: str = "cpu"):
+        self.device = device
         self.loader = loader
         self.trace_root = trace_root
         self._loaded: dict[str, dict] = {}

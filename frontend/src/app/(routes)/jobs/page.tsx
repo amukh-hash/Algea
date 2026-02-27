@@ -12,8 +12,8 @@ import { OpsHeader } from "@/components/OpsHeader";
 export default function JobsPage() {
   const { asof } = useOpsFilters();
   const qc = useQueryClient();
-  const registry = useQuery({ queryKey: ["jobs-registry"], queryFn: orchApi.getJobs });
-  const history = useQuery({ queryKey: ["jobs-history", asof], queryFn: () => orchApi.getJobHistory(200, asof || undefined) });
+  const registry = useQuery({ queryKey: ["jobs-registry"], queryFn: orchApi.getJobs, refetchInterval: 60000 });
+  const history = useQuery({ queryKey: ["jobs-history", asof], queryFn: () => orchApi.getJobHistory(200, asof || undefined), refetchInterval: 15000 });
   const dryRun = useMutation({ mutationFn: () => controlApi.triggerTick(true), onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs-history"] }) });
 
   return (

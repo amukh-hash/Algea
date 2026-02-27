@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from algaie.training.ranker_train import train_ranker_model
+from algea.training.ranker_train import train_ranker_model
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 

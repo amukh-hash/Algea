@@ -1,9 +1,9 @@
-# 📊 Algaie Trading Platform - Layman's Guide
+# 📊 Algea Trading Platform - Layman's Guide
 
-Welcome to the Algaie Codebase! This document explains the architecture and daily operations of the system in plain English.
+Welcome to the Algea Codebase! This document explains the architecture and daily operations of the system in plain English.
 
 ## 🎯 The Big Picture
-**Algaie** is a sophisticated swing-trading system that uses Machine Learning to predict and execute trades. 
+**Algea** is a sophisticated swing-trading system that uses Machine Learning to predict and execute trades. 
 - **What it does:** It pulls daily market data, calculates metrics, uses a "Teacher" AI model (Chronos) to gauge market risk, and a "Selector" AI model (a Stock-Transformer) to pick the best assets to trade.
 - **How it trades:** It connects to Interactive Brokers (IBKR) to automatically execute trades across three distinct portfolios (called "Sleeves").
 - **How you manage it:** It comes with a web dashboard (and a desktop app wrapper) to monitor live executions, review past runs, and check system health.
@@ -18,7 +18,7 @@ This is a standard Python-based FastAPI server combined with heavy data science 
 - **`scripts/`**: The operational heavy lifters. This folder contains scripts to ingest new market data, compile it into clean datasets, train the AI models, and run nightly predictions.
 - **`app/orchestrator/`**: The overarching conductor that coordinates data pipelines and trading jobs.
 
-### `algaie/` 📚 The Shared Library
+### `algea/` 📚 The Shared Library
 This is the core Python package containing the shared, reusable logic for trading and AI:
 - **`data/` & `features/`**: The logic defining how raw stock data is cleaned and how useful signals (features) are extracted.
 - **`models/` & `training/`**: The blueprints for the AI models themselves.

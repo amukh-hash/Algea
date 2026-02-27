@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from backend.app.orchestrator.control_state import control_state
 
 router = APIRouter(prefix="/api/control", tags=["control"])
-logger = logging.getLogger("algaie.api.control")
+logger = logging.getLogger("algea.api.control")
 
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")

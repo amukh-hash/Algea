@@ -27,14 +27,14 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algaie.data.priors.selector_schema import (
+from algea.data.priors.selector_schema import (
     TEACHER_PRIORS_COLS,
     Z_FEATURE_COLS,
     DEAD_ZSCORE_COLS,
     MODEL_FEATURE_COLS,
     TARGET_COLS,
 )
-from algaie.data.priors.feature_utils import (
+from algea.data.priors.feature_utils import (
     recompute_regime_risk,
     compute_date_cross_sectional_stats,
     fit_time_zscore_scaler,

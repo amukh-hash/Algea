@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from algaie.data.features.build import build_features, write_features
+from algea.data.features.build import build_features, write_features
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 

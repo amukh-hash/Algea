@@ -2,7 +2,7 @@ from datetime import date
 
 import pandas as pd
 
-from algaie.data.priors.build import build_priors
+from algea.data.priors.build import build_priors
 
 
 def test_priors_ignore_future_data():

@@ -40,9 +40,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from algaie.portfolio.portfolio_rules import PortfolioConfig, construct_portfolio
-from algaie.portfolio.cost_model import CostConfig, compute_turnover_and_cost
-from algaie.portfolio.vol_scaling import VolTargetConfig, compute_leverage, apply_leverage
+from algea.portfolio.portfolio_rules import PortfolioConfig, construct_portfolio
+from algea.portfolio.cost_model import CostConfig, compute_turnover_and_cost
+from algea.portfolio.vol_scaling import VolTargetConfig, compute_leverage, apply_leverage
 
 logging.basicConfig(
     level=logging.INFO,

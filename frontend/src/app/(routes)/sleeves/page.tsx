@@ -20,8 +20,8 @@ function mapStatus(targets: any[] | undefined, risk: any) {
 
 export default function SleevesPage() {
   const { asof } = useOpsFilters();
-  const targets = useQuery({ queryKey: ["targets", asof], queryFn: () => orchApi.getTargets(asof || undefined) });
-  const risk = useQuery({ queryKey: ["risk", asof], queryFn: () => (asof ? orchApi.getRiskChecks(asof) : orchApi.getLatestRiskChecks()) });
+  const targets = useQuery({ queryKey: ["targets", asof], queryFn: () => orchApi.getTargets(asof || undefined), refetchInterval: 15000 });
+  const risk = useQuery({ queryKey: ["risk", asof], queryFn: () => (asof ? orchApi.getRiskChecks(asof) : orchApi.getLatestRiskChecks()), refetchInterval: 15000 });
 
   return (
     <div className="space-y-4">

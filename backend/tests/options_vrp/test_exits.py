@@ -4,9 +4,9 @@ Tests for the constraint-driven de-risk policy.
 import pytest
 from datetime import date
 
-from algaie.execution.options.config import VRPConfig
-from algaie.execution.options.exits import DeRiskPolicy, ExitReason
-from algaie.execution.options.structures import (
+from algea.execution.options.config import VRPConfig
+from algea.execution.options.exits import DeRiskPolicy, ExitReason
+from algea.execution.options.structures import (
     DerivativesPosition,
     OptionLeg,
     StructureType,

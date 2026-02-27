@@ -58,7 +58,7 @@ class TestFrameQuality:
 
     def test_no_nans_in_features(self):
         """All model features must be non-NaN."""
-        from algaie.data.priors.selector_schema import MODEL_FEATURE_COLS
+        from algea.data.priors.selector_schema import MODEL_FEATURE_COLS
 
         date_str = _get_first_available_date(FRAME_ROOT)
         df = _load_frame_partition(FRAME_ROOT, date_str)
@@ -72,7 +72,7 @@ class TestFrameQuality:
 
     def test_z_features_bounded(self):
         """z-features must be within [-5, +5]."""
-        from algaie.data.priors.selector_schema import Z_FEATURE_COLS
+        from algea.data.priors.selector_schema import Z_FEATURE_COLS
 
         date_str = _get_first_available_date(FRAME_ROOT)
         df = _load_frame_partition(FRAME_ROOT, date_str)
@@ -129,8 +129,8 @@ class TestFeatureParity:
 
     def test_parity_with_cache(self):
         """Features from cache-loaded inference match training frame."""
-        from algaie.data.priors.feature_utils import build_features
-        from algaie.data.priors.selector_schema import MODEL_FEATURE_COLS
+        from algea.data.priors.feature_utils import build_features
+        from algea.data.priors.selector_schema import MODEL_FEATURE_COLS
 
         cache_root = ROOT / "backend" / "data" / "selector" / "priors_cache"
         frame_root = FRAME_ROOT

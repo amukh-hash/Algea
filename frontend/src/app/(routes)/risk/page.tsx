@@ -11,7 +11,7 @@ import { OpsHeader } from "@/components/OpsHeader";
 
 export default function RiskPage() {
   const { asof, session } = useOpsFilters();
-  const risk = useQuery({ queryKey: ["risk", asof, session], queryFn: () => (asof ? orchApi.getRiskChecks(asof, session || undefined) : orchApi.getLatestRiskChecks()) });
+  const risk = useQuery({ queryKey: ["risk", asof, session], queryFn: () => (asof ? orchApi.getRiskChecks(asof, session || undefined) : orchApi.getLatestRiskChecks()), refetchInterval: 15000 });
 
   let parsed: any = null;
   let parseError: string | null = null;

@@ -1,13 +1,13 @@
 {
   "timestamp": "2026-02-07T20:14:07.592265",
   "config": {
-    "gold_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\processed\\gold",
+    "gold_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\processed\\gold",
     "gold_glob": "*.parquet",
-    "silver_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\prices",
-    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\breadth.parquet",
-    "universe_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\universe",
-    "selector_features_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\features\\selector_features_v2",
-    "priors_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\priors",
+    "silver_dir": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\prices",
+    "breadth_path": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\breadth.parquet",
+    "universe_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\artifacts\\universe",
+    "selector_features_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\artifacts\\features\\selector_features_v2",
+    "priors_root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\priors",
     "gold_sample_k": 5,
     "gold_min_ok_frac": 1.0,
     "gold_required_cols": [
@@ -55,7 +55,7 @@
   },
   "universe_frame_v2": {
     "ok": false,
-    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\universe",
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\artifacts\\universe",
     "n_files": 121,
     "sampled_files": 5,
     "breadth": null,
@@ -111,7 +111,7 @@
   },
   "selector_featureframe_v2": {
     "ok": false,
-    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algaie\\backend\\data\\artifacts\\features\\selector_features_v2",
+    "root": "C:\\Users\\Aishik\\Documents\\Workshop\\Algea\\backend\\data\\artifacts\\features\\selector_features_v2",
     "n_files": 1,
     "sampled_files": 1,
     "breadth": {

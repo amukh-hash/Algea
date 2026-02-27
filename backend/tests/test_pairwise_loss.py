@@ -145,7 +145,7 @@ def test_modes_cuda():
         print("  ⊘ CUDA not available, skipping")
         return
 
-    from algaie.core.device import get_device
+    from algea.core.device import get_device
     dev = get_device()
     scores, targets, mask = _make_inputs(N=200, device=str(dev))
 

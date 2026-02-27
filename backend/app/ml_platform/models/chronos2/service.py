@@ -15,7 +15,8 @@ from .types import TSFMRequest, TSFMResponse
 
 
 class Chronos2Service:
-    def __init__(self, loader: Chronos2Loader, trace_root: Path, timeout_ms: int = 500):
+    def __init__(self, loader: Chronos2Loader, trace_root: Path, timeout_ms: int = 500, device: str = "cpu"):
+        self.device = device
         self.loader = loader
         self.trace_root = trace_root
         self.timeout_ms = timeout_ms

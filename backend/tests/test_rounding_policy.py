@@ -1,6 +1,6 @@
 import pandas as pd
 
-from algaie.trading.portfolio import Portfolio
+from algea.trading.portfolio import Portfolio
 
 
 def test_rounding_policy_rounds_shares():
