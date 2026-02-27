@@ -6,6 +6,7 @@ from ..models.chronos2.types import TSFMRequest, TSFMResponse
 from ..models.selector_smoe.types import SMoERankRequest, SMoERankResponse
 from ..models.vol_surface.types import VolSurfaceRequest, VolSurfaceResponse
 from ..models.itransformer.types import ITransformerSignalRequest, ITransformerSignalResponse
+from ..models.rl_policy.types import RLPolicyRequest, RLPolicyResponse
 from .protocol import InferenceRequestBase, InferenceResponse
 from .server import InferenceGatewayServer
 
@@ -113,6 +114,31 @@ class InferenceGatewayClient:
             scores=response.outputs.get("scores", {}),
             uncertainty=float(response.outputs.get("uncertainty", 0.0)),
             correlation_regime=float(response.outputs.get("correlation_regime", 0.0)),
+            latency_ms=response.latency_ms,
+            warnings=response.warnings,
+        )
+
+    def rl_policy_act(self, req: RLPolicyRequest, critical: bool = True) -> RLPolicyResponse | None:
+        wrapped = InferenceRequestBase(
+            asof=datetime.fromisoformat(req.asof),
+            universe_id=req.sleeve,
+            features_hash="",
+            model_alias=req.model_alias,
+            trace_id=req.trace_id,
+            payload=req.model_dump(),
+        )
+        response = self.call("rl_policy_act", wrapped, critical=critical)
+        if response is None:
+            return None
+        return RLPolicyResponse(
+            model_version=response.model_version,
+            size_multiplier=float(response.outputs.get("size_multiplier", 0.0)),
+            veto=bool(response.outputs.get("veto", False)),
+            projected_multiplier=float(response.outputs.get("projected_multiplier", 0.0)),
+            projection_reason=str(response.outputs.get("projection_reason", "")),
+            projection_applied=bool(response.outputs.get("projection_applied", False)),
+            drift_score=float(response.outputs.get("drift_score", response.ood_score)),
+            ood_score=response.ood_score,
             latency_ms=response.latency_ms,
             warnings=response.warnings,
         )

@@ -32,10 +32,18 @@ class TrainChronos2LoRAJob:
     batch_size: int = 8
     lr: float = 1e-4
     seed: int = 7
+    downsample_freq: str = "1min"
+    timestamps: list[str] = field(default_factory=list)
     series: list[float] = field(default_factory=list)
 
     def run(self, out_dir: Path) -> dict:
-        windows = build_tsfm_windows(self.series, self.context_length, self.prediction_length)
+        windows = build_tsfm_windows(
+            self.series,
+            self.context_length,
+            self.prediction_length,
+            timestamps=self.timestamps or None,
+            downsample_freq=self.downsample_freq,
+        )
         adapter = train_lora_adapter_stub(windows, self.epochs)
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "weights.safetensors").write_bytes(json.dumps(adapter).encode("utf-8"))
@@ -44,6 +52,7 @@ class TrainChronos2LoRAJob:
             "context_length": self.context_length,
             "prediction_length": self.prediction_length,
             "lora": {"r": self.lora_r, "alpha": self.lora_alpha, "dropout": self.lora_dropout},
+            "downsample_freq": self.downsample_freq,
         }
         metrics = {
             "pinball_loss": pinball_loss(self.series[-self.prediction_length :], self.series[-self.prediction_length :], 0.5),

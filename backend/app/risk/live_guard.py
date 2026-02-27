@@ -1,9 +1,5 @@
 """
 Paper / live trading safety guard.
-
-Blocks new trades and optionally reduces VRP allocation when
-extreme risk conditions are detected.  All decisions are logged
-for audit.
 """
 from __future__ import annotations
 
@@ -13,41 +9,25 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from algaie.execution.options.config import VRPConfig
+from backend.app.ml_platform.drift.calibration import expected_calibration_error
+from backend.app.ml_platform.drift.detectors import confidence_entropy_correlation, prediction_consistency_score
 
 logger = logging.getLogger(__name__)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Decision output
-# ═══════════════════════════════════════════════════════════════════════════
-
 @dataclass
 class LiveGuardDecision:
-    """Output of the live guard evaluation."""
     as_of_date: str
     allow_new_trades: bool = True
-    reduce_vrp_pct: float = 0.0   # 0 = no reduction, 0.5 = cut by 50%
+    reduce_vrp_pct: float = 0.0
     reasons: List[str] = field(default_factory=list)
-    metrics: Dict[str, float] = field(default_factory=dict)
+    metrics: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Live guard
-# ═══════════════════════════════════════════════════════════════════════════
-
 class LiveGuard:
-    """Safety layer for paper and live trading.
-
-    Checks:
-    1. Scenario loss > hard limit → block new trades
-    2. Margin utilisation > limit → block new trades
-    3. Forecast health sudden drop → reduce VRP weight
-    4. Regime is CRASH_RISK → block new trades
-    """
-
     def __init__(self, config: Optional[VRPConfig] = None) -> None:
         self.config = config or VRPConfig()
         self._health_history: List[float] = []
@@ -59,41 +39,46 @@ class LiveGuard:
         margin_utilization: float,
         forecast_health: float,
         regime: str = "normal_carry",
+        current_confidence: float = 0.7,
+        current_accuracy: float = 0.7,
+        prediction_series: Optional[list[float]] = None,
+        consistency_baseline: Optional[dict] = None,
+        confidence_series: Optional[list[float]] = None,
+        outcome_series: Optional[list[float]] = None,
+        corr_baseline: float = 0.2,
     ) -> LiveGuardDecision:
-        """Evaluate all safety conditions.
-
-        Parameters
-        ----------
-        as_of_date : current date
-        scenario_loss_pct : current worst-case scenario loss as % of NAV
-        margin_utilization : current margin utilisation (0-1)
-        forecast_health : current forecast health score (0-1)
-        regime : current regime string
-        """
         cfg = self.config
         decision = LiveGuardDecision(as_of_date=str(as_of_date))
+        prediction_series = prediction_series or []
+        consistency_baseline = consistency_baseline or {}
+        confidence_series = confidence_series or []
+        outcome_series = outcome_series or []
+
+        ece = expected_calibration_error(current_confidence, current_accuracy)
+        consistency = prediction_consistency_score(prediction_series, consistency_baseline)
+        corr = confidence_entropy_correlation(confidence_series, outcome_series)
+
         decision.metrics = {
             "scenario_loss_pct": scenario_loss_pct,
             "margin_utilization": margin_utilization,
             "forecast_health": forecast_health,
             "regime": regime,
+            "ece": ece,
+            "prediction_consistency_score": consistency,
+            "conf_entropy_corr": corr,
+            "interval_coverage_error": ece,
         }
 
-        # 1. Scenario loss hard limit
         if scenario_loss_pct > cfg.live_guard_hard_loss_limit:
             decision.allow_new_trades = False
-            decision.reasons.append(
-                f"scenario_loss_pct {scenario_loss_pct:.4f} > hard limit {cfg.live_guard_hard_loss_limit}"
-            )
+            decision.reasons.append(f"scenario_loss_pct {scenario_loss_pct:.4f} > hard limit {cfg.live_guard_hard_loss_limit}")
+            decision.reasons.append("halt_scenario_loss")
 
-        # 2. Margin utilisation
         if margin_utilization > cfg.live_guard_margin_limit:
             decision.allow_new_trades = False
-            decision.reasons.append(
-                f"margin_utilization {margin_utilization:.2%} > limit {cfg.live_guard_margin_limit:.2%}"
-            )
+            decision.reasons.append(f"margin_utilization {margin_utilization:.2%} > limit {cfg.live_guard_margin_limit:.2%}")
+            decision.reasons.append("halt_margin")
 
-        # 3. Forecast health sudden drop
         self._health_history.append(forecast_health)
         if len(self._health_history) >= 4:
             health_3d_ago = self._health_history[-4]
@@ -101,20 +86,36 @@ class LiveGuard:
             if drop > cfg.live_guard_health_drop_threshold:
                 decision.reduce_vrp_pct = cfg.live_guard_health_drop_reduce_pct
                 decision.reasons.append(
-                    f"forecast health dropped {drop:.2f} in 3 days "
-                    f"(from {health_3d_ago:.2f} to {forecast_health:.2f})"
+                    f"forecast health dropped {drop:.2f} in 3 days (from {health_3d_ago:.2f} to {forecast_health:.2f})"
                 )
+                decision.reasons.append("reduce_forecast_health_drop")
 
-        # 4. Regime CRASH_RISK
         if regime == "crash_risk":
             decision.allow_new_trades = False
             decision.reasons.append("regime is CRASH_RISK")
+            decision.reasons.append("halt_regime_crash_risk")
+
+        ece_threshold = float(getattr(cfg, "live_guard_ece_threshold", 0.12))
+        consistency_threshold = float(getattr(cfg, "live_guard_prediction_consistency_threshold", 2.5))
+        corr_deviation_threshold = float(getattr(cfg, "live_guard_conf_entropy_corr_delta_threshold", 0.4))
+
+        if ece > ece_threshold:
+            decision.allow_new_trades = False
+            decision.reasons.append("halt_ece_spike")
+        if consistency > consistency_threshold:
+            decision.allow_new_trades = False
+            decision.reasons.append("halt_prediction_consistency")
+        if abs(corr - corr_baseline) > corr_deviation_threshold:
+            decision.allow_new_trades = False
+            decision.reasons.append("halt_conf_entropy_corr")
 
         if decision.reasons:
             logger.warning(
                 "LiveGuard %s: allow_trades=%s reduce=%.0f%% reasons=%s",
-                as_of_date, decision.allow_new_trades,
-                decision.reduce_vrp_pct * 100, decision.reasons,
+                as_of_date,
+                decision.allow_new_trades,
+                decision.reduce_vrp_pct * 100,
+                decision.reasons,
             )
 
         return decision

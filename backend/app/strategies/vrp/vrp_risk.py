@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def build_vrp_ml_risk(model_version: str, model_alias: str, predicted_rv: dict, edge_by_tenor: dict[int, float], uncertainty: dict[int, float], drift: float, ood: float, latency_ms: float) -> dict:
+def build_vrp_ml_risk(model_version: str, model_alias: str, predicted_rv: dict, edge_by_tenor: dict[int, float], uncertainty: dict[int, float], drift: float, ood: float, latency_ms: float, rl_fields: dict | None = None) -> dict:
     return {
         "model_name": "vol_surface",
         "model_version": model_version,
@@ -16,4 +16,5 @@ def build_vrp_ml_risk(model_version: str, model_alias: str, predicted_rv: dict, 
         "expert_utilization": {},
         "load_balance_score": 0.0,
         "fallback_used": False,
+        "rl_policy": rl_fields or {},
     }

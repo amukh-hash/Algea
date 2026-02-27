@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..config import MLPlatformConfig
 from ..registry.store import ModelRegistryStore
-from .jobs import TrainChronos2LoRAJob, TrainSMoERankerJob, TrainVolSurfaceForecasterJob, TrainITransformerJob, TrainingJob
+from .jobs import TrainChronos2LoRAJob, TrainSMoERankerJob, TrainVolSurfaceForecasterJob, TrainITransformerJob, TrainRLPolicyJob, TrainingJob
 
 
 class TrainerDaemon:
@@ -50,6 +50,12 @@ class TrainerDaemon:
         if isinstance(job, TrainITransformerJob) or job.job_type == "train_itransformer":
             if not isinstance(job, TrainITransformerJob):
                 job = TrainITransformerJob(**{**job.params, "job_type": job.job_type, "model_name": job.model_name, "version": job.version})
+            tmp = Path("backend/artifacts/tmp_training") / f"{job.model_name}_{job.version}"
+            return self._publish_result(job.model_name, job.version, job.run(tmp))
+
+        if isinstance(job, TrainRLPolicyJob) or job.job_type == "train_rl_policy":
+            if not isinstance(job, TrainRLPolicyJob):
+                job = TrainRLPolicyJob(**{**job.params, "job_type": job.job_type, "model_name": job.model_name, "version": job.version})
             tmp = Path("backend/artifacts/tmp_training") / f"{job.model_name}_{job.version}"
             return self._publish_result(job.model_name, job.version, job.run(tmp))
 
