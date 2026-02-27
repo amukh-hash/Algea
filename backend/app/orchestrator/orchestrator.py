@@ -17,6 +17,8 @@ from .locks import LockManager
 from .runner import JobRunner
 from .state_store import StateStore
 from .control_state import control_state
+from .tick_context import TickContext
+from .model_versions import record_model_versions
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +76,7 @@ class Orchestrator:
 
     def run_once(self, asof: date | datetime | None = None, forced_session: Session | None = None, dry_run: bool = False) -> TickResult:
         now = now_et()
+        tick_context = TickContext()
         control_snapshot = control_state.snapshot()
         asof_date = normalize_asof_date(asof)
         day_root = self._day_root(asof_date)
@@ -147,6 +150,7 @@ class Orchestrator:
                         "config": self.config,
                         "control_snapshot": control_snapshot,
                         "control_snapshot_id": control_snapshot.get("snapshot_id"),
+                        "tick_context": tick_context,
                     },
                     day_root / "jobs",
                 )
@@ -180,6 +184,13 @@ class Orchestrator:
         tick = TickResult(run_id, asof_date.isoformat(), session.value, ran, skipped, failed)
         self.state.update_run_record(run_id, status, asdict(tick))
         (day_root / "runs" / f"{run_id}.json").write_text(json.dumps(asdict(tick), indent=2), encoding="utf-8")
+        record_model_versions(
+            day_root / "model_versions.json",
+            tick_context.model_versions,
+            run_id=run_id,
+            asof_date=asof_date.isoformat(),
+            session=session.value,
+        )
         self._write_heartbeat(day_root, now_et(), session, status)
         logger.info("orchestrator tick complete: %s", tick)
         if self._telemetry_bridge:

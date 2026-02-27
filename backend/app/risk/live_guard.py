@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LiveGuardDecision:
     as_of_date: str
+    status: str = "ok"
     allow_new_trades: bool = True
     reduce_vrp_pct: float = 0.0
     reasons: List[str] = field(default_factory=list)
@@ -46,6 +47,7 @@ class LiveGuard:
         confidence_series: Optional[list[float]] = None,
         outcome_series: Optional[list[float]] = None,
         corr_baseline: float = 0.2,
+        sla_breach: bool = False,
     ) -> LiveGuardDecision:
         cfg = self.config
         decision = LiveGuardDecision(as_of_date=str(as_of_date))
@@ -67,15 +69,18 @@ class LiveGuard:
             "prediction_consistency_score": consistency,
             "conf_entropy_corr": corr,
             "interval_coverage_error": ece,
+            "sla_breach": bool(sla_breach),
         }
 
         if scenario_loss_pct > cfg.live_guard_hard_loss_limit:
             decision.allow_new_trades = False
+            decision.status = "halted"
             decision.reasons.append(f"scenario_loss_pct {scenario_loss_pct:.4f} > hard limit {cfg.live_guard_hard_loss_limit}")
             decision.reasons.append("halt_scenario_loss")
 
         if margin_utilization > cfg.live_guard_margin_limit:
             decision.allow_new_trades = False
+            decision.status = "halted"
             decision.reasons.append(f"margin_utilization {margin_utilization:.2%} > limit {cfg.live_guard_margin_limit:.2%}")
             decision.reasons.append("halt_margin")
 
@@ -92,6 +97,7 @@ class LiveGuard:
 
         if regime == "crash_risk":
             decision.allow_new_trades = False
+            decision.status = "halted"
             decision.reasons.append("regime is CRASH_RISK")
             decision.reasons.append("halt_regime_crash_risk")
 
@@ -101,13 +107,21 @@ class LiveGuard:
 
         if ece > ece_threshold:
             decision.allow_new_trades = False
+            decision.status = "halted"
             decision.reasons.append("halt_ece_spike")
         if consistency > consistency_threshold:
             decision.allow_new_trades = False
+            decision.status = "halted"
             decision.reasons.append("halt_prediction_consistency")
         if abs(corr - corr_baseline) > corr_deviation_threshold:
             decision.allow_new_trades = False
+            decision.status = "halted"
             decision.reasons.append("halt_conf_entropy_corr")
+
+        if decision.metrics.get("sla_breach", False):
+            decision.allow_new_trades = False
+            decision.status = "halted"
+            decision.reasons.append("halt_sla_breach")
 
         if decision.reasons:
             logger.warning(

@@ -19,5 +19,8 @@ class SMoERankResponse(BaseModel):
     router_entropy_mean: float
     expert_utilization: dict[str, int]
     load_balance_score: float
+    context_sensitivity_score: float = 0.0
+    expert_collapse_score: float = 0.0
+    specialization_by_bucket: dict[str, dict[str, int]] = Field(default_factory=dict)
     latency_ms: float
     warnings: list[str] = Field(default_factory=list)

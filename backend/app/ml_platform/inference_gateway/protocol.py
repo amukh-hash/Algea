@@ -11,6 +11,7 @@ class InferenceRequestBase:
     universe_id: str
     features_hash: str
     model_alias: str = "prod"
+    model_version: str | None = None
     trace_id: str = ""
     payload: dict[str, Any] = field(default_factory=dict)
 
