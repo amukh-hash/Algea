@@ -19,6 +19,64 @@ def _mode(ctx: dict[str, Any]) -> str:
     return str(ctx.get("mode", "noop")).lower()
 
 
+def _chronos2_enabled(ctx: dict[str, Any]) -> bool:
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "enable_chronos2_sleeve"):
+        return bool(getattr(cfg, "enable_chronos2_sleeve"))
+    import os
+    return os.getenv("ENABLE_CHRONOS2_SLEEVE", "0") == "1"
+
+
+def _smoe_selector_enabled(ctx: dict[str, Any]) -> bool:
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "enable_smoe_selector"):
+        return bool(getattr(cfg, "enable_smoe_selector"))
+    import os
+    return os.getenv("ENABLE_SMOE_SELECTOR", "0") == "1"
+
+
+def _selector_model_alias(ctx: dict[str, Any]) -> str:
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "selector_model_alias"):
+        return str(getattr(cfg, "selector_model_alias"))
+    import os
+    return os.getenv("SELECTOR_MODEL_ALIAS", "prod")
+
+
+def _vol_surface_vrp_enabled(ctx: dict[str, Any]) -> bool:
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "enable_vol_surface_vrp"):
+        return bool(getattr(cfg, "enable_vol_surface_vrp"))
+    import os
+    return os.getenv("ENABLE_VOL_SURFACE_VRP", "0") == "1"
+
+
+def _vrp_model_alias(ctx: dict[str, Any]) -> str:
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "vrp_model_alias"):
+        return str(getattr(cfg, "vrp_model_alias"))
+    import os
+    return os.getenv("VRP_MODEL_ALIAS", "prod")
+
+
+def _statarb_enabled(ctx: dict[str, Any]) -> bool:
+    cfg = ctx.get("config")
+    if isinstance(cfg, dict) and "enable_statarb_sleeve" in cfg:
+        return bool(cfg.get("enable_statarb_sleeve"))
+    if cfg is not None and hasattr(cfg, "enable_statarb_sleeve"):
+        return bool(getattr(cfg, "enable_statarb_sleeve"))
+    import os
+    return os.getenv("ENABLE_STATARB_SLEEVE", "0") == "1"
+
+
+def _itransformer_model_alias(ctx: dict[str, Any]) -> str:
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "itransformer_model_alias"):
+        return str(getattr(cfg, "itransformer_model_alias"))
+    import os
+    return os.getenv("ITRANSFORMER_MODEL_ALIAS", "prod")
+
+
 def _allow_stub_signals(ctx: dict[str, Any]) -> bool:
     import os
 
@@ -283,12 +341,53 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
-    """VRP sleeve: options volatility premium signals.
+    """VRP sleeve: options volatility premium signals."""
+    if _vol_surface_vrp_enabled(ctx):
+        from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
+        from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
+        from backend.app.strategies.vrp.vrp_sleeve import VRPSleeve
 
-    Delegates to ``run_three_sleeves_ibkr.run_vrp`` when available.
-    Mode follows the orchestrator (paper/live/noop).
-    Falls back to stub if imports fail.
-    """
+        p = _paths(ctx)
+        sig_path = p["signals"] / "vrp_signals.json"
+        tgt_path = p["targets"] / "vrp_targets.json"
+
+        iv_atm = {7: 0.22, 14: 0.23, 30: 0.24, 60: 0.25}
+        feats = {
+            7: {"iv_atm": 0.22, "rv_hist_20": 0.18},
+            14: {"iv_atm": 0.23, "rv_hist_20": 0.18},
+            30: {"iv_atm": 0.24, "rv_hist_20": 0.19},
+            60: {"iv_atm": 0.25, "rv_hist_20": 0.20},
+        }
+
+        server = InferenceGatewayServer()
+        client = InferenceGatewayClient(server, timeout_ms=500)
+        sleeve = VRPSleeve(client, model_alias=_vrp_model_alias(ctx))
+        decision = sleeve.generate_targets(_asof(ctx), "SPY", iv_atm, feats, trace_id=f"vrp_{_asof(ctx)}")
+        if decision.get("status") != "ok":
+            raise RuntimeError(f"vrp halted: {decision.get('reason', 'unknown')}")
+
+        _write_json(sig_path, {
+            "schema_version": "signals.v1",
+            "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+            "sleeve": "vrp", "source": "vol_surface_forecast",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "signals": decision.get("targets", []),
+            "is_stub": False,
+            "ml_risk": decision.get("ml_risk", {}),
+        })
+        _write_json(tgt_path, {
+            "schema_version": "targets.v1",
+            "status": "ok", "asof_date": _asof(ctx), "sleeve": "vrp",
+            "targets": decision.get("targets", []),
+            "is_stub": False,
+            "ml_risk": decision.get("ml_risk", {}),
+        })
+        return {
+            "status": "ok",
+            "artifacts": {"vrp_signals": str(sig_path), "vrp_targets": str(tgt_path)},
+            "metrics": {"source": "vol_surface_forecast"},
+        }
+
     try:
         import sys
         from pathlib import Path as _P
@@ -301,12 +400,8 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
         from datetime import date
 
         asof = date.fromisoformat(_asof(ctx))
-
-        # VRP mode follows orchestrator — "paper" maps to "ibkr" for run_vrp
         vrp_mode = _mode(ctx)
         effective_vrp_mode = "ibkr" if vrp_mode == "paper" else vrp_mode
-
-        # Create IBKR broker for VRP signal generation & execution
         try:
             broker = IBKRLiveBroker.from_env()
         except Exception:
@@ -332,7 +427,6 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
             "vrp_result": vrp_result,
             "is_stub": False,
         })
-        # Pass through any targets produced by VRP strategy
         vrp_targets = vrp_result.get("orders", [])
         _write_json(tgt_path, {
             "schema_version": "targets.v1",
@@ -356,10 +450,51 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
 def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
     """Selector sleeve: equities swing trading signals.
 
-    Delegates to ``run_three_sleeves_ibkr._load_selector_signals`` when available.
-    Falls back to stub if imports fail.
+    Delegates to SMoE selector when enabled, else legacy selector pipeline.
     """
     run_type = "intraday" if _session(ctx) == Session.INTRADAY.value else "premarket"
+    if _smoe_selector_enabled(ctx):
+        from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
+        from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
+        from backend.app.strategies.selector.selector_sleeve import SelectorSleeve
+        from backend.app.ml_platform.feature_store.market_context import compute_market_context
+
+        p = _paths(ctx)
+        sig_path = p["signals"] / "selector_signals.json"
+        tgt_path = p["targets"] / "selector_targets.json"
+        symbols = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "META"]
+        feature_matrix = [[0.01 * (i + 1), 0.02 * (i + 1), -0.01 * i, 0.005 * i, 0.1, 0.05] for i in range(len(symbols))]
+        market_context = compute_market_context(_asof(ctx), [500.0 + i for i in range(30)], 0.6, [0.1, 0.05])
+
+        server = InferenceGatewayServer()
+        client = InferenceGatewayClient(server, timeout_ms=500)
+        sleeve = SelectorSleeve(client, model_alias=_selector_model_alias(ctx))
+        decision = sleeve.generate_targets(_asof(ctx), symbols, feature_matrix, trace_id=f"selector_{_asof(ctx)}", market_context=market_context)
+        if decision.get("status") != "ok":
+            raise RuntimeError(f"selector smoe halted: {decision.get('reason', 'unknown')}")
+
+        _write_json(sig_path, {
+            "schema_version": "signals.v1",
+            "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+            "sleeve": "selector", "run_type": run_type, "source": "smoe_rank",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "signals": decision.get("targets", []),
+            "is_stub": False,
+            "ml_risk": decision.get("ml_risk", {}),
+        })
+        _write_json(tgt_path, {
+            "schema_version": "targets.v1",
+            "status": "ok", "asof_date": _asof(ctx), "sleeve": "selector",
+            "targets": decision.get("targets", []),
+            "is_stub": False,
+            "ml_risk": decision.get("ml_risk", {}),
+        })
+        return {
+            "status": "ok",
+            "artifacts": {"selector_signals": str(sig_path), "selector_targets": str(tgt_path)},
+            "metrics": {"n_symbols": len(decision.get("targets", [])), "run_type": run_type, "source": "smoe_rank"},
+        }
+
     try:
         import sys
         from pathlib import Path as _P
@@ -433,6 +568,96 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
         raise
 
 
+
+
+def handle_signals_generate_futures_overnight(ctx: dict[str, Any]) -> dict[str, Any]:
+    if not _chronos2_enabled(ctx):
+        return {"status": "ok", "summary": "chronos2 sleeve disabled", "artifacts": {}}
+
+    from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
+    from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
+    from backend.app.strategies.futures_overnight.sleeve import FuturesOvernightSleeve
+
+    p = _paths(ctx)
+    sig_path = p["signals"] / "futures_overnight_signals.json"
+    tgt_path = p["targets"] / "futures_overnight_targets.json"
+
+    server = InferenceGatewayServer()
+    client = InferenceGatewayClient(server, timeout_ms=500)
+    sleeve = FuturesOvernightSleeve(client, enabled=True)
+    decision = sleeve.generate_targets("ES", [100.0, 100.5, 101.0, 100.8, 101.3], trace_id=f"fo_{_asof(ctx)}", asof=_asof(ctx))
+
+    _write_json(sig_path, {
+        "schema_version": "signals.v1",
+        "status": "ok" if decision.get("status") == "ok" else "halted",
+        "asof_date": _asof(ctx),
+        "session": _session(ctx),
+        "sleeve": "futures_overnight",
+        "signals": [{"symbol": "ES", "score": 1.0}] if decision.get("status") == "ok" else [],
+        "is_stub": False,
+        "ml_risk": decision.get("ml_risk", {}),
+    })
+    _write_json(tgt_path, {
+        "schema_version": "targets.v1",
+        "status": "ok" if decision.get("status") == "ok" else "halted",
+        "asof_date": _asof(ctx),
+        "sleeve": "futures_overnight",
+        "targets": decision.get("targets", []),
+        "is_stub": False,
+        "ml_risk": decision.get("ml_risk", {}),
+    })
+    if decision.get("status") != "ok":
+        raise RuntimeError("futures overnight sleeve halted fail-closed")
+    return {"status": "ok", "artifacts": {"futures_overnight_signals": str(sig_path), "futures_overnight_targets": str(tgt_path)}}
+
+
+
+
+def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
+    if not _statarb_enabled(ctx):
+        return {"status": "ok", "summary": "statarb disabled", "artifacts": {}}
+
+    from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
+    from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
+    from backend.app.strategies.statarb.sleeve import StatArbSleeve
+
+    p = _paths(ctx)
+    sig_path = p["signals"] / "statarb_signals.json"
+    tgt_path = p["targets"] / "statarb_targets.json"
+
+    symbols = ["XLF", "XLK", "XLE", "XLI", "XLY", "XLP"]
+    features = [[0.01 * (i + 1), -0.01 * i, 0.02 * i, 0.1] for i in range(len(symbols))]
+
+    server = InferenceGatewayServer()
+    client = InferenceGatewayClient(server, timeout_ms=500)
+    sleeve = StatArbSleeve(client, model_alias=_itransformer_model_alias(ctx))
+    decision = sleeve.generate_targets(_asof(ctx), symbols, features, trace_id=f"statarb_{_asof(ctx)}")
+    if decision.get("status") != "ok":
+        raise RuntimeError(f"statarb halted: {decision.get('reason','unknown')}")
+
+    _write_json(sig_path, {
+        "schema_version": "signals.v1",
+        "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+        "sleeve": "statarb", "source": "itransformer_signal",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "signals": decision.get("targets", []),
+        "is_stub": False,
+        "ml_risk": decision.get("ml_risk", {}),
+    })
+    _write_json(tgt_path, {
+        "schema_version": "targets.v1",
+        "status": "ok", "asof_date": _asof(ctx), "sleeve": "statarb",
+        "targets": decision.get("targets", []),
+        "is_stub": False,
+        "ml_risk": decision.get("ml_risk", {}),
+    })
+    return {
+        "status": "ok",
+        "artifacts": {"statarb_signals": str(sig_path), "statarb_targets": str(tgt_path)},
+        "metrics": {"n_symbols": len(decision.get("targets", [])), "source": "itransformer_signal"},
+    }
+
+
 def _load_artifact(path: Path, expected_version: str) -> dict[str, Any]:
     payload = _read_json(path)
     version = payload.get("schema_version", expected_version)
@@ -446,6 +671,10 @@ def _load_artifact(path: Path, expected_version: str) -> dict[str, Any]:
 def _load_targets_required(ctx: dict[str, Any]) -> tuple[dict[str, Path], list[str]]:
     p = _paths(ctx)
     sleeves = ["core", "vrp", "selector"]
+    if _chronos2_enabled(ctx):
+        sleeves.append("futures_overnight")
+    if _statarb_enabled(ctx):
+        sleeves.append("statarb")
     missing: list[str] = []
     target_paths: dict[str, Path] = {}
     for sleeve in sleeves:
@@ -493,10 +722,12 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
             sleeve_net += w
             if symbol:
                 combined[symbol] = combined.get(symbol, 0.0) + w
+        ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
         per_sleeve[sleeve] = {
             "gross": round(sleeve_gross, 8),
             "net": round(sleeve_net, 8),
             "num_symbols": sleeve_symbols,
+            "ml": ml_risk,
         }
 
     gross = sum(abs(w) for w in combined.values())
@@ -588,7 +819,12 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     # Fail-closed route gate: every upstream signal/target artifact must be
     # explicitly non-stub and status=ok.
     allow_stub_for_dry_run = bool(ctx.get("dry_run", False))
-    for sleeve in ["core", "vrp", "selector"]:
+    sleeves_for_route = ["core", "vrp", "selector"]
+    if _chronos2_enabled(ctx):
+        sleeves_for_route.append("futures_overnight")
+    if _statarb_enabled(ctx):
+        sleeves_for_route.append("statarb")
+    for sleeve in sleeves_for_route:
         sig_path = p["signals"] / f"{sleeve}_signals.json"
         if not sig_path.exists():
             raise RuntimeError(f"cannot route orders: missing signal artifact for {sleeve}")
@@ -847,7 +1083,9 @@ def default_jobs() -> list[Job]:
         Job("signals_generate_core", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_core),
         Job("signals_generate_vrp", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_vrp),
         Job("signals_generate_selector", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_selector, min_interval_s=300),
-        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.INTRADAY, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
+        Job("signals_generate_futures_overnight", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_futures_overnight),
+        Job("signals_generate_statarb", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_statarb),
+        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.INTRADAY, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector", "signals_generate_futures_overnight", "signals_generate_statarb"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
         Job("order_build_and_route", {Session.OPEN, Session.INTRADAY}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
         Job("fills_reconcile", {Session.INTRADAY, Session.CLOSE}, [], {"paper", "live", "noop"}, 120, 0, handle_fills_reconcile, min_interval_s=300),
         Job("eod_reports", {Session.CLOSE, Session.OVERNIGHT}, ["fills_reconcile"], {"paper", "live", "noop"}, 120, 0, handle_eod_reports),
