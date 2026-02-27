@@ -20,6 +20,9 @@ from ..models.itransformer.types import ITransformerSignalRequest
 from ..models.rl_policy.loader import RLPolicyLoader
 from ..models.rl_policy.service import RLPolicyService
 from ..models.rl_policy.types import RLPolicyRequest
+from ..models.vol_surface_grid.loader import VolSurfaceGridLoader
+from ..models.vol_surface_grid.service import VolSurfaceGridService
+from ..models.vol_surface_grid.types import VolSurfaceGridRequest
 from ..registry.store import ModelRegistryStore
 from .health import health_payload
 from .protocol import InferenceRequestBase, InferenceResponse
@@ -75,6 +78,13 @@ class InferenceGatewayServer:
             self.model_status["rl_policy:prod"] = {"status": f"optional_missing:{exc}"}
 
         self.register("vol_surface_forecast", self._vol_surface_handler)
+        self.vol_surface_grid_service = VolSurfaceGridService(VolSurfaceGridLoader(store), self.cfg.trace_root)
+        try:
+            self.vol_surface_grid_service.load_alias("prod")
+            self.model_status["vol_surface_grid:prod"] = {"status": "loaded"}
+        except Exception as exc:
+            self.model_status["vol_surface_grid:prod"] = {"status": f"optional_missing:{exc}"}
+        self.register("vol_surface_grid_forecast", self._vol_surface_grid_handler)
         self.register("itransformer_signal", self._itransformer_handler)
         self.register("rl_policy_act", self._rl_policy_handler)
 
@@ -102,6 +112,9 @@ class InferenceGatewayServer:
                 "router_entropy_mean": response.router_entropy_mean,
                 "expert_utilization": response.expert_utilization,
                 "load_balance_score": response.load_balance_score,
+                "context_sensitivity_score": response.context_sensitivity_score,
+                "expert_collapse_score": response.expert_collapse_score,
+                "specialization_by_bucket": response.specialization_by_bucket,
             },
             "uncertainty": 0.0,
             "calibration_score": 0.7,
@@ -165,6 +178,24 @@ class InferenceGatewayServer:
             "warnings": response.warnings,
         }
 
+    def _vol_surface_grid_handler(self, req: InferenceRequestBase) -> dict:
+        payload = VolSurfaceGridRequest(**req.payload)
+        response = self.vol_surface_grid_service.forecast(payload)
+        return {
+            "model_name": "vol_surface_grid",
+            "model_version": response.model_version,
+            "outputs": {
+                "grid_forecast": response.grid_forecast,
+                "mask_coverage": response.mask_coverage,
+                "uncertainty_proxy": response.uncertainty_proxy,
+                "drift_score": response.drift_score,
+            },
+            "uncertainty": response.uncertainty_proxy,
+            "calibration_score": 0.7,
+            "ood_score": response.drift_score,
+            "warnings": response.warnings,
+        }
+
     def register(self, endpoint: str, handler: Callable[[InferenceRequestBase], dict]) -> None:
         self._handlers[endpoint] = handler
         self.endpoints[endpoint] = True
@@ -207,7 +238,7 @@ class InferenceGatewayServer:
     def smoe_http_rank(self, req: SMoERankRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id="selector", features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
         resp = self.infer("smoe_rank", wrapped)
-        return {"model_name": "selector_smoe", "model_version": resp.model_version, "scores": resp.outputs.get("scores", {}), "router_entropy_mean": resp.outputs.get("router_entropy_mean", 0.0), "expert_utilization": resp.outputs.get("expert_utilization", {}), "load_balance_score": resp.outputs.get("load_balance_score", 0.0), "latency_ms": resp.latency_ms, "warnings": resp.warnings}
+        return {"model_name": "selector_smoe", "model_version": resp.model_version, "scores": resp.outputs.get("scores", {}), "router_entropy_mean": resp.outputs.get("router_entropy_mean", 0.0), "expert_utilization": resp.outputs.get("expert_utilization", {}), "load_balance_score": resp.outputs.get("load_balance_score", 0.0), "context_sensitivity_score": resp.outputs.get("context_sensitivity_score", 0.0), "expert_collapse_score": resp.outputs.get("expert_collapse_score", 0.0), "specialization_by_bucket": resp.outputs.get("specialization_by_bucket", {}), "latency_ms": resp.latency_ms, "warnings": resp.warnings}
 
     def vol_surface_http_forecast(self, req: VolSurfaceRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.underlying_symbol, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
@@ -289,6 +320,12 @@ class InferenceGatewayServer:
         @app.post("/v1/vrp/vol_surface_forecast")
         def _vol(req: VolSurfaceRequest) -> dict:
             return self.vol_surface_http_forecast(req)
+
+        @app.post("/v1/vrp/vol_surface_grid_forecast")
+        def _vol_grid(req: VolSurfaceGridRequest) -> dict:
+            wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.underlying_symbol, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
+            resp = self.infer("vol_surface_grid_forecast", wrapped)
+            return {"model_name": "vol_surface_grid", "model_version": resp.model_version, "grid_forecast": resp.outputs.get("grid_forecast", {}), "mask_coverage": resp.outputs.get("mask_coverage", 0.0), "uncertainty_proxy": resp.outputs.get("uncertainty_proxy", 1.0), "drift_score": resp.outputs.get("drift_score", resp.ood_score), "latency_ms": resp.latency_ms, "warnings": resp.warnings}
 
         @app.post("/v1/statarb/itransformer_signal")
         def _itra(req: ITransformerSignalRequest) -> dict:

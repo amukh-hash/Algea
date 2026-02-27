@@ -7,6 +7,7 @@ from ..models.selector_smoe.types import SMoERankRequest, SMoERankResponse
 from ..models.vol_surface.types import VolSurfaceRequest, VolSurfaceResponse
 from ..models.itransformer.types import ITransformerSignalRequest, ITransformerSignalResponse
 from ..models.rl_policy.types import RLPolicyRequest, RLPolicyResponse
+from ..models.vol_surface_grid.types import VolSurfaceGridRequest, VolSurfaceGridResponse
 from .protocol import InferenceRequestBase, InferenceResponse
 from .server import InferenceGatewayServer
 
@@ -16,19 +17,25 @@ class InferenceTimeoutError(TimeoutError):
 
 
 class InferenceGatewayClient:
-    def __init__(self, server: InferenceGatewayServer, timeout_ms: int = 200):
+    def __init__(self, server: InferenceGatewayServer, timeout_ms: int = 200, endpoint_timeouts_ms: dict[str, int] | None = None):
         self.server = server
         self.timeout_ms = timeout_ms
+        self.endpoint_timeouts_ms = endpoint_timeouts_ms or {}
 
     def call(self, endpoint: str, req: InferenceRequestBase, critical: bool = True) -> InferenceResponse | None:
         response = self.server.infer(endpoint, req)
-        if response.latency_ms > self.timeout_ms:
+        budget_ms = int(self.endpoint_timeouts_ms.get(endpoint, self.timeout_ms))
+        if response.latency_ms > budget_ms:
             if critical:
                 raise InferenceTimeoutError(
-                    f"fail-closed timeout on {endpoint}: {response.latency_ms:.1f}ms > {self.timeout_ms}ms"
+                    f"fail-closed timeout on {endpoint}: {response.latency_ms:.1f}ms > {budget_ms}ms"
                 )
             return None
         return response
+
+    def call_pinned(self, endpoint: str, req: InferenceRequestBase, model_version: str, critical: bool = True) -> InferenceResponse | None:
+        req.model_version = model_version
+        return self.call(endpoint, req, critical=critical)
 
     def chronos2_forecast(self, req: TSFMRequest, critical: bool = True) -> TSFMResponse | None:
         wrapped = InferenceRequestBase(
@@ -70,6 +77,9 @@ class InferenceGatewayClient:
             router_entropy_mean=float(response.outputs.get("router_entropy_mean", 0.0)),
             expert_utilization=response.outputs.get("expert_utilization", {}),
             load_balance_score=float(response.outputs.get("load_balance_score", 0.0)),
+            context_sensitivity_score=float(response.outputs.get("context_sensitivity_score", 0.0)),
+            expert_collapse_score=float(response.outputs.get("expert_collapse_score", 0.0)),
+            specialization_by_bucket=response.outputs.get("specialization_by_bucket", {}),
             latency_ms=response.latency_ms,
             warnings=response.warnings,
         )
@@ -139,6 +149,28 @@ class InferenceGatewayClient:
             projection_applied=bool(response.outputs.get("projection_applied", False)),
             drift_score=float(response.outputs.get("drift_score", response.ood_score)),
             ood_score=response.ood_score,
+            latency_ms=response.latency_ms,
+            warnings=response.warnings,
+        )
+
+    def vol_surface_grid_forecast(self, req: VolSurfaceGridRequest, critical: bool = True) -> VolSurfaceGridResponse | None:
+        wrapped = InferenceRequestBase(
+            asof=datetime.fromisoformat(req.asof),
+            universe_id=req.underlying_symbol,
+            features_hash="",
+            model_alias=req.model_alias,
+            trace_id=req.trace_id,
+            payload=req.model_dump(),
+        )
+        response = self.call("vol_surface_grid_forecast", wrapped, critical=critical)
+        if response is None:
+            return None
+        return VolSurfaceGridResponse(
+            model_version=response.model_version,
+            grid_forecast={str(k): float(v) for k, v in response.outputs.get("grid_forecast", {}).items()},
+            uncertainty_proxy=float(response.outputs.get("uncertainty_proxy", 1.0)),
+            drift_score=float(response.outputs.get("drift_score", response.ood_score)),
+            mask_coverage=float(response.outputs.get("mask_coverage", 0.0)),
             latency_ms=response.latency_ms,
             warnings=response.warnings,
         )

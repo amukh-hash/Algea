@@ -48,3 +48,19 @@ class MLPlatformConfig:
     enable_rl_overlay_statarb: bool = field(default_factory=lambda: os.getenv("ENABLE_RL_OVERLAY_STATARB", "1") == "1")
     rl_fail_mode: str = field(default_factory=lambda: os.getenv("RL_FAIL_MODE", "halt"))
     tsfm_downsample_freq: str = field(default_factory=_resolve_tsfm_downsample_freq)
+    sla_chronos2_ms: int = field(default_factory=lambda: int(os.getenv("SLA_CHRONOS2_MS", "500")))
+    sla_smoe_rank_ms: int = field(default_factory=lambda: int(os.getenv("SLA_SMOE_RANK_MS", "500")))
+    sla_vol_surface_forecast_ms: int = field(default_factory=lambda: int(os.getenv("SLA_VOL_SURFACE_FORECAST_MS", "500")))
+    sla_vol_surface_grid_forecast_ms: int = field(default_factory=lambda: int(os.getenv("SLA_VOL_SURFACE_GRID_FORECAST_MS", "500")))
+    sla_itransformer_signal_ms: int = field(default_factory=lambda: int(os.getenv("SLA_ITRANSFORMER_SIGNAL_MS", "500")))
+    sla_rl_policy_act_ms: int = field(default_factory=lambda: int(os.getenv("SLA_RL_POLICY_ACT_MS", "200")))
+
+    def inference_endpoint_timeouts_ms(self) -> dict[str, int]:
+        return {
+            "chronos2_forecast": self.sla_chronos2_ms,
+            "smoe_rank": self.sla_smoe_rank_ms,
+            "vol_surface_forecast": self.sla_vol_surface_forecast_ms,
+            "vol_surface_grid_forecast": self.sla_vol_surface_grid_forecast_ms,
+            "itransformer_signal": self.sla_itransformer_signal_ms,
+            "rl_policy_act": self.sla_rl_policy_act_ms,
+        }

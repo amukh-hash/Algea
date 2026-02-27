@@ -85,6 +85,54 @@ def _allow_stub_signals(ctx: dict[str, Any]) -> bool:
     return _mode(ctx) == "noop" or bool(ctx.get("dry_run", False))
 
 
+def _ml_platform_cfg(ctx: dict[str, Any]):
+    from backend.app.ml_platform.config import MLPlatformConfig
+
+    return MLPlatformConfig()
+
+
+def _build_inference_client(ctx: dict[str, Any], server):
+    from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
+
+    cfg = _ml_platform_cfg(ctx)
+    return InferenceGatewayClient(
+        server,
+        timeout_ms=max(cfg.inference_endpoint_timeouts_ms().values()),
+        endpoint_timeouts_ms=cfg.inference_endpoint_timeouts_ms(),
+    )
+
+
+def _record_model_usage(
+    ctx: dict[str, Any],
+    model_key: str,
+    *,
+    model_name: str,
+    model_version: str,
+    endpoint_name: str,
+    model_alias: str | None = None,
+    latency_ms: float | None = None,
+) -> None:
+    tc = ctx.get("tick_context")
+    if tc is None or not hasattr(tc, "add_model_version"):
+        return
+    tc.add_model_version(
+        model_key,
+        model_name=model_name,
+        model_version=model_version,
+        endpoint_name=endpoint_name,
+        model_alias=model_alias,
+        latency_ms=latency_ms,
+    )
+
+
+def _allocator_enabled(ctx: dict[str, Any], cfg: dict[str, Any]) -> bool:
+    import os
+
+    if "enable_allocator" in cfg:
+        return bool(cfg.get("enable_allocator"))
+    return os.getenv("ENABLE_ALLOCATOR", "0") == "1"
+
+
 @dataclass
 class Job:
     name: str
@@ -344,7 +392,6 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
     """VRP sleeve: options volatility premium signals."""
     if _vol_surface_vrp_enabled(ctx):
         from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
-        from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
         from backend.app.strategies.vrp.vrp_sleeve import VRPSleeve
 
         p = _paths(ctx)
@@ -360,11 +407,42 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
         }
 
         server = InferenceGatewayServer()
-        client = InferenceGatewayClient(server, timeout_ms=500)
+        client = _build_inference_client(ctx, server)
         sleeve = VRPSleeve(client, model_alias=_vrp_model_alias(ctx))
         decision = sleeve.generate_targets(_asof(ctx), "SPY", iv_atm, feats, trace_id=f"vrp_{_asof(ctx)}")
         if decision.get("status") != "ok":
             raise RuntimeError(f"vrp halted: {decision.get('reason', 'unknown')}")
+        ml = decision.get("ml_risk", {})
+        _record_model_usage(
+            ctx,
+            "vol_surface",
+            model_name=str(ml.get("model_name", "vol_surface")),
+            model_version=str(ml.get("model_version", "")),
+            model_alias=str(ml.get("model_alias", "")),
+            endpoint_name="vol_surface_forecast",
+            latency_ms=float(ml.get("latency_ms_p95", 0.0)),
+        )
+        rl = ml.get("rl_policy", {}) if isinstance(ml.get("rl_policy", {}), dict) else {}
+        if rl.get("rl_model_version"):
+            _record_model_usage(
+                ctx,
+                "rl_policy",
+                model_name="rl_policy",
+                model_version=str(rl.get("rl_model_version", "")),
+                model_alias=str(rl.get("rl_model_alias", "")),
+                endpoint_name="rl_policy_act",
+                latency_ms=float(rl.get("latency_ms", 0.0)),
+            )
+        if ml.get("grid_model_version"):
+            _record_model_usage(
+                ctx,
+                "vol_surface_grid",
+                model_name="vol_surface_grid",
+                model_version=str(ml.get("grid_model_version", "")),
+                model_alias=str(ml.get("model_alias", "")),
+                endpoint_name="vol_surface_grid_forecast",
+                latency_ms=float(ml.get("grid_latency_ms", 0.0)),
+            )
 
         _write_json(sig_path, {
             "schema_version": "signals.v1",
@@ -455,7 +533,6 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
     run_type = "intraday" if _session(ctx) == Session.INTRADAY.value else "premarket"
     if _smoe_selector_enabled(ctx):
         from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
-        from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
         from backend.app.strategies.selector.selector_sleeve import SelectorSleeve
         from backend.app.ml_platform.feature_store.market_context import compute_market_context
 
@@ -467,11 +544,21 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
         market_context = compute_market_context(_asof(ctx), [500.0 + i for i in range(30)], 0.6, [0.1, 0.05])
 
         server = InferenceGatewayServer()
-        client = InferenceGatewayClient(server, timeout_ms=500)
+        client = _build_inference_client(ctx, server)
         sleeve = SelectorSleeve(client, model_alias=_selector_model_alias(ctx))
         decision = sleeve.generate_targets(_asof(ctx), symbols, feature_matrix, trace_id=f"selector_{_asof(ctx)}", market_context=market_context)
         if decision.get("status") != "ok":
             raise RuntimeError(f"selector smoe halted: {decision.get('reason', 'unknown')}")
+        ml = decision.get("ml_risk", {})
+        _record_model_usage(
+            ctx,
+            "selector_smoe",
+            model_name=str(ml.get("model_name", "selector_smoe")),
+            model_version=str(ml.get("model_version", "")),
+            model_alias=str(ml.get("model_alias", "")),
+            endpoint_name="smoe_rank",
+            latency_ms=float(ml.get("latency_ms_p95", 0.0)),
+        )
 
         _write_json(sig_path, {
             "schema_version": "signals.v1",
@@ -575,7 +662,6 @@ def handle_signals_generate_futures_overnight(ctx: dict[str, Any]) -> dict[str, 
         return {"status": "ok", "summary": "chronos2 sleeve disabled", "artifacts": {}}
 
     from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
-    from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
     from backend.app.strategies.futures_overnight.sleeve import FuturesOvernightSleeve
 
     p = _paths(ctx)
@@ -583,9 +669,20 @@ def handle_signals_generate_futures_overnight(ctx: dict[str, Any]) -> dict[str, 
     tgt_path = p["targets"] / "futures_overnight_targets.json"
 
     server = InferenceGatewayServer()
-    client = InferenceGatewayClient(server, timeout_ms=500)
+    client = _build_inference_client(ctx, server)
     sleeve = FuturesOvernightSleeve(client, enabled=True)
     decision = sleeve.generate_targets("ES", [100.0, 100.5, 101.0, 100.8, 101.3], trace_id=f"fo_{_asof(ctx)}", asof=_asof(ctx))
+    ml = decision.get("ml_risk", {})
+    if ml:
+        _record_model_usage(
+            ctx,
+            "chronos2",
+            model_name=str(ml.get("model_name", "chronos2")),
+            model_version=str(ml.get("model_version", "")),
+            model_alias=str(ml.get("model_alias", "")),
+            endpoint_name="chronos2_forecast",
+            latency_ms=float(ml.get("latency_ms_p95", 0.0)),
+        )
 
     _write_json(sig_path, {
         "schema_version": "signals.v1",
@@ -618,7 +715,6 @@ def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
         return {"status": "ok", "summary": "statarb disabled", "artifacts": {}}
 
     from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
-    from backend.app.ml_platform.inference_gateway.client import InferenceGatewayClient
     from backend.app.strategies.statarb.sleeve import StatArbSleeve
 
     p = _paths(ctx)
@@ -629,11 +725,32 @@ def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
     features = [[0.01 * (i + 1), -0.01 * i, 0.02 * i, 0.1] for i in range(len(symbols))]
 
     server = InferenceGatewayServer()
-    client = InferenceGatewayClient(server, timeout_ms=500)
+    client = _build_inference_client(ctx, server)
     sleeve = StatArbSleeve(client, model_alias=_itransformer_model_alias(ctx))
     decision = sleeve.generate_targets(_asof(ctx), symbols, features, trace_id=f"statarb_{_asof(ctx)}")
     if decision.get("status") != "ok":
         raise RuntimeError(f"statarb halted: {decision.get('reason','unknown')}")
+    ml = decision.get("ml_risk", {})
+    _record_model_usage(
+        ctx,
+        "itransformer",
+        model_name=str(ml.get("model_name", "itransformer")),
+        model_version=str(ml.get("model_version", "")),
+        model_alias=str(ml.get("model_alias", "")),
+        endpoint_name="itransformer_signal",
+        latency_ms=float(ml.get("latency_ms_p95", 0.0)),
+    )
+    rl = ml.get("rl_policy", {}) if isinstance(ml.get("rl_policy", {}), dict) else {}
+    if rl.get("rl_model_version"):
+        _record_model_usage(
+            ctx,
+            "rl_policy",
+            model_name="rl_policy",
+            model_version=str(rl.get("rl_model_version", "")),
+            model_alias=str(rl.get("rl_model_alias", "")),
+            endpoint_name="rl_policy_act",
+            latency_ms=float(rl.get("latency_ms", 0.0)),
+        )
 
     _write_json(sig_path, {
         "schema_version": "signals.v1",
@@ -690,6 +807,7 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
     report_path = p["reports"] / "risk_checks.json"
     target_paths, missing = _load_targets_required(ctx)
     limits = _risk_limits(ctx)
+    cfg = _load_config(ctx)
     checked_at = datetime.now(timezone.utc).isoformat()
 
     violations: list[dict[str, Any]] = []
@@ -758,6 +876,56 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
+    allocator_payload: dict[str, Any]
+    if _allocator_enabled(ctx, cfg):
+        from backend.app.allocator.sleeve_allocator import allocate_sleeve_gross
+
+        sleeve_metrics: dict[str, dict[str, float]] = {}
+        for sleeve, stat in sorted(per_sleeve.items()):
+            ml = stat.get("ml", {}) if isinstance(stat.get("ml", {}), dict) else {}
+            expected_return_proxy = float(
+                ml.get(
+                    "expected_return_proxy",
+                    ml.get("edge_mean", ml.get("top_bottom_spread", stat.get("net", 0.0))),
+                )
+            )
+            uncertainty = float(ml.get("uncertainty", ml.get("router_entropy_mean", 0.0)))
+            drift = float(ml.get("drift_score", 0.0))
+            drawdown = float(ml.get("drawdown", 0.0))
+            recent_pnl = float(ml.get("recent_pnl", 0.0))
+            sleeve_metrics[sleeve] = {
+                "expected_return_proxy": expected_return_proxy,
+                "uncertainty": uncertainty,
+                "drift": drift,
+                "drawdown": drawdown,
+                "recent_pnl": recent_pnl,
+            }
+
+        constraints = {
+            "total_gross_cap": float(limits["max_gross"]),
+            "sleeve_min": _cfg_float(cfg, "allocator_sleeve_min", 0.0),
+            "sleeve_max": _cfg_float(cfg, "allocator_sleeve_max", 0.7),
+            "max_turnover": _cfg_float(cfg, "allocator_max_turnover", 0.25),
+        }
+        outputs = allocate_sleeve_gross(sleeve_metrics, **constraints)
+        allocator_payload = {
+            "enabled": True,
+            "status": "ok",
+            "inputs": sleeve_metrics,
+            "outputs": outputs,
+            "constraints": constraints,
+            "reasons": [],
+        }
+    else:
+        allocator_payload = {
+            "enabled": False,
+            "status": "disabled",
+            "inputs": {},
+            "outputs": {},
+            "constraints": {},
+            "reasons": [],
+        }
+
     status = "ok" if not violations else "failed"
     reason = None if status == "ok" else "; ".join(v["code"] for v in violations)
     report = {
@@ -781,6 +949,7 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
             "max_symbol_abs_weight": float(limits["max_symbol_abs_weight"]),
             "max_symbols": int(limits["max_symbols"]),
         },
+        "allocator": allocator_payload,
         "violations": violations,
     }
     _write_json(report_path, report)
@@ -849,14 +1018,21 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     fallback_price = _cfg_float(cfg, "price_fallback", 100.0)
     is_dry_run = bool(ctx["dry_run"])
 
+    allocator = risk_raw.get("allocator", {}) if isinstance(risk_raw.get("allocator", {}), dict) else {}
+    allocator_scales = {
+        str(k): float(v)
+        for k, v in (allocator.get("outputs", {}) or {}).items()
+    }
+
     combined: dict[str, float] = {}
-    for _, tpath in target_paths.items():
+    for sleeve, tpath in target_paths.items():
+        sleeve_scale = float(allocator_scales.get(sleeve, 1.0))
         targets = _load_artifact(tpath, "targets.v1").get("targets", [])
         for row in targets:
             sym = str(row.get("symbol", "")).strip()
             if not sym:
                 continue
-            combined[sym] = combined.get(sym, 0.0) + float(row.get("target_weight", 0.0))
+            combined[sym] = combined.get(sym, 0.0) + float(row.get("target_weight", 0.0)) * sleeve_scale
 
     positions_resp = ctx["broker"].get_positions() if hasattr(ctx["broker"], "get_positions") else {"positions": []}
     positions = positions_resp.get("positions", []) if isinstance(positions_resp, dict) else []
@@ -967,6 +1143,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         "inputs": {
             "account_equity": account_equity,
             "price_fallback": fallback_price,
+            "allocator": allocator,
             "limits": {
                 "max_order_notional": max_order_notional,
                 "max_total_order_notional": max_total_order_notional,

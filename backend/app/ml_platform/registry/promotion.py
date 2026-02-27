@@ -15,6 +15,7 @@ class PromotionGate:
     min_top_bottom_spread: float = 0.0
     max_expert_collapse: float = 0.8
     min_router_entropy: float = 0.01
+    min_context_sensitivity_score: float = 0.01
     max_vol_pinball_loss: float = 0.3
     min_edge_hit_rate: float = 0.5
     min_itr_rank_ic: float = 0.5
@@ -45,9 +46,12 @@ def _selector_smoe_gate(metrics: dict, gate: PromotionGate) -> bool:
         return False
     if float(metrics.get("top_bottom_spread", -9e9)) < gate.min_top_bottom_spread:
         return False
-    if float(metrics.get("load_balance_score", 9e9)) > gate.max_expert_collapse:
+    collapse = float(metrics.get("expert_collapse_score", metrics.get("load_balance_score", 9e9)))
+    if collapse > gate.max_expert_collapse:
         return False
     if float(metrics.get("router_entropy_mean", 0.0)) < gate.min_router_entropy:
+        return False
+    if float(metrics.get("context_sensitivity_score", 0.0)) < gate.min_context_sensitivity_score:
         return False
     return True
 
