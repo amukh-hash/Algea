@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from backend.app.version import with_app_metadata
 
 MODEL_KEYS = ["chronos2", "selector_smoe", "vol_surface", "vol_surface_grid", "itransformer", "rl_policy"]
 
@@ -41,5 +42,5 @@ def record_model_versions(
             }
         payload["models"][key] = entry
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, sort_keys=True, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(with_app_metadata(payload), sort_keys=True, indent=2), encoding="utf-8")
     return path

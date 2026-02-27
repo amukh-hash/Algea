@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .calendar import Session
+from backend.app.version import with_app_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ def _session(ctx: dict[str, Any]) -> str:
 
 def _write_json(path: Path, obj: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, indent=2, sort_keys=True), encoding="utf-8")
+    path.write_text(json.dumps(with_app_metadata(obj), indent=2, sort_keys=True), encoding="utf-8")
 
 
 def _read_json(path: Path) -> dict[str, Any]:

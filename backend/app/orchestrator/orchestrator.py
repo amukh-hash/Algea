@@ -19,6 +19,7 @@ from .state_store import StateStore
 from .control_state import control_state
 from .tick_context import TickContext
 from .model_versions import record_model_versions
+from backend.app.version import APP_DISPLAY, with_app_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class Orchestrator:
                 logger.info("Telemetry bridge enabled")
             except Exception:
                 logger.warning("Telemetry bridge unavailable", exc_info=True)
+        logger.info("%s orchestrator initialized", APP_DISPLAY)
 
     def _day_root(self, asof_date: date) -> Path:
         root = self.config.artifact_root / asof_date.isoformat()
@@ -72,7 +74,7 @@ class Orchestrator:
             "state": state,
             "mode": self.config.mode,
         }
-        (day_root / "heartbeat.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        (day_root / "heartbeat.json").write_text(json.dumps(with_app_metadata(payload), indent=2), encoding="utf-8")
 
     def run_once(self, asof: date | datetime | None = None, forced_session: Session | None = None, dry_run: bool = False) -> TickResult:
         now = now_et()
@@ -183,7 +185,10 @@ class Orchestrator:
         status = "failed" if failed else "success"
         tick = TickResult(run_id, asof_date.isoformat(), session.value, ran, skipped, failed)
         self.state.update_run_record(run_id, status, asdict(tick))
-        (day_root / "runs" / f"{run_id}.json").write_text(json.dumps(asdict(tick), indent=2), encoding="utf-8")
+        (day_root / "runs" / f"{run_id}.json").write_text(
+            json.dumps(with_app_metadata(asdict(tick)), indent=2),
+            encoding="utf-8",
+        )
         record_model_versions(
             day_root / "model_versions.json",
             tick_context.model_versions,
