@@ -10,6 +10,8 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
+from backend.app.version import APP_DISPLAY, app_metadata
+
 router = APIRouter(tags=["ops"])
 
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
@@ -61,5 +63,10 @@ async def healthz() -> dict:
     from fastapi.responses import JSONResponse
     return JSONResponse(
         status_code=200 if all_ok else 503,
-        content={"ok": all_ok, "elapsed_ms": elapsed_ms, "checks": checks},
+        content={"ok": all_ok, "elapsed_ms": elapsed_ms, "checks": checks, "app": APP_DISPLAY},
     )
+
+
+@router.get("/meta")
+async def meta() -> dict[str, str]:
+    return app_metadata()

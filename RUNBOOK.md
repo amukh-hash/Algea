@@ -1,4 +1,4 @@
-# Algaie Operational Runbook (Swing Trading: Chronos Teacher → Stock-Transformer Selector)
+# Algae 4.0 Operational Runbook (Swing Trading: Chronos Teacher → Stock-Transformer Selector)
 
 **Status:** Operational Runbook (Target)
 **Scope:** Data ingestion, preprocessing, teacher priors, selector training, portfolio construction, and nightly/weekly execution.

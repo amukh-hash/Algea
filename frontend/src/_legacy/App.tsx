@@ -48,7 +48,7 @@ export default function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="brand">ALGAIE Control Room</div>
+        <div className="brand">Algae 4.0 Control Room</div>
         <nav>
           {NAV_ITEMS.map((item) => (
             <button

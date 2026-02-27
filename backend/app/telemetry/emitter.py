@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from backend.app.version import APP_VERSION, with_app_metadata
+
 from .schemas import Artifact, Event, EventLevel, EventType, MetricPoint, Run, RunStatus, RunType
 from .storage import TelemetryStorage, now_utc
 
@@ -28,7 +30,7 @@ class TelemetryEmitter:
         tags: list[str] | None = None,
         git_sha: str = "dev",
         config_hash: str = "dev",
-        data_version: str = "dev",
+        data_version: str = APP_VERSION,
     ) -> str:
         run_id = str(uuid.uuid4())
         run = Run(
@@ -42,7 +44,7 @@ class TelemetryEmitter:
             config_hash=config_hash,
             data_version=data_version,
             tags=tags or [],
-            meta=meta or {},
+            meta=with_app_metadata(meta or {}),
         )
         self._safe_call(self.storage.upsert_run, run)
         self.storage.publish(run_id, {"type": "status", "data": {"run_id": run_id, "status": "starting", "ts": now_utc().isoformat()}})
@@ -114,7 +116,7 @@ class TelemetryEmitter:
             mime=mime,
             bytes=bytes if bytes is not None else (dst_path.stat().st_size if dst_path.exists() else 0),
             created_at=now_utc(),
-            meta=meta or {},
+            meta=with_app_metadata(meta or {}),
         )
         self._safe_call(self.storage.register_artifact, artifact)
         return artifact_id

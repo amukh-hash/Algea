@@ -1,6 +1,8 @@
 import logging
 
 from fastapi import FastAPI
+
+from backend.app.version import APP_DISPLAY
 from fastapi.middleware.cors import CORSMiddleware
 
 from .control_routes import router as control_router
@@ -15,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 
-app = FastAPI(title="ALGAIE Telemetry API")
+app = FastAPI(title=APP_DISPLAY, description=f"{APP_DISPLAY} telemetry and control API")
 
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(

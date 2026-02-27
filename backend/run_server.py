@@ -4,9 +4,11 @@ import argparse
 
 import uvicorn
 
+from backend.app.version import APP_DISPLAY
+
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="ALGAIE backend server")
+    parser = argparse.ArgumentParser(description=f"{APP_DISPLAY} backend server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--log-level", default="info")

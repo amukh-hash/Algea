@@ -25,6 +25,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const router = useRouter();
+  const [appDisplay, setAppDisplay] = useState("Algae 4.0");
+
+  useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+    fetch(`${base}/meta`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((meta) => {
+        if (meta?.display) setAppDisplay(String(meta.display));
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -73,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[240px_1fr]" data-theme="dark">
       <aside className={`${open ? "block" : "hidden"} border-r border-border bg-surface-1 p-3 lg:block`}>
-        <div className="mb-4 text-lg font-semibold">Algai Ops</div>
+        <div className="mb-4 text-lg font-semibold">{appDisplay} Ops</div>
         <nav className="space-y-1">
           {nav.map((item) => (
             <Link key={item.href} href={item.href} className={`block rounded-md px-3 py-2 text-sm ${path.startsWith(item.href) ? "bg-surface-2 text-primary" : "text-secondary hover:bg-surface-2"}`}>
@@ -105,6 +116,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <div className="border-b border-border-subtle px-4 py-2 text-xs text-secondary">{crumbs.join(" / ")}</div>
         <div className="mx-auto max-w-7xl p-4">{children}</div>
+        <footer className="border-t border-border-subtle px-4 py-2 text-xs text-muted">{appDisplay}</footer>
       </main>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
     </div>

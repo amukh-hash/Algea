@@ -1,7 +1,7 @@
 [project]
-name = "algaie"
-version = "0.1.0"
-description = "AlgaiE refresh"
+name = "algae"
+version = "4.0.0"
+description = "Algae 4.0"
 requires-python = ">=3.10"
 
 [tool.black]
