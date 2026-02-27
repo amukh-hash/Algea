@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class TSFMRequest(BaseModel):
     asof: str
     series: list[float]
+    timestamps: list[str] | None = None
     freq: str
     prediction_length: int
     context_length: int | None = None

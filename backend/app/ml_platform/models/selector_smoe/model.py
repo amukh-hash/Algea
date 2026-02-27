@@ -17,7 +17,8 @@ class SMoERankerModel:
         self.cfg = cfg or SMoEConfig()
 
     def forward_row(self, features: list[float], market_context: list[float]) -> dict:
-        logits = [sum(features[:4]) * (i + 1) * 0.05 + sum(market_context) * 0.1 for i in range(self.cfg.n_experts)]
+        ctx = sum((j + 1) * v for j, v in enumerate(market_context))
+        logits = [sum(features[:4]) * (i + 1) * 0.05 + ctx * (i + 1) * 0.03 for i in range(self.cfg.n_experts)]
         chosen, probs, entropy = topk_router(logits, k=self.cfg.top_k)
         score = sum(expert_score(features, i) * probs[i] for i in chosen)
         return {

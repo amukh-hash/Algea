@@ -17,6 +17,9 @@ from ..models.vol_surface.types import VolSurfaceRequest
 from ..models.itransformer.loader import ITransformerLoader
 from ..models.itransformer.service import ITransformerService
 from ..models.itransformer.types import ITransformerSignalRequest
+from ..models.rl_policy.loader import RLPolicyLoader
+from ..models.rl_policy.service import RLPolicyService
+from ..models.rl_policy.types import RLPolicyRequest
 from ..registry.store import ModelRegistryStore
 from .health import health_payload
 from .protocol import InferenceRequestBase, InferenceResponse
@@ -63,8 +66,17 @@ class InferenceGatewayServer:
 
         self.register("chronos2_forecast", self._chronos2_handler)
         self.register("smoe_rank", self._smoe_handler)
+
+        self.rl_policy_service = RLPolicyService(RLPolicyLoader(store), self.cfg.trace_root)
+        try:
+            self.rl_policy_service.load_alias("prod")
+            self.model_status["rl_policy:prod"] = {"status": "loaded"}
+        except Exception as exc:
+            self.model_status["rl_policy:prod"] = {"status": f"optional_missing:{exc}"}
+
         self.register("vol_surface_forecast", self._vol_surface_handler)
         self.register("itransformer_signal", self._itransformer_handler)
+        self.register("rl_policy_act", self._rl_policy_handler)
 
     def _chronos2_handler(self, req: InferenceRequestBase) -> dict:
         payload = TSFMRequest(**req.payload)
@@ -112,6 +124,27 @@ class InferenceGatewayServer:
             "uncertainty": response.uncertainty,
             "calibration_score": 0.7,
             "ood_score": 0.0,
+            "warnings": response.warnings,
+        }
+
+
+    def _rl_policy_handler(self, req: InferenceRequestBase) -> dict:
+        payload = RLPolicyRequest(**req.payload)
+        response = self.rl_policy_service.policy_act(payload)
+        return {
+            "model_name": "rl_policy",
+            "model_version": response.model_version,
+            "outputs": {
+                "size_multiplier": response.size_multiplier,
+                "veto": response.veto,
+                "projected_multiplier": response.projected_multiplier,
+                "projection_reason": response.projection_reason,
+                "projection_applied": response.projection_applied,
+                "drift_score": response.drift_score,
+            },
+            "uncertainty": 1.0 - response.projected_multiplier,
+            "calibration_score": 0.7,
+            "ood_score": response.ood_score,
             "warnings": response.warnings,
         }
 
@@ -191,6 +224,24 @@ class InferenceGatewayServer:
         }
 
 
+
+    def rl_policy_http_act(self, req: RLPolicyRequest) -> dict:
+        wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id=req.sleeve, features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
+        resp = self.infer("rl_policy_act", wrapped)
+        return {
+            "model_name": "rl_policy",
+            "model_version": resp.model_version,
+            "size_multiplier": resp.outputs.get("size_multiplier", 0.0),
+            "veto": resp.outputs.get("veto", False),
+            "projected_multiplier": resp.outputs.get("projected_multiplier", 0.0),
+            "projection_reason": resp.outputs.get("projection_reason", ""),
+            "projection_applied": resp.outputs.get("projection_applied", False),
+            "drift_score": resp.outputs.get("drift_score", resp.ood_score),
+            "ood_score": resp.ood_score,
+            "latency_ms": resp.latency_ms,
+            "warnings": resp.warnings,
+        }
+
     def itransformer_http_signal(self, req: ITransformerSignalRequest) -> dict:
         wrapped = InferenceRequestBase(asof=datetime.fromisoformat(req.asof), universe_id="statarb", features_hash="", model_alias=req.model_alias, trace_id=req.trace_id, payload=req.model_dump())
         resp = self.infer("itransformer_signal", wrapped)
@@ -242,5 +293,9 @@ class InferenceGatewayServer:
         @app.post("/v1/statarb/itransformer_signal")
         def _itra(req: ITransformerSignalRequest) -> dict:
             return self.itransformer_http_signal(req)
+
+        @app.post("/v1/rl/policy_act")
+        def _rl(req: RLPolicyRequest) -> dict:
+            return self.rl_policy_http_act(req)
 
         return app

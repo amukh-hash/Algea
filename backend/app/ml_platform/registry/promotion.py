@@ -19,6 +19,9 @@ class PromotionGate:
     min_edge_hit_rate: float = 0.5
     min_itr_rank_ic: float = 0.5
     min_pair_stability: float = 0.5
+    max_rl_constraint_violation_rate: float = 0.0
+    min_rl_seed_stability_score: float = 0.2
+    max_rl_drawdown: float = 0.2
 
 
 def _base_gate(metrics: dict, gate: PromotionGate) -> bool:
@@ -68,6 +71,8 @@ def promote_if_eligible(
         return False
     if model_name == "itransformer" and not _itransformer_gate(metrics, gate):
         return False
+    if model_name == "rl_policy" and not _rl_policy_gate(metrics, gate):
+        return False
     store.set_alias(model_name, to_alias, version)
     return True
 
@@ -86,5 +91,16 @@ def _itransformer_gate(metrics: dict, gate: PromotionGate) -> bool:
     if float(metrics.get("rank_ic", -9e9)) < gate.min_itr_rank_ic:
         return False
     if float(metrics.get("pair_stability", -9e9)) < gate.min_pair_stability:
+        return False
+    return True
+
+
+
+def _rl_policy_gate(metrics: dict, gate: PromotionGate) -> bool:
+    if float(metrics.get("constraint_violation_rate", 9e9)) > gate.max_rl_constraint_violation_rate:
+        return False
+    if float(metrics.get("seed_stability_score", -9e9)) < gate.min_rl_seed_stability_score:
+        return False
+    if float(metrics.get("max_drawdown", 9e9)) > gate.max_rl_drawdown:
         return False
     return True

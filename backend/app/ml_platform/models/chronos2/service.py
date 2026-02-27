@@ -8,6 +8,7 @@ from pathlib import Path
 from ...drift.detectors import zscore_ood_score
 from ...replay.hashes import hash_payload
 from ...replay.trace import write_trace
+from ...training.datasets.tsfm_windows import downsample_series_time_aware
 from .adapter import deterministic_quantile_forecast, summarize_uncertainty
 from .loader import Chronos2Loader
 from .types import TSFMRequest, TSFMResponse
@@ -41,6 +42,7 @@ class Chronos2Service:
                     "mv": bundle.model_version,
                     "inst": req.instrument_id,
                     "series": req.series,
+                    "timestamps": req.timestamps,
                     "pred": req.prediction_length,
                     "q": req.quantiles,
                 },
@@ -50,9 +52,14 @@ class Chronos2Service:
         if key in self._cache:
             return self._cache[key]
 
-        forecast = deterministic_quantile_forecast(req.series, req.prediction_length, req.quantiles)
+        model_freq = str(bundle.config.get("downsample_freq", "1min"))
+        series_values = req.series
+        if req.timestamps:
+            series_values, _ = downsample_series_time_aware(req.series, req.timestamps, downsample_freq=model_freq)
+
+        forecast = deterministic_quantile_forecast(series_values, req.prediction_length, req.quantiles)
         uncertainty = summarize_uncertainty(forecast)
-        ood = zscore_ood_score(req.series, bundle.drift_baseline)
+        ood = zscore_ood_score(series_values, bundle.drift_baseline)
         calibration = float(bundle.calibration.get("calibration_score", 0.5))
         elapsed = (time.perf_counter() - started) * 1000
         if elapsed > self.timeout_ms:
