@@ -14,6 +14,12 @@ $ErrorActionPreference = "Continue"
 $ROOT = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $ROOT
 
+# Set IBKR Gateway connection for paper trading (port 4002)
+# TWS uses 7497 (live) / 7496 (paper); Gateway uses 4001 (live) / 4002 (paper)
+if (-not $env:IBKR_GATEWAY_URL) {
+    $env:IBKR_GATEWAY_URL = "127.0.0.1:4002"
+}
+
 $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
 $logDir = Join-Path $ROOT "backend\logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }

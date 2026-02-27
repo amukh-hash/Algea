@@ -286,7 +286,7 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
     """VRP sleeve: options volatility premium signals.
 
     Delegates to ``run_three_sleeves_ibkr.run_vrp`` when available.
-    Always runs in noop mode to avoid SPX sizing risk.
+    Mode follows the orchestrator (paper/live/noop).
     Falls back to stub if imports fail.
     """
     try:
@@ -302,15 +302,18 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
 
         asof = date.fromisoformat(_asof(ctx))
 
-        # VRP sleeve always noop — SPX sizing danger
-        # Create a temporary readonly broker for signal generation (no trades)
+        # VRP mode follows orchestrator — "paper" maps to "ibkr" for run_vrp
+        vrp_mode = _mode(ctx)
+        effective_vrp_mode = "ibkr" if vrp_mode == "paper" else vrp_mode
+
+        # Create IBKR broker for VRP signal generation & execution
         try:
             broker = IBKRLiveBroker.from_env()
         except Exception:
             broker = None
 
         if broker is not None:
-            vrp_result = run_vrp(broker, capital=30_000.0, asof=asof, mode="noop")
+            vrp_result = run_vrp(broker, capital=30_000.0, asof=asof, mode=effective_vrp_mode)
             try:
                 broker._disconnect()
             except Exception:
@@ -329,18 +332,19 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
             "vrp_result": vrp_result,
             "is_stub": False,
         })
-        # VRP is always noop, provide empty targets
+        # Pass through any targets produced by VRP strategy
+        vrp_targets = vrp_result.get("orders", [])
         _write_json(tgt_path, {
             "schema_version": "targets.v1",
             "status": "ok", "asof_date": _asof(ctx), "sleeve": "vrp",
-            "targets": [],  # VRP currently noop
+            "targets": vrp_targets,
             "is_stub": False,
         })
 
         return {
             "status": "ok",
             "artifacts": {"vrp_signals": str(sig_path), "vrp_targets": str(tgt_path)},
-            "metrics": {"source": "run_vrp", "mode": "noop"},
+            "metrics": {"source": "run_vrp", "mode": effective_vrp_mode},
         }
     except Exception as exc:
         logger.exception("VRP signal handler failed: %s", exc)
@@ -843,8 +847,8 @@ def default_jobs() -> list[Job]:
         Job("signals_generate_core", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_core),
         Job("signals_generate_vrp", {Session.PREMARKET}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_vrp),
         Job("signals_generate_selector", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0, handle_signals_generate_selector, min_interval_s=300),
-        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
-        Job("order_build_and_route", {Session.OPEN}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
+        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.INTRADAY, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
+        Job("order_build_and_route", {Session.OPEN, Session.INTRADAY}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
         Job("fills_reconcile", {Session.INTRADAY, Session.CLOSE}, [], {"paper", "live", "noop"}, 120, 0, handle_fills_reconcile, min_interval_s=300),
         Job("eod_reports", {Session.CLOSE, Session.OVERNIGHT}, ["fills_reconcile"], {"paper", "live", "noop"}, 120, 0, handle_eod_reports),
     ]

@@ -169,7 +169,7 @@ def run_core(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# SLEEVE 2: VRP (Options — NOOP by default)
+# SLEEVE 2: VRP (Options — put credit spreads via IBKR)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def run_vrp(
@@ -180,9 +180,20 @@ def run_vrp(
 ) -> Dict[str, Any]:
     """Run the VRP options sleeve.
 
-    Week 1: Always noop — compute target positions and log them,
-    but never submit to IBKR. This avoids the SPX sizing danger
-    ($500K+ per contract notional).
+    Fetches option chains, computes VRP features, generates put credit
+    spread positions via ``VRPStrategy``, and optionally submits IBKR
+    combo (BAG) orders in paper trading mode.
+
+    Parameters
+    ----------
+    broker : IBKRLiveBroker
+        Connected IBKR broker instance.
+    capital : float
+        Capital allocated to the VRP sleeve.
+    asof : date
+        Trading date.
+    mode : str
+        "noop" (signal only) or "ibkr" (submit orders to IB Gateway).
     """
     logger.info("=" * 60)
     logger.info("VRP SLEEVE (Options) -- capital=$%.0f  mode=%s", capital, mode)
@@ -192,39 +203,259 @@ def run_vrp(
         "sleeve": "vrp",
         "capital": capital,
         "mode": mode,
-        "status": "noop",
+        "asof": asof.isoformat(),
+        "status": "ok",
         "orders": [],
+        "positions": [],
+        "warnings": [],
     }
-
-    if mode == "ibkr":
-        logger.warning(
-            "[WARN] VRP sleeve in IBKR mode -- SPX notional is ~$500K/contract. "
-            "Proceeding with extreme caution."
-        )
 
     try:
         from algaie.execution.options.vrp_strategy import VRPStrategy
-        strategy = VRPStrategy()
-
-        # VRP needs option chains, VIX, etc. — for now just report readiness
-        report["message"] = (
-            "VRP strategy loaded. Week-1 mode is NOOP (signal-only). "
-            "Target: put credit spreads on SPY. "
-            "No orders submitted. "
-            "To enable live: --vrp-mode ibkr (use with extreme caution)"
+        from algaie.execution.options.config import VRPConfig
+        from backend.app.trading.ibkr_option_chain import fetch_option_chain
+        from backend.app.trading.ibkr_market_data import (
+            fetch_underlying_closes,
+            fetch_vix_series,
+            get_current_price,
         )
-        report["sizing_warning"] = {
-            "spx_notional_per_contract": "~$500,000",
-            "spy_notional_per_contract": "~$50,000",
-            "recommendation": "Use SPY options, not SPX, for paper trading",
-        }
-
-        logger.info("VRP: NOOP — no orders submitted (week 1 safety)")
-
+        from backend.app.trading.ibkr_options_executor import (
+            position_to_order_intent,
+            submit_combo_order,
+        )
     except ImportError as exc:
-        logger.warning("VRP strategy not importable: %s", exc)
+        logger.warning("VRP imports failed: %s", exc)
         report["status"] = "import_error"
         report["error"] = str(exc)
+        return report
+
+    try:
+        config = VRPConfig()
+        strategy = VRPStrategy(config)
+        logger.info(
+            "VRP strategy loaded — underlyings=%s, DTE range=%s",
+            config.underlyings, config.dte_range,
+        )
+
+        # Get raw IB connection for data fetching
+        broker._ensure_connected()
+        ib = broker._client._ib
+
+        # ── Fetch VIX series (shared across underlyings) ──────────────
+        try:
+            vix_series = fetch_vix_series(ib, lookback_days=252)
+        except Exception as exc:
+            logger.error("VIX fetch failed: %s", exc)
+            report["status"] = "error"
+            report["error"] = f"VIX fetch failed: {exc}"
+            return report
+
+        # ── Process each underlying ───────────────────────────────────
+        all_positions = []
+        all_order_intents = []
+
+        for underlying in config.underlyings:
+            logger.info("─── Processing %s ───", underlying)
+
+            # 1. Get spot price
+            try:
+                spot = get_current_price(ib, underlying)
+            except Exception as exc:
+                msg = f"Spot price fetch failed for {underlying}: {exc}"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+                continue
+
+            # 2. Fetch option chain
+            try:
+                chain_df = fetch_option_chain(
+                    ib,
+                    underlying,
+                    asof_date=asof,
+                    dte_range=config.dte_range,
+                    strike_band_pct=0.15,
+                    max_expiries=2,
+                    max_strikes_per_expiry=30,
+                )
+            except Exception as exc:
+                msg = f"Chain fetch failed for {underlying}: {exc}"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+                continue
+
+            if chain_df.empty:
+                msg = f"Empty chain for {underlying} after filtering"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+                continue
+
+            logger.info(
+                "Chain for %s: %d rows, %d puts, %d calls",
+                underlying,
+                len(chain_df),
+                len(chain_df[chain_df["option_type"] == "put"]),
+                len(chain_df[chain_df["option_type"] == "call"]),
+            )
+
+            # 3. Fetch underlying close prices
+            try:
+                close_prices = fetch_underlying_closes(
+                    ib, underlying, lookback_days=252,
+                )
+            except Exception as exc:
+                msg = f"Close prices fetch failed for {underlying}: {exc}"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+                continue
+
+            # 4. Compute features
+            try:
+                features = strategy.compute_features(
+                    as_of_date=asof,
+                    chain=chain_df,
+                    close_prices=close_prices,
+                    vix=vix_series,
+                )
+            except Exception as exc:
+                msg = f"Feature computation failed for {underlying}: {exc}"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+                continue
+
+            regime = features.get("regime", None)
+            logger.info(
+                "%s features: regime=%s, atm_iv=%.4f, skew_25d=%.4f",
+                underlying,
+                regime.value if regime else "unknown",
+                features.get("surface_snapshot", {}).get("atm_iv", float("nan")),
+                features.get("surface_snapshot", {}).get("skew_25d", float("nan")),
+            )
+
+            # 5. Generate position via strategy predict
+            try:
+                position = strategy.predict(
+                    as_of_date=asof,
+                    chain=chain_df,
+                    underlying=underlying,
+                    underlying_price=spot,
+                    features=features,
+                    nav=capital,
+                )
+            except Exception as exc:
+                msg = f"Strategy predict failed for {underlying}: {exc}"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+                continue
+
+            if position is None:
+                logger.info(
+                    "%s: no trade — gated by regime/IV/limits",
+                    underlying,
+                )
+                continue
+
+            # Log the generated position
+            logger.info(
+                "POSITION: %s %s K=%.1f/%.1f exp=%s credit=%.4f max_loss=%.4f "
+                "delta=%.4f theta=%.4f risk_budget=%.4f",
+                underlying,
+                position.structure_type.value,
+                position.legs[0].strike if len(position.legs) > 0 else 0,
+                position.legs[1].strike if len(position.legs) > 1 else 0,
+                position.expiry.isoformat(),
+                position.premium_collected,
+                position.max_loss,
+                position.delta,
+                position.theta,
+                position.risk_budget_used,
+            )
+
+            all_positions.append(position)
+
+            # 6. Convert to order intent
+            try:
+                intent = position_to_order_intent(position)
+                all_order_intents.append(intent)
+            except Exception as exc:
+                msg = f"Order intent conversion failed for {underlying}: {exc}"
+                logger.warning(msg)
+                report["warnings"].append(msg)
+
+        # ── Summary ───────────────────────────────────────────────────
+        report["orders"] = all_order_intents
+        report["positions"] = [
+            {
+                "underlying": p.underlying,
+                "structure": p.structure_type.value,
+                "expiry": p.expiry.isoformat(),
+                "short_strike": next(
+                    (l.strike for l in p.legs if l.qty < 0), None
+                ),
+                "long_strike": next(
+                    (l.strike for l in p.legs if l.qty > 0), None
+                ),
+                "premium_collected": p.premium_collected,
+                "max_loss": p.max_loss,
+                "delta": p.delta,
+                "theta": p.theta,
+                "risk_budget_used": p.risk_budget_used,
+                "position_id": p.position_id,
+            }
+            for p in all_positions
+        ]
+
+        logger.info(
+            "VRP summary: %d underlyings scanned, %d positions generated, "
+            "%d order intents, %d warnings",
+            len(config.underlyings),
+            len(all_positions),
+            len(all_order_intents),
+            len(report["warnings"]),
+        )
+
+        # ── Submit combo orders if in IBKR mode ──────────────────────
+        if mode == "ibkr" and all_positions:
+            logger.info("Submitting %d combo orders to IBKR...", len(all_positions))
+            submitted = []
+
+            account_id = os.environ.get("IBKR_ACCOUNT_ID", "")
+            for position in all_positions:
+                try:
+                    result = submit_combo_order(
+                        ib, position, account_id=account_id,
+                    )
+                    submitted.append(result)
+                    logger.info(
+                        "  %s: %s (orderId=%s)",
+                        position.underlying,
+                        result.get("status"),
+                        result.get("order_id"),
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "Combo order failed for %s: %s",
+                        position.underlying, exc,
+                    )
+                    submitted.append({
+                        "status": "error",
+                        "message": str(exc),
+                        "underlying": position.underlying,
+                    })
+
+            report["submitted_orders"] = submitted
+            report["status"] = "submitted"
+        elif mode == "noop":
+            report["status"] = "ok"
+            if all_order_intents:
+                logger.info(
+                    "NOOP mode — %d orders computed but not submitted",
+                    len(all_order_intents),
+                )
+            else:
+                logger.info("NOOP mode — no trades triggered")
+        else:
+            report["status"] = "ok"
+
     except Exception as exc:
         logger.error("VRP sleeve error: %s", exc, exc_info=True)
         report["status"] = "error"
@@ -430,7 +661,7 @@ def run_all_sleeves(
 ) -> Dict[str, Any]:
     """Run all three sleeves sequentially."""
 
-    effective_vrp_mode = vrp_mode or "noop"  # VRP defaults to noop always
+    effective_vrp_mode = vrp_mode or mode  # VRP now follows global mode
 
     logger.info("=" * 70)
     logger.info("THREE-SLEEVE PAPER TRADING RUNNER")

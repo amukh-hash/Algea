@@ -5,7 +5,7 @@
 Set these before running any commands:
 
 ```bash
-export IBKR_GATEWAY_URL="127.0.0.1:7497"    # TWS paper port
+export IBKR_GATEWAY_URL="127.0.0.1:4002"    # IB Gateway paper port
 export IBKR_ACCOUNT_ID="<your_paper_account>" # e.g. DUP*****2I
 export IBKR_CLIENT_ID="17"                    # unique per connection
 export IBKR_PAPER_ONLY="1"                    # enforce paper checks
@@ -18,10 +18,10 @@ export IBKR_READONLY="0"                      # set to "1" for read-only
 
 ## Prerequisites
 
-1. **TWS or IB Gateway** running in paper mode on port 7497
+1. **IB Gateway** running in paper mode on port **4002**
 2. **API settings enabled** in TWS: File → Global Configuration → API → Settings
    - Enable ActiveX and Socket Clients
-   - Socket port: 7497 (paper) or 4002 (Gateway paper)
+   - Socket port: **4002** (Gateway paper)
    - Allow connections from localhost
 3. **ib_insync** installed: `pip install ib_insync==0.9.86`
 

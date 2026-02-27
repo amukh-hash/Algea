@@ -1,4595 +1,5 @@
 [
  {
-  "ts": "2026-02-24T13:19:33.412992+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:20:33.415313+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:21:33.417677+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:22:33.419654+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:23:33.422358+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:24:33.425154+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:25:33.427075+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:26:33.429395+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:27:33.433316+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:28:33.436186+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:29:33.438476+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:30:33.441413+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:31:33.443930+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:32:33.446594+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:33:33.449229+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:34:33.451887+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:35:33.454867+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:36:33.457822+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:37:33.460967+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:38:33.463867+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:39:33.466289+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:40:33.469042+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:41:33.471584+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:42:33.474194+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:43:33.476393+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:44:33.479656+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:45:33.482311+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:46:33.484707+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:47:33.487549+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:48:33.490185+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:49:33.493189+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:50:33.496330+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:51:33.498704+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:52:33.501752+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:53:33.504203+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:54:33.507261+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:55:33.510047+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:56:33.512257+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:57:33.515252+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:58:33.518408+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T13:59:33.520916+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:00:33.523720+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:01:33.526440+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:02:33.529276+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:03:33.531990+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:04:33.534864+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:05:33.538178+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:06:33.541883+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:07:33.544763+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:08:33.547584+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:09:33.550620+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:10:33.554153+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:11:33.556845+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:12:33.559562+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:13:33.562363+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:14:33.565353+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:15:33.567952+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:16:33.570901+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:17:33.574006+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:18:33.576966+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:19:33.579958+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:20:33.582720+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:21:33.585661+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:22:33.588985+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:23:33.591517+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:24:33.594650+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:25:33.597753+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:26:33.600336+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:27:33.603871+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:28:33.606715+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:29:33.609648+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:30:33.612711+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:31:33.615314+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:32:33.618032+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:33:33.620732+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:34:33.623477+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:35:33.626150+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:36:33.629323+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:37:33.632382+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:38:33.634912+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:39:33.638135+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:40:33.641201+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:41:33.644320+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:42:33.647100+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:43:33.649750+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:44:33.652625+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:45:33.655811+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:46:33.658575+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:47:33.661788+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:48:33.664660+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:49:33.667921+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:50:33.670955+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:51:33.674219+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:52:33.677204+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:53:33.680592+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:54:33.683340+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:55:33.686371+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:56:33.689528+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:57:33.692579+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:58:33.695469+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T14:59:33.698369+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:00:33.701588+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:01:33.704488+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:02:33.708077+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:03:33.711179+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:04:33.714984+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:05:33.718828+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:06:33.721815+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:07:33.725263+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:08:33.728623+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:09:33.731768+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:10:33.735168+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:11:33.738232+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:12:33.740890+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:13:33.743873+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:14:33.747428+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:15:33.750499+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:16:33.753434+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:17:33.756611+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:18:33.759613+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:19:33.762974+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:20:33.766610+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:21:33.769296+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:22:33.772435+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:23:33.775926+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:24:33.779233+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:25:33.782282+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:26:33.785822+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:27:33.788780+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:28:33.791756+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:29:33.796151+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:30:33.799222+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:31:33.802299+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:32:33.806739+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:33:33.809368+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:34:33.812778+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:35:33.816529+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:36:33.820184+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:37:33.823391+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:38:33.826187+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:39:33.828959+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:40:33.832502+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:41:33.835539+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:42:33.838750+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:43:33.842376+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:44:33.845309+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:45:33.848247+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:46:33.852476+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:47:33.856005+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:48:33.858992+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:49:33.861947+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:50:33.865089+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:51:33.867865+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:52:33.870836+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:53:33.873789+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:54:33.877351+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:55:33.881280+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:56:33.885081+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:57:33.887972+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:58:33.891033+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T15:59:33.893811+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:00:33.896905+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:01:33.900051+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:02:33.902846+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:03:33.905758+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:04:33.908634+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:05:33.911837+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:06:33.914465+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:07:33.917438+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:08:33.920104+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:09:33.922748+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:10:33.926615+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:11:33.929171+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:12:33.933001+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:13:33.935996+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:14:33.941085+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:15:33.945286+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:16:33.947797+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:17:33.951439+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:18:33.954812+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:19:33.958681+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:20:33.961343+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:21:33.964498+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:22:33.967599+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:23:33.970471+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:24:33.973405+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:25:33.976512+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:26:33.979389+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:27:33.982841+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:28:33.986433+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:29:33.989167+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:30:33.991950+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:31:33.996006+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:32:33.999130+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:33:34.001902+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:34:22.209442+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:35:22.212013+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:36:22.214850+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:37:22.217732+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:38:22.220696+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:39:22.223532+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:41:19.023036+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:42:19.025999+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:43:19.028268+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:44:19.031633+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:45:19.034004+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:45:25.667936+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:45:36.587961+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:46:36.592112+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:47:02.217584+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:48:02.220852+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:49:02.224062+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:50:02.226101+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:51:02.230194+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:52:02.233132+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:53:02.236435+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:54:02.238620+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:55:02.240222+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:56:02.241658+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:57:02.243357+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:58:02.244987+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T16:59:02.246330+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:00:02.248078+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:01:02.251465+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:02:02.253290+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:03:02.255438+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:04:02.257155+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:05:02.259564+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:06:02.261146+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:07:02.262991+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:08:02.265025+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:09:02.266652+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:10:02.269083+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:11:02.270636+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:12:02.273252+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:13:02.274442+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:14:02.276267+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:15:02.279661+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:16:02.281102+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:17:02.282711+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:18:02.284462+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:19:02.287122+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:20:02.289152+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:21:02.291329+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:22:02.292910+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:23:02.294810+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:24:02.296524+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:25:02.298231+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:26:02.300024+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:27:02.301697+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:28:02.304420+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:29:02.306852+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:30:02.309026+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:31:02.312924+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:32:02.315677+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:33:02.318031+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:34:02.320726+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:35:02.323658+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:36:02.326379+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:37:02.328858+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:38:02.331067+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:39:02.333311+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:40:02.336313+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:41:02.338898+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:42:02.341796+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:43:02.344829+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:44:02.347675+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:45:02.350704+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:46:02.354159+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:47:02.356098+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:48:02.358762+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:49:02.362332+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:50:02.364648+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:51:02.367197+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:52:02.369648+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:53:02.372780+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:54:02.375840+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:55:02.378688+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:56:02.380567+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:57:02.383166+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:58:02.386682+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T17:59:02.389662+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:00:02.392045+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:01:02.394901+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:02:02.397710+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:03:02.401342+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:04:02.404058+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:05:02.406797+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:06:02.409373+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:07:02.412813+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:08:02.415855+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:09:02.418584+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:10:02.421544+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:11:02.424170+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:12:02.427728+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:13:02.430366+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:14:02.433445+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:15:02.436190+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:16:02.438879+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:17:02.441703+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:18:02.445319+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:19:02.448032+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:20:02.450941+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:21:02.453458+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:22:02.456274+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:23:02.459270+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:24:02.461798+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:25:02.465121+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:26:02.468555+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:27:02.471607+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:28:02.474823+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:29:02.477495+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:30:02.481597+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:31:02.484402+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:32:02.487560+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:33:02.491054+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:34:02.495784+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:35:02.498341+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:36:02.501095+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:37:02.504521+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:38:02.507761+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:39:02.510455+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:40:02.513388+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:41:02.515969+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:42:02.519404+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:43:02.522808+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:44:02.525425+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:45:02.530079+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:46:02.533854+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:47:02.538762+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:48:02.543658+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:49:02.548106+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:50:02.552416+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:51:02.557756+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:52:02.560462+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:53:02.564416+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:54:02.567373+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:55:02.572223+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:56:02.574517+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:57:02.578581+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:58:02.583655+00:00",
-  "total_value": 100000.0,
-  "cash": 100000.0,
-  "core": 0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": 0.0,
-  "unrealized_pnl": 0.0
- },
- {
-  "ts": "2026-02-24T18:59:03.001802+00:00",
-  "total_value": 99245.01,
-  "cash": 85700.0,
-  "core": 13545.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -754.99,
-  "unrealized_pnl": -754.99
- },
- {
-  "ts": "2026-02-24T19:00:03.152842+00:00",
-  "total_value": 99315.0,
-  "cash": 85700.0,
-  "core": 13615.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -685.0,
-  "unrealized_pnl": -685.0
- },
- {
-  "ts": "2026-02-24T19:01:03.311885+00:00",
-  "total_value": 99345.01,
-  "cash": 85700.0,
-  "core": 13645.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -654.99,
-  "unrealized_pnl": -654.99
- },
- {
-  "ts": "2026-02-24T19:02:03.480389+00:00",
-  "total_value": 99305.0,
-  "cash": 85700.0,
-  "core": 13605.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -695.0,
-  "unrealized_pnl": -695.0
- },
- {
-  "ts": "2026-02-24T19:03:03.667467+00:00",
-  "total_value": 99265.0,
-  "cash": 85700.0,
-  "core": 13565.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -735.0,
-  "unrealized_pnl": -735.0
- },
- {
-  "ts": "2026-02-24T19:04:03.671107+00:00",
-  "total_value": 99235.0,
-  "cash": 85700.0,
-  "core": 13535.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -765.0,
-  "unrealized_pnl": -765.0
- },
- {
-  "ts": "2026-02-24T19:05:03.674580+00:00",
-  "total_value": 99174.99,
-  "cash": 85700.0,
-  "core": 13474.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -825.01,
-  "unrealized_pnl": -825.01
- },
- {
-  "ts": "2026-02-24T19:06:03.849100+00:00",
-  "total_value": 99124.99,
-  "cash": 85700.0,
-  "core": 13424.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -875.01,
-  "unrealized_pnl": -875.01
- },
- {
-  "ts": "2026-02-24T19:07:03.852362+00:00",
-  "total_value": 99035.0,
-  "cash": 85700.0,
-  "core": 13335.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -965.0,
-  "unrealized_pnl": -965.0
- },
- {
-  "ts": "2026-02-24T19:08:03.855556+00:00",
-  "total_value": 99045.01,
-  "cash": 85700.0,
-  "core": 13345.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -954.99,
-  "unrealized_pnl": -954.99
- },
- {
-  "ts": "2026-02-24T19:09:03.859583+00:00",
-  "total_value": 99124.99,
-  "cash": 85700.0,
-  "core": 13424.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -875.01,
-  "unrealized_pnl": -875.01
- },
- {
-  "ts": "2026-02-24T19:10:03.862898+00:00",
-  "total_value": 99185.0,
-  "cash": 85700.0,
-  "core": 13485.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -815.0,
-  "unrealized_pnl": -815.0
- },
- {
-  "ts": "2026-02-24T19:11:03.867612+00:00",
-  "total_value": 99295.01,
-  "cash": 85700.0,
-  "core": 13595.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -704.99,
-  "unrealized_pnl": -704.99
- },
- {
-  "ts": "2026-02-24T19:12:04.059995+00:00",
-  "total_value": 99274.99,
-  "cash": 85700.0,
-  "core": 13574.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -725.01,
-  "unrealized_pnl": -725.01
- },
- {
-  "ts": "2026-02-24T19:13:04.063685+00:00",
-  "total_value": 99174.99,
-  "cash": 85700.0,
-  "core": 13474.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -825.01,
-  "unrealized_pnl": -825.01
- },
- {
-  "ts": "2026-02-24T19:14:04.069283+00:00",
-  "total_value": 99195.01,
-  "cash": 85700.0,
-  "core": 13495.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -804.99,
-  "unrealized_pnl": -804.99
- },
- {
-  "ts": "2026-02-24T19:15:04.072554+00:00",
-  "total_value": 99235.0,
-  "cash": 85700.0,
-  "core": 13535.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -765.0,
-  "unrealized_pnl": -765.0
- },
- {
-  "ts": "2026-02-24T19:16:04.075377+00:00",
-  "total_value": 99285.0,
-  "cash": 85700.0,
-  "core": 13585.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -715.0,
-  "unrealized_pnl": -715.0
- },
- {
-  "ts": "2026-02-24T19:17:04.079105+00:00",
-  "total_value": 99174.99,
-  "cash": 85700.0,
-  "core": 13474.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -825.01,
-  "unrealized_pnl": -825.01
- },
- {
-  "ts": "2026-02-24T19:18:04.082965+00:00",
-  "total_value": 99055.0,
-  "cash": 85700.0,
-  "core": 13355.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -945.0,
-  "unrealized_pnl": -945.0
- },
- {
-  "ts": "2026-02-24T19:19:04.280466+00:00",
-  "total_value": 99055.0,
-  "cash": 85700.0,
-  "core": 13355.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -945.0,
-  "unrealized_pnl": -945.0
- },
- {
-  "ts": "2026-02-24T19:20:04.285033+00:00",
-  "total_value": 99035.0,
-  "cash": 85700.0,
-  "core": 13335.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -965.0,
-  "unrealized_pnl": -965.0
- },
- {
-  "ts": "2026-02-24T19:21:04.288150+00:00",
-  "total_value": 99045.01,
-  "cash": 85700.0,
-  "core": 13345.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -954.99,
-  "unrealized_pnl": -954.99
- },
- {
-  "ts": "2026-02-24T19:22:04.292644+00:00",
-  "total_value": 98955.0,
-  "cash": 85700.0,
-  "core": 13255.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1045.0,
-  "unrealized_pnl": -1045.0
- },
- {
-  "ts": "2026-02-24T19:23:04.295400+00:00",
-  "total_value": 99035.0,
-  "cash": 85700.0,
-  "core": 13335.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -965.0,
-  "unrealized_pnl": -965.0
- },
- {
-  "ts": "2026-02-24T19:24:04.298632+00:00",
-  "total_value": 99055.0,
-  "cash": 85700.0,
-  "core": 13355.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -945.0,
-  "unrealized_pnl": -945.0
- },
- {
-  "ts": "2026-02-24T19:25:04.513746+00:00",
-  "total_value": 98995.01,
-  "cash": 85700.0,
-  "core": 13295.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1004.99,
-  "unrealized_pnl": -1004.99
- },
- {
-  "ts": "2026-02-24T19:26:04.517895+00:00",
-  "total_value": 99015.0,
-  "cash": 85700.0,
-  "core": 13315.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -985.0,
-  "unrealized_pnl": -985.0
- },
- {
-  "ts": "2026-02-24T19:27:04.522449+00:00",
-  "total_value": 98995.01,
-  "cash": 85700.0,
-  "core": 13295.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1004.99,
-  "unrealized_pnl": -1004.99
- },
- {
-  "ts": "2026-02-24T19:28:04.527141+00:00",
-  "total_value": 98835.0,
-  "cash": 85700.0,
-  "core": 13135.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1165.0,
-  "unrealized_pnl": -1165.0
- },
- {
-  "ts": "2026-02-24T19:29:04.531779+00:00",
-  "total_value": 98935.0,
-  "cash": 85700.0,
-  "core": 13235.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1065.0,
-  "unrealized_pnl": -1065.0
- },
- {
-  "ts": "2026-02-24T19:30:04.535782+00:00",
-  "total_value": 98915.0,
-  "cash": 85700.0,
-  "core": 13215.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1085.0,
-  "unrealized_pnl": -1085.0
- },
- {
-  "ts": "2026-02-24T19:31:04.540982+00:00",
-  "total_value": 98955.0,
-  "cash": 85700.0,
-  "core": 13255.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1045.0,
-  "unrealized_pnl": -1045.0
- },
- {
-  "ts": "2026-02-24T19:32:04.724799+00:00",
-  "total_value": 98824.99,
-  "cash": 85700.0,
-  "core": 13124.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1175.01,
-  "unrealized_pnl": -1175.01
- },
- {
-  "ts": "2026-02-24T19:33:04.894292+00:00",
-  "total_value": 98795.01,
-  "cash": 85700.0,
-  "core": 13095.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1204.99,
-  "unrealized_pnl": -1204.99
- },
- {
-  "ts": "2026-02-24T19:34:04.897814+00:00",
-  "total_value": 98774.99,
-  "cash": 85700.0,
-  "core": 13074.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1225.01,
-  "unrealized_pnl": -1225.01
- },
- {
-  "ts": "2026-02-24T19:35:04.902015+00:00",
-  "total_value": 98874.99,
-  "cash": 85700.0,
-  "core": 13174.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1125.01,
-  "unrealized_pnl": -1125.01
- },
- {
-  "ts": "2026-02-24T19:36:04.905592+00:00",
-  "total_value": 98985.0,
-  "cash": 85700.0,
-  "core": 13285.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1015.0,
-  "unrealized_pnl": -1015.0
- },
- {
-  "ts": "2026-02-24T19:37:04.909574+00:00",
-  "total_value": 99035.0,
-  "cash": 85700.0,
-  "core": 13335.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -965.0,
-  "unrealized_pnl": -965.0
- },
- {
-  "ts": "2026-02-24T19:38:04.912912+00:00",
-  "total_value": 99005.0,
-  "cash": 85700.0,
-  "core": 13305.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -995.0,
-  "unrealized_pnl": -995.0
- },
- {
-  "ts": "2026-02-24T19:39:05.102784+00:00",
-  "total_value": 98935.0,
-  "cash": 85700.0,
-  "core": 13235.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1065.0,
-  "unrealized_pnl": -1065.0
- },
- {
-  "ts": "2026-02-24T19:40:05.108716+00:00",
-  "total_value": 98895.01,
-  "cash": 85700.0,
-  "core": 13195.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1104.99,
-  "unrealized_pnl": -1104.99
- },
- {
-  "ts": "2026-02-24T19:41:05.306822+00:00",
-  "total_value": 98955.0,
-  "cash": 85700.0,
-  "core": 13255.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1045.0,
-  "unrealized_pnl": -1045.0
- },
- {
-  "ts": "2026-02-24T19:42:05.466678+00:00",
-  "total_value": 98985.0,
-  "cash": 85700.0,
-  "core": 13285.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1015.0,
-  "unrealized_pnl": -1015.0
- },
- {
-  "ts": "2026-02-24T19:43:05.666802+00:00",
-  "total_value": 99045.01,
-  "cash": 85700.0,
-  "core": 13345.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -954.99,
-  "unrealized_pnl": -954.99
- },
- {
-  "ts": "2026-02-24T19:44:05.849111+00:00",
-  "total_value": 99035.0,
-  "cash": 85700.0,
-  "core": 13335.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -965.0,
-  "unrealized_pnl": -965.0
- },
- {
-  "ts": "2026-02-24T19:45:06.033456+00:00",
-  "total_value": 99074.99,
-  "cash": 85700.0,
-  "core": 13374.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -925.01,
-  "unrealized_pnl": -925.01
- },
- {
-  "ts": "2026-02-24T19:46:06.038527+00:00",
-  "total_value": 99074.99,
-  "cash": 85700.0,
-  "core": 13374.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -925.01,
-  "unrealized_pnl": -925.01
- },
- {
-  "ts": "2026-02-24T19:47:06.211383+00:00",
-  "total_value": 99024.99,
-  "cash": 85700.0,
-  "core": 13324.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -975.01,
-  "unrealized_pnl": -975.01
- },
- {
-  "ts": "2026-02-24T19:48:06.383477+00:00",
-  "total_value": 99024.99,
-  "cash": 85700.0,
-  "core": 13324.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -975.01,
-  "unrealized_pnl": -975.01
- },
- {
-  "ts": "2026-02-24T19:49:06.387221+00:00",
-  "total_value": 99035.0,
-  "cash": 85700.0,
-  "core": 13335.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -965.0,
-  "unrealized_pnl": -965.0
- },
- {
-  "ts": "2026-02-24T19:50:06.391952+00:00",
-  "total_value": 99065.0,
-  "cash": 85700.0,
-  "core": 13365.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -935.0,
-  "unrealized_pnl": -935.0
- },
- {
-  "ts": "2026-02-24T19:51:06.607302+00:00",
-  "total_value": 99115.0,
-  "cash": 85700.0,
-  "core": 13415.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -885.0,
-  "unrealized_pnl": -885.0
- },
- {
-  "ts": "2026-02-24T19:54:11.368660+00:00",
-  "total_value": 99045.01,
-  "cash": 85700.0,
-  "core": 13345.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -954.99,
-  "unrealized_pnl": -954.99
- },
- {
-  "ts": "2026-02-24T19:55:11.526197+00:00",
-  "total_value": 99145.01,
-  "cash": 85700.0,
-  "core": 13445.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -854.99,
-  "unrealized_pnl": -854.99
- },
- {
-  "ts": "2026-02-24T19:56:11.698466+00:00",
-  "total_value": 99185.0,
-  "cash": 85700.0,
-  "core": 13485.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -815.0,
-  "unrealized_pnl": -815.0
- },
- {
-  "ts": "2026-02-24T19:57:11.853344+00:00",
-  "total_value": 99145.01,
-  "cash": 85700.0,
-  "core": 13445.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -854.99,
-  "unrealized_pnl": -854.99
- },
- {
-  "ts": "2026-02-24T19:58:11.997867+00:00",
-  "total_value": 99124.99,
-  "cash": 85700.0,
-  "core": 13424.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -875.01,
-  "unrealized_pnl": -875.01
- },
- {
-  "ts": "2026-02-24T19:59:12.175987+00:00",
-  "total_value": 99174.99,
-  "cash": 85700.0,
-  "core": 13474.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -825.01,
-  "unrealized_pnl": -825.01
- },
- {
-  "ts": "2026-02-24T20:00:12.374338+00:00",
-  "total_value": 99235.0,
-  "cash": 85700.0,
-  "core": 13535.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -765.0,
-  "unrealized_pnl": -765.0
- },
- {
-  "ts": "2026-02-24T20:01:12.377688+00:00",
-  "total_value": 99265.0,
-  "cash": 85700.0,
-  "core": 13565.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -735.0,
-  "unrealized_pnl": -735.0
- },
- {
-  "ts": "2026-02-24T20:02:12.575177+00:00",
-  "total_value": 99285.0,
-  "cash": 85700.0,
-  "core": 13585.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -715.0,
-  "unrealized_pnl": -715.0
- },
- {
-  "ts": "2026-02-24T20:03:12.778898+00:00",
-  "total_value": 99255.0,
-  "cash": 85700.0,
-  "core": 13555.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -745.0,
-  "unrealized_pnl": -745.0
- },
- {
-  "ts": "2026-02-24T20:04:12.968328+00:00",
-  "total_value": 99224.99,
-  "cash": 85700.0,
-  "core": 13524.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -775.01,
-  "unrealized_pnl": -775.01
- },
- {
-  "ts": "2026-02-24T20:05:13.135901+00:00",
-  "total_value": 99115.0,
-  "cash": 85700.0,
-  "core": 13415.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -885.0,
-  "unrealized_pnl": -885.0
- },
- {
-  "ts": "2026-02-24T20:06:13.139315+00:00",
-  "total_value": 99135.0,
-  "cash": 85700.0,
-  "core": 13435.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -865.0,
-  "unrealized_pnl": -865.0
- },
- {
-  "ts": "2026-02-24T20:07:13.335424+00:00",
-  "total_value": 99055.0,
-  "cash": 85700.0,
-  "core": 13355.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -945.0,
-  "unrealized_pnl": -945.0
- },
- {
-  "ts": "2026-02-24T20:08:13.451617+00:00",
-  "total_value": 99065.0,
-  "cash": 85700.0,
-  "core": 13365.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -935.0,
-  "unrealized_pnl": -935.0
- },
- {
-  "ts": "2026-02-24T20:09:13.607412+00:00",
-  "total_value": 99015.0,
-  "cash": 85700.0,
-  "core": 13315.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -985.0,
-  "unrealized_pnl": -985.0
- },
- {
-  "ts": "2026-02-24T20:10:13.825619+00:00",
-  "total_value": 99074.99,
-  "cash": 85700.0,
-  "core": 13374.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -925.01,
-  "unrealized_pnl": -925.01
- },
- {
-  "ts": "2026-02-24T20:11:14.001769+00:00",
-  "total_value": 99185.0,
-  "cash": 85700.0,
-  "core": 13485.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -815.0,
-  "unrealized_pnl": -815.0
- },
- {
-  "ts": "2026-02-24T20:12:14.214269+00:00",
-  "total_value": 99174.99,
-  "cash": 85700.0,
-  "core": 13474.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -825.01,
-  "unrealized_pnl": -825.01
- },
- {
-  "ts": "2026-02-24T20:13:14.365442+00:00",
-  "total_value": 99045.01,
-  "cash": 85700.0,
-  "core": 13345.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -954.99,
-  "unrealized_pnl": -954.99
- },
- {
-  "ts": "2026-02-24T20:14:14.551985+00:00",
-  "total_value": 99005.0,
-  "cash": 85700.0,
-  "core": 13305.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -995.0,
-  "unrealized_pnl": -995.0
- },
- {
-  "ts": "2026-02-24T20:15:14.558797+00:00",
-  "total_value": 98935.0,
-  "cash": 85700.0,
-  "core": 13235.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1065.0,
-  "unrealized_pnl": -1065.0
- },
- {
-  "ts": "2026-02-24T20:16:14.562282+00:00",
-  "total_value": 98865.0,
-  "cash": 85700.0,
-  "core": 13165.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1135.0,
-  "unrealized_pnl": -1135.0
- },
- {
-  "ts": "2026-02-24T20:17:14.565439+00:00",
-  "total_value": 98955.0,
-  "cash": 85700.0,
-  "core": 13255.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1045.0,
-  "unrealized_pnl": -1045.0
- },
- {
-  "ts": "2026-02-24T20:18:14.751012+00:00",
-  "total_value": 98845.01,
-  "cash": 85700.0,
-  "core": 13145.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1154.99,
-  "unrealized_pnl": -1154.99
- },
- {
-  "ts": "2026-02-24T20:19:15.014661+00:00",
-  "total_value": 98865.0,
-  "cash": 85700.0,
-  "core": 13165.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1135.0,
-  "unrealized_pnl": -1135.0
- },
- {
-  "ts": "2026-02-24T20:20:15.018332+00:00",
-  "total_value": 98795.01,
-  "cash": 85700.0,
-  "core": 13095.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1204.99,
-  "unrealized_pnl": -1204.99
- },
- {
-  "ts": "2026-02-24T20:21:15.211564+00:00",
-  "total_value": 98724.99,
-  "cash": 85700.0,
-  "core": 13024.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1275.01,
-  "unrealized_pnl": -1275.01
- },
- {
-  "ts": "2026-02-24T20:22:15.369677+00:00",
-  "total_value": 98715.0,
-  "cash": 85700.0,
-  "core": 13015.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1285.0,
-  "unrealized_pnl": -1285.0
- },
- {
-  "ts": "2026-02-24T20:23:15.574852+00:00",
-  "total_value": 98695.01,
-  "cash": 85700.0,
-  "core": 12995.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1304.99,
-  "unrealized_pnl": -1304.99
- },
- {
-  "ts": "2026-02-24T20:24:15.766467+00:00",
-  "total_value": 98785.0,
-  "cash": 85700.0,
-  "core": 13085.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1215.0,
-  "unrealized_pnl": -1215.0
- },
- {
-  "ts": "2026-02-24T20:25:15.769854+00:00",
-  "total_value": 98715.0,
-  "cash": 85700.0,
-  "core": 13015.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1285.0,
-  "unrealized_pnl": -1285.0
- },
- {
-  "ts": "2026-02-24T20:26:15.987585+00:00",
-  "total_value": 98715.0,
-  "cash": 85700.0,
-  "core": 13015.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1285.0,
-  "unrealized_pnl": -1285.0
- },
- {
-  "ts": "2026-02-24T20:27:15.991483+00:00",
-  "total_value": 98705.0,
-  "cash": 85700.0,
-  "core": 13005.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1295.0,
-  "unrealized_pnl": -1295.0
- },
- {
-  "ts": "2026-02-24T20:28:15.995342+00:00",
-  "total_value": 98705.0,
-  "cash": 85700.0,
-  "core": 13005.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1295.0,
-  "unrealized_pnl": -1295.0
- },
- {
-  "ts": "2026-02-24T20:29:16.140232+00:00",
-  "total_value": 98774.99,
-  "cash": 85700.0,
-  "core": 13074.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1225.01,
-  "unrealized_pnl": -1225.01
- },
- {
-  "ts": "2026-02-24T20:30:16.142876+00:00",
-  "total_value": 98845.01,
-  "cash": 85700.0,
-  "core": 13145.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1154.99,
-  "unrealized_pnl": -1154.99
- },
- {
-  "ts": "2026-02-24T20:31:16.348480+00:00",
-  "total_value": 98815.0,
-  "cash": 85700.0,
-  "core": 13115.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1185.0,
-  "unrealized_pnl": -1185.0
- },
- {
-  "ts": "2026-02-24T20:32:16.557962+00:00",
-  "total_value": 98635.0,
-  "cash": 85700.0,
-  "core": 12935.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1365.0,
-  "unrealized_pnl": -1365.0
- },
- {
-  "ts": "2026-02-24T20:33:16.802064+00:00",
-  "total_value": 98715.0,
-  "cash": 85700.0,
-  "core": 13015.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1285.0,
-  "unrealized_pnl": -1285.0
- },
- {
-  "ts": "2026-02-24T20:34:16.962363+00:00",
-  "total_value": 98605.0,
-  "cash": 85700.0,
-  "core": 12905.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1395.0,
-  "unrealized_pnl": -1395.0
- },
- {
-  "ts": "2026-02-24T20:35:17.146265+00:00",
-  "total_value": 98605.0,
-  "cash": 85700.0,
-  "core": 12905.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1395.0,
-  "unrealized_pnl": -1395.0
- },
- {
-  "ts": "2026-02-24T20:36:17.304446+00:00",
-  "total_value": 98515.0,
-  "cash": 85700.0,
-  "core": 12815.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1485.0,
-  "unrealized_pnl": -1485.0
- },
- {
-  "ts": "2026-02-24T20:37:17.309196+00:00",
-  "total_value": 98524.99,
-  "cash": 85700.0,
-  "core": 12824.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1475.01,
-  "unrealized_pnl": -1475.01
- },
- {
-  "ts": "2026-02-24T20:38:17.312961+00:00",
-  "total_value": 98485.0,
-  "cash": 85700.0,
-  "core": 12785.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1515.0,
-  "unrealized_pnl": -1515.0
- },
- {
-  "ts": "2026-02-24T20:39:17.522712+00:00",
-  "total_value": 98455.0,
-  "cash": 85700.0,
-  "core": 12755.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1545.0,
-  "unrealized_pnl": -1545.0
- },
- {
-  "ts": "2026-02-24T20:40:17.681097+00:00",
-  "total_value": 98465.0,
-  "cash": 85700.0,
-  "core": 12765.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1535.0,
-  "unrealized_pnl": -1535.0
- },
- {
-  "ts": "2026-02-24T20:41:17.875344+00:00",
-  "total_value": 98555.0,
-  "cash": 85700.0,
-  "core": 12855.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1445.0,
-  "unrealized_pnl": -1445.0
- },
- {
-  "ts": "2026-02-24T20:42:18.101446+00:00",
-  "total_value": 98624.99,
-  "cash": 85700.0,
-  "core": 12924.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1375.01,
-  "unrealized_pnl": -1375.01
- },
- {
-  "ts": "2026-02-24T20:43:18.301356+00:00",
-  "total_value": 98765.0,
-  "cash": 85700.0,
-  "core": 13065.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1235.0,
-  "unrealized_pnl": -1235.0
- },
- {
-  "ts": "2026-02-24T20:44:18.459170+00:00",
-  "total_value": 98695.01,
-  "cash": 85700.0,
-  "core": 12995.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1304.99,
-  "unrealized_pnl": -1304.99
- },
- {
-  "ts": "2026-02-24T20:45:18.653106+00:00",
-  "total_value": 98655.0,
-  "cash": 85700.0,
-  "core": 12955.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1345.0,
-  "unrealized_pnl": -1345.0
- },
- {
-  "ts": "2026-02-24T20:46:18.816288+00:00",
-  "total_value": 98735.0,
-  "cash": 85700.0,
-  "core": 13035.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1265.0,
-  "unrealized_pnl": -1265.0
- },
- {
-  "ts": "2026-02-24T20:47:18.993579+00:00",
-  "total_value": 98755.0,
-  "cash": 85700.0,
-  "core": 13055.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1245.0,
-  "unrealized_pnl": -1245.0
- },
- {
-  "ts": "2026-02-24T20:48:18.997753+00:00",
-  "total_value": 98805.0,
-  "cash": 85700.0,
-  "core": 13105.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1195.0,
-  "unrealized_pnl": -1195.0
- },
- {
-  "ts": "2026-02-24T20:49:19.175619+00:00",
-  "total_value": 98845.01,
-  "cash": 85700.0,
-  "core": 13145.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1154.99,
-  "unrealized_pnl": -1154.99
- },
- {
-  "ts": "2026-02-24T20:50:19.362293+00:00",
-  "total_value": 98815.0,
-  "cash": 85700.0,
-  "core": 13115.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1185.0,
-  "unrealized_pnl": -1185.0
- },
- {
-  "ts": "2026-02-24T20:51:19.522516+00:00",
-  "total_value": 98795.01,
-  "cash": 85700.0,
-  "core": 13095.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1204.99,
-  "unrealized_pnl": -1204.99
- },
- {
-  "ts": "2026-02-24T20:52:19.687548+00:00",
-  "total_value": 98805.0,
-  "cash": 85700.0,
-  "core": 13105.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1195.0,
-  "unrealized_pnl": -1195.0
- },
- {
-  "ts": "2026-02-24T20:53:19.848482+00:00",
-  "total_value": 98824.99,
-  "cash": 85700.0,
-  "core": 13124.99,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1175.01,
-  "unrealized_pnl": -1175.01
- },
- {
-  "ts": "2026-02-24T20:54:20.040434+00:00",
-  "total_value": 98895.01,
-  "cash": 85700.0,
-  "core": 13195.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1104.99,
-  "unrealized_pnl": -1104.99
- },
- {
-  "ts": "2026-02-24T20:55:20.233507+00:00",
-  "total_value": 98905.0,
-  "cash": 85700.0,
-  "core": 13205.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1095.0,
-  "unrealized_pnl": -1095.0
- },
- {
-  "ts": "2026-02-24T20:56:20.432167+00:00",
-  "total_value": 98955.0,
-  "cash": 85700.0,
-  "core": 13255.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1045.0,
-  "unrealized_pnl": -1045.0
- },
- {
-  "ts": "2026-02-24T20:57:20.436110+00:00",
-  "total_value": 98935.0,
-  "cash": 85700.0,
-  "core": 13235.0,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1065.0,
-  "unrealized_pnl": -1065.0
- },
- {
-  "ts": "2026-02-24T20:58:20.640554+00:00",
-  "total_value": 98945.01,
-  "cash": 85700.0,
-  "core": 13245.01,
-  "vrp": 0,
-  "selector": 0,
-  "total_pnl": -1054.99,
-  "unrealized_pnl": -1054.99
- },
- {
   "ts": "2026-02-24T20:59:20.819580+00:00",
   "total_value": 99015.0,
   "cash": 85700.0,
@@ -4798,5 +208,4595 @@
   "selector": 0,
   "total_pnl": -1265.0,
   "unrealized_pnl": -1265.0
+ },
+ {
+  "ts": "2026-02-24T21:20:23.604921+00:00",
+  "total_value": 98745.01,
+  "cash": 85700.0,
+  "core": 13045.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1254.99,
+  "unrealized_pnl": -1254.99
+ },
+ {
+  "ts": "2026-02-24T21:21:23.764265+00:00",
+  "total_value": 98715.0,
+  "cash": 85700.0,
+  "core": 13015.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1285.0,
+  "unrealized_pnl": -1285.0
+ },
+ {
+  "ts": "2026-02-24T21:22:23.935463+00:00",
+  "total_value": 98715.0,
+  "cash": 85700.0,
+  "core": 13015.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1285.0,
+  "unrealized_pnl": -1285.0
+ },
+ {
+  "ts": "2026-02-24T21:23:24.103974+00:00",
+  "total_value": 98755.0,
+  "cash": 85700.0,
+  "core": 13055.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1245.0,
+  "unrealized_pnl": -1245.0
+ },
+ {
+  "ts": "2026-02-24T21:24:24.270405+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-24T21:25:24.486951+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-24T21:26:24.646306+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-24T21:27:24.822418+00:00",
+  "total_value": 98785.0,
+  "cash": 85700.0,
+  "core": 13085.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1215.0,
+  "unrealized_pnl": -1215.0
+ },
+ {
+  "ts": "2026-02-24T21:28:25.049865+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-24T21:29:25.287423+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-24T21:30:25.496608+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T21:31:25.688476+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T21:32:25.862288+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T21:33:26.075367+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T21:34:26.248276+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T21:35:26.440413+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T21:36:26.644137+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-24T21:37:26.801909+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T21:38:26.984144+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T21:39:27.166195+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T21:40:27.353788+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T21:41:27.529179+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T21:42:27.716084+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T21:43:27.859871+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T21:44:28.090368+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T21:45:28.283330+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-24T21:46:28.466141+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-24T21:47:28.677422+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T21:48:28.829461+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T21:49:29.016818+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-24T21:50:29.189060+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T21:51:29.356082+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T21:52:29.511951+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-24T21:53:29.649784+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-24T21:54:29.814002+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-24T21:55:29.983934+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T21:56:30.156739+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T21:57:30.342992+00:00",
+  "total_value": 98915.0,
+  "cash": 85700.0,
+  "core": 13215.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1085.0,
+  "unrealized_pnl": -1085.0
+ },
+ {
+  "ts": "2026-02-24T21:58:30.521486+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-24T21:59:30.759807+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-24T22:00:30.952641+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T22:01:31.101073+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-24T22:02:31.291507+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T22:03:31.456224+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T22:04:31.606758+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T22:05:31.796203+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T22:06:32.017960+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-24T22:07:32.206303+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T22:08:32.406376+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T22:09:32.597378+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-24T22:10:32.833325+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:11:33.013031+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:12:33.169502+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:13:33.360667+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:14:33.530844+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:15:33.698670+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:16:33.882284+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:17:34.062382+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:18:34.246092+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:19:34.399597+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:20:34.577807+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:21:34.763170+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:22:34.992553+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:23:35.209376+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:24:35.406963+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:25:35.558221+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:26:35.734591+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:27:35.905727+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:28:36.077194+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:29:36.273674+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:30:36.479117+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:31:36.669939+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:32:36.862321+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:33:37.045488+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:34:37.219655+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:35:37.399191+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:36:37.576489+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:37:37.760577+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:38:37.935689+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:39:38.111273+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:40:38.304200+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:41:38.476176+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:42:38.661654+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:43:38.837593+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:44:39.019054+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:45:39.208265+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:46:39.422440+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:47:39.623805+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:48:39.786761+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:49:39.964960+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:50:40.136330+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:51:40.312666+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:52:40.515239+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:53:40.675020+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:54:40.836821+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:55:41.046363+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:56:41.277568+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:57:41.441599+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:58:41.651452+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T22:59:41.804740+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:00:41.991289+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:01:42.140125+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:02:42.320783+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:03:42.493423+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:04:42.669935+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:05:42.866243+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:06:43.071487+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:07:43.246915+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:08:43.424169+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:09:43.602323+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:10:43.796936+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-24T23:11:43.970093+00:00",
+  "total_value": 98915.0,
+  "cash": 85700.0,
+  "core": 13215.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1085.0,
+  "unrealized_pnl": -1085.0
+ },
+ {
+  "ts": "2026-02-24T23:12:44.133336+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T23:13:44.289725+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-24T23:14:44.535884+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-24T23:15:44.696087+00:00",
+  "total_value": 98774.99,
+  "cash": 85700.0,
+  "core": 13074.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1225.01,
+  "unrealized_pnl": -1225.01
+ },
+ {
+  "ts": "2026-02-24T23:16:44.858604+00:00",
+  "total_value": 98745.01,
+  "cash": 85700.0,
+  "core": 13045.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1254.99,
+  "unrealized_pnl": -1254.99
+ },
+ {
+  "ts": "2026-02-24T23:17:45.045551+00:00",
+  "total_value": 98745.01,
+  "cash": 85700.0,
+  "core": 13045.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1254.99,
+  "unrealized_pnl": -1254.99
+ },
+ {
+  "ts": "2026-02-24T23:18:45.206137+00:00",
+  "total_value": 98674.99,
+  "cash": 85700.0,
+  "core": 12974.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1325.01,
+  "unrealized_pnl": -1325.01
+ },
+ {
+  "ts": "2026-02-24T23:19:45.372936+00:00",
+  "total_value": 98745.01,
+  "cash": 85700.0,
+  "core": 13045.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1254.99,
+  "unrealized_pnl": -1254.99
+ },
+ {
+  "ts": "2026-02-24T23:20:45.589272+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-24T23:21:45.786702+00:00",
+  "total_value": 98735.0,
+  "cash": 85700.0,
+  "core": 13035.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1265.0,
+  "unrealized_pnl": -1265.0
+ },
+ {
+  "ts": "2026-02-24T23:22:45.953746+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-24T23:23:46.151576+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:24:46.329111+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T23:25:46.516543+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-24T23:26:46.674669+00:00",
+  "total_value": 98905.0,
+  "cash": 85700.0,
+  "core": 13205.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1095.0,
+  "unrealized_pnl": -1095.0
+ },
+ {
+  "ts": "2026-02-24T23:27:46.873353+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-24T23:28:47.059975+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T23:29:47.201518+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T23:30:47.388581+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T23:31:47.564648+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T23:32:47.744147+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-24T23:33:47.901428+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-24T23:34:48.072530+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:35:48.220434+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:36:48.426971+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-24T23:37:48.603472+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T23:38:48.809939+00:00",
+  "total_value": 98874.99,
+  "cash": 85700.0,
+  "core": 13174.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1125.01,
+  "unrealized_pnl": -1125.01
+ },
+ {
+  "ts": "2026-02-24T23:39:49.000571+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T23:40:49.170454+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-24T23:41:49.340493+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-24T23:42:49.533314+00:00",
+  "total_value": 98774.99,
+  "cash": 85700.0,
+  "core": 13074.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1225.01,
+  "unrealized_pnl": -1225.01
+ },
+ {
+  "ts": "2026-02-24T23:43:49.690941+00:00",
+  "total_value": 98755.0,
+  "cash": 85700.0,
+  "core": 13055.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1245.0,
+  "unrealized_pnl": -1245.0
+ },
+ {
+  "ts": "2026-02-24T23:44:49.873751+00:00",
+  "total_value": 98915.0,
+  "cash": 85700.0,
+  "core": 13215.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1085.0,
+  "unrealized_pnl": -1085.0
+ },
+ {
+  "ts": "2026-02-24T23:45:50.042235+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-24T23:46:50.252148+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-24T23:47:50.424788+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-24T23:48:50.603126+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-24T23:49:50.782766+00:00",
+  "total_value": 98905.0,
+  "cash": 85700.0,
+  "core": 13205.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1095.0,
+  "unrealized_pnl": -1095.0
+ },
+ {
+  "ts": "2026-02-24T23:50:50.957434+00:00",
+  "total_value": 98945.01,
+  "cash": 85700.0,
+  "core": 13245.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1054.99,
+  "unrealized_pnl": -1054.99
+ },
+ {
+  "ts": "2026-02-24T23:51:51.135975+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-24T23:52:51.318555+00:00",
+  "total_value": 98905.0,
+  "cash": 85700.0,
+  "core": 13205.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1095.0,
+  "unrealized_pnl": -1095.0
+ },
+ {
+  "ts": "2026-02-24T23:53:51.580887+00:00",
+  "total_value": 98945.01,
+  "cash": 85700.0,
+  "core": 13245.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1054.99,
+  "unrealized_pnl": -1054.99
+ },
+ {
+  "ts": "2026-02-24T23:54:51.778881+00:00",
+  "total_value": 98915.0,
+  "cash": 85700.0,
+  "core": 13215.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1085.0,
+  "unrealized_pnl": -1085.0
+ },
+ {
+  "ts": "2026-02-24T23:55:51.931538+00:00",
+  "total_value": 98874.99,
+  "cash": 85700.0,
+  "core": 13174.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1125.01,
+  "unrealized_pnl": -1125.01
+ },
+ {
+  "ts": "2026-02-24T23:56:52.084395+00:00",
+  "total_value": 98874.99,
+  "cash": 85700.0,
+  "core": 13174.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1125.01,
+  "unrealized_pnl": -1125.01
+ },
+ {
+  "ts": "2026-02-24T23:57:52.255771+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-24T23:58:52.430054+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-24T23:59:52.607518+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-25T00:00:52.820737+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-25T00:01:53.001156+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-25T00:02:53.303332+00:00",
+  "total_value": 98874.99,
+  "cash": 85700.0,
+  "core": 13174.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1125.01,
+  "unrealized_pnl": -1125.01
+ },
+ {
+  "ts": "2026-02-25T00:03:53.482530+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-25T00:04:53.669694+00:00",
+  "total_value": 98874.99,
+  "cash": 85700.0,
+  "core": 13174.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1125.01,
+  "unrealized_pnl": -1125.01
+ },
+ {
+  "ts": "2026-02-25T00:05:53.861653+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-25T00:06:54.047318+00:00",
+  "total_value": 98935.0,
+  "cash": 85700.0,
+  "core": 13235.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1065.0,
+  "unrealized_pnl": -1065.0
+ },
+ {
+  "ts": "2026-02-25T00:07:54.212571+00:00",
+  "total_value": 98945.01,
+  "cash": 85700.0,
+  "core": 13245.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1054.99,
+  "unrealized_pnl": -1054.99
+ },
+ {
+  "ts": "2026-02-25T00:08:54.397018+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T00:09:54.579655+00:00",
+  "total_value": 98905.0,
+  "cash": 85700.0,
+  "core": 13205.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1095.0,
+  "unrealized_pnl": -1095.0
+ },
+ {
+  "ts": "2026-02-25T00:10:54.763015+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-25T00:11:54.920957+00:00",
+  "total_value": 98774.99,
+  "cash": 85700.0,
+  "core": 13074.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1225.01,
+  "unrealized_pnl": -1225.01
+ },
+ {
+  "ts": "2026-02-25T00:12:55.085714+00:00",
+  "total_value": 98785.0,
+  "cash": 85700.0,
+  "core": 13085.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1215.0,
+  "unrealized_pnl": -1215.0
+ },
+ {
+  "ts": "2026-02-25T00:13:55.239510+00:00",
+  "total_value": 98785.0,
+  "cash": 85700.0,
+  "core": 13085.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1215.0,
+  "unrealized_pnl": -1215.0
+ },
+ {
+  "ts": "2026-02-25T00:14:55.422631+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-25T00:15:55.726729+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-25T00:16:55.926209+00:00",
+  "total_value": 98785.0,
+  "cash": 85700.0,
+  "core": 13085.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1215.0,
+  "unrealized_pnl": -1215.0
+ },
+ {
+  "ts": "2026-02-25T00:17:56.150354+00:00",
+  "total_value": 98774.99,
+  "cash": 85700.0,
+  "core": 13074.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1225.01,
+  "unrealized_pnl": -1225.01
+ },
+ {
+  "ts": "2026-02-25T00:18:56.313113+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-25T00:19:56.477658+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-25T00:20:56.644434+00:00",
+  "total_value": 98785.0,
+  "cash": 85700.0,
+  "core": 13085.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1215.0,
+  "unrealized_pnl": -1215.0
+ },
+ {
+  "ts": "2026-02-25T00:21:56.853665+00:00",
+  "total_value": 98774.99,
+  "cash": 85700.0,
+  "core": 13074.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1225.01,
+  "unrealized_pnl": -1225.01
+ },
+ {
+  "ts": "2026-02-25T00:22:57.087823+00:00",
+  "total_value": 98795.01,
+  "cash": 85700.0,
+  "core": 13095.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1204.99,
+  "unrealized_pnl": -1204.99
+ },
+ {
+  "ts": "2026-02-25T00:23:57.282480+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-25T00:24:57.457890+00:00",
+  "total_value": 98755.0,
+  "cash": 85700.0,
+  "core": 13055.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1245.0,
+  "unrealized_pnl": -1245.0
+ },
+ {
+  "ts": "2026-02-25T00:25:57.657887+00:00",
+  "total_value": 98745.01,
+  "cash": 85700.0,
+  "core": 13045.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1254.99,
+  "unrealized_pnl": -1254.99
+ },
+ {
+  "ts": "2026-02-25T00:26:57.852816+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-25T00:27:58.041014+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-25T00:28:58.258793+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-25T00:29:58.410839+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-25T00:30:58.575643+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-25T00:31:58.730047+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-25T00:32:58.915203+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-25T00:33:59.113857+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-25T00:34:59.282295+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-25T00:35:59.438442+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-25T00:36:59.585613+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-25T00:37:59.728319+00:00",
+  "total_value": 98745.01,
+  "cash": 85700.0,
+  "core": 13045.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1254.99,
+  "unrealized_pnl": -1254.99
+ },
+ {
+  "ts": "2026-02-25T00:38:59.893355+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-25T00:40:00.077703+00:00",
+  "total_value": 98774.99,
+  "cash": 85700.0,
+  "core": 13074.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1225.01,
+  "unrealized_pnl": -1225.01
+ },
+ {
+  "ts": "2026-02-25T00:41:00.265913+00:00",
+  "total_value": 98715.0,
+  "cash": 85700.0,
+  "core": 13015.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1285.0,
+  "unrealized_pnl": -1285.0
+ },
+ {
+  "ts": "2026-02-25T00:42:00.477045+00:00",
+  "total_value": 98685.0,
+  "cash": 85700.0,
+  "core": 12985.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1315.0,
+  "unrealized_pnl": -1315.0
+ },
+ {
+  "ts": "2026-02-25T00:43:00.636220+00:00",
+  "total_value": 98685.0,
+  "cash": 85700.0,
+  "core": 12985.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1315.0,
+  "unrealized_pnl": -1315.0
+ },
+ {
+  "ts": "2026-02-25T00:44:00.786431+00:00",
+  "total_value": 98674.99,
+  "cash": 85700.0,
+  "core": 12974.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1325.01,
+  "unrealized_pnl": -1325.01
+ },
+ {
+  "ts": "2026-02-25T00:45:00.966421+00:00",
+  "total_value": 98674.99,
+  "cash": 85700.0,
+  "core": 12974.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1325.01,
+  "unrealized_pnl": -1325.01
+ },
+ {
+  "ts": "2026-02-25T00:46:01.185048+00:00",
+  "total_value": 98695.01,
+  "cash": 85700.0,
+  "core": 12995.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1304.99,
+  "unrealized_pnl": -1304.99
+ },
+ {
+  "ts": "2026-02-25T00:47:01.378122+00:00",
+  "total_value": 98674.99,
+  "cash": 85700.0,
+  "core": 12974.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1325.01,
+  "unrealized_pnl": -1325.01
+ },
+ {
+  "ts": "2026-02-25T00:48:01.552944+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-25T00:49:01.755262+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-25T00:50:01.982405+00:00",
+  "total_value": 98824.99,
+  "cash": 85700.0,
+  "core": 13124.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1175.01,
+  "unrealized_pnl": -1175.01
+ },
+ {
+  "ts": "2026-02-25T00:51:02.192837+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-25T00:52:02.362936+00:00",
+  "total_value": 98865.0,
+  "cash": 85700.0,
+  "core": 13165.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1135.0,
+  "unrealized_pnl": -1135.0
+ },
+ {
+  "ts": "2026-02-25T00:53:02.554284+00:00",
+  "total_value": 98874.99,
+  "cash": 85700.0,
+  "core": 13174.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1125.01,
+  "unrealized_pnl": -1125.01
+ },
+ {
+  "ts": "2026-02-25T00:54:02.745920+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-25T00:55:02.949879+00:00",
+  "total_value": 98935.0,
+  "cash": 85700.0,
+  "core": 13235.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1065.0,
+  "unrealized_pnl": -1065.0
+ },
+ {
+  "ts": "2026-02-25T00:56:03.146880+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T00:57:03.350984+00:00",
+  "total_value": 98895.01,
+  "cash": 85700.0,
+  "core": 13195.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1104.99,
+  "unrealized_pnl": -1104.99
+ },
+ {
+  "ts": "2026-02-25T00:58:03.526855+00:00",
+  "total_value": 98965.0,
+  "cash": 85700.0,
+  "core": 13265.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1035.0,
+  "unrealized_pnl": -1035.0
+ },
+ {
+  "ts": "2026-02-25T00:59:03.691449+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T01:00:03.875411+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T01:01:04.064069+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T01:02:04.294017+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T01:03:04.527464+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T01:04:04.715692+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T01:05:04.893254+00:00",
+  "total_value": 99015.0,
+  "cash": 85700.0,
+  "core": 13315.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -985.0,
+  "unrealized_pnl": -985.0
+ },
+ {
+  "ts": "2026-02-25T01:06:05.205564+00:00",
+  "total_value": 99005.0,
+  "cash": 85700.0,
+  "core": 13305.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -995.0,
+  "unrealized_pnl": -995.0
+ },
+ {
+  "ts": "2026-02-25T01:07:05.426926+00:00",
+  "total_value": 99005.0,
+  "cash": 85700.0,
+  "core": 13305.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -995.0,
+  "unrealized_pnl": -995.0
+ },
+ {
+  "ts": "2026-02-25T01:08:05.595144+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T01:09:05.807755+00:00",
+  "total_value": 98985.0,
+  "cash": 85700.0,
+  "core": 13285.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1015.0,
+  "unrealized_pnl": -1015.0
+ },
+ {
+  "ts": "2026-02-25T01:10:05.974918+00:00",
+  "total_value": 98985.0,
+  "cash": 85700.0,
+  "core": 13285.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1015.0,
+  "unrealized_pnl": -1015.0
+ },
+ {
+  "ts": "2026-02-25T01:11:06.159172+00:00",
+  "total_value": 98945.01,
+  "cash": 85700.0,
+  "core": 13245.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1054.99,
+  "unrealized_pnl": -1054.99
+ },
+ {
+  "ts": "2026-02-25T01:12:06.335440+00:00",
+  "total_value": 98965.0,
+  "cash": 85700.0,
+  "core": 13265.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1035.0,
+  "unrealized_pnl": -1035.0
+ },
+ {
+  "ts": "2026-02-25T01:13:06.530860+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T01:14:06.726967+00:00",
+  "total_value": 99015.0,
+  "cash": 85700.0,
+  "core": 13315.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -985.0,
+  "unrealized_pnl": -985.0
+ },
+ {
+  "ts": "2026-02-25T01:15:06.897043+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T01:16:07.119877+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T01:17:07.281747+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T01:18:07.458734+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T01:19:07.646193+00:00",
+  "total_value": 99024.99,
+  "cash": 85700.0,
+  "core": 13324.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -975.01,
+  "unrealized_pnl": -975.01
+ },
+ {
+  "ts": "2026-02-25T01:20:07.857676+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T01:21:08.032216+00:00",
+  "total_value": 98974.99,
+  "cash": 85700.0,
+  "core": 13274.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1025.01,
+  "unrealized_pnl": -1025.01
+ },
+ {
+  "ts": "2026-02-25T01:22:08.232508+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T01:23:08.429927+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T01:24:08.615807+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T01:25:08.783489+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T01:26:08.960071+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T01:27:09.153028+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T01:28:09.310585+00:00",
+  "total_value": 99124.99,
+  "cash": 85700.0,
+  "core": 13424.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -875.01,
+  "unrealized_pnl": -875.01
+ },
+ {
+  "ts": "2026-02-25T01:29:09.512168+00:00",
+  "total_value": 99135.0,
+  "cash": 85700.0,
+  "core": 13435.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -865.0,
+  "unrealized_pnl": -865.0
+ },
+ {
+  "ts": "2026-02-25T01:30:09.715044+00:00",
+  "total_value": 99085.0,
+  "cash": 85700.0,
+  "core": 13385.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -915.0,
+  "unrealized_pnl": -915.0
+ },
+ {
+  "ts": "2026-02-25T01:31:09.902392+00:00",
+  "total_value": 99095.01,
+  "cash": 85700.0,
+  "core": 13395.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -904.99,
+  "unrealized_pnl": -904.99
+ },
+ {
+  "ts": "2026-02-25T01:32:10.093575+00:00",
+  "total_value": 99074.99,
+  "cash": 85700.0,
+  "core": 13374.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -925.01,
+  "unrealized_pnl": -925.01
+ },
+ {
+  "ts": "2026-02-25T01:33:10.248846+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T01:34:10.415050+00:00",
+  "total_value": 98965.0,
+  "cash": 85700.0,
+  "core": 13265.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1035.0,
+  "unrealized_pnl": -1035.0
+ },
+ {
+  "ts": "2026-02-25T01:35:10.583933+00:00",
+  "total_value": 98965.0,
+  "cash": 85700.0,
+  "core": 13265.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1035.0,
+  "unrealized_pnl": -1035.0
+ },
+ {
+  "ts": "2026-02-25T01:36:10.783083+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T01:37:10.979527+00:00",
+  "total_value": 99015.0,
+  "cash": 85700.0,
+  "core": 13315.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -985.0,
+  "unrealized_pnl": -985.0
+ },
+ {
+  "ts": "2026-02-25T01:38:11.194995+00:00",
+  "total_value": 99005.0,
+  "cash": 85700.0,
+  "core": 13305.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -995.0,
+  "unrealized_pnl": -995.0
+ },
+ {
+  "ts": "2026-02-25T01:39:11.429207+00:00",
+  "total_value": 99005.0,
+  "cash": 85700.0,
+  "core": 13305.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -995.0,
+  "unrealized_pnl": -995.0
+ },
+ {
+  "ts": "2026-02-25T01:40:11.634458+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T01:41:11.816989+00:00",
+  "total_value": 99015.0,
+  "cash": 85700.0,
+  "core": 13315.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -985.0,
+  "unrealized_pnl": -985.0
+ },
+ {
+  "ts": "2026-02-25T01:42:12.001987+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T01:43:12.162951+00:00",
+  "total_value": 99095.01,
+  "cash": 85700.0,
+  "core": 13395.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -904.99,
+  "unrealized_pnl": -904.99
+ },
+ {
+  "ts": "2026-02-25T01:44:12.363962+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T01:45:12.541733+00:00",
+  "total_value": 99115.0,
+  "cash": 85700.0,
+  "core": 13415.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -885.0,
+  "unrealized_pnl": -885.0
+ },
+ {
+  "ts": "2026-02-25T01:46:12.740028+00:00",
+  "total_value": 99124.99,
+  "cash": 85700.0,
+  "core": 13424.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -875.01,
+  "unrealized_pnl": -875.01
+ },
+ {
+  "ts": "2026-02-25T01:47:12.942309+00:00",
+  "total_value": 99155.0,
+  "cash": 85700.0,
+  "core": 13455.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -845.0,
+  "unrealized_pnl": -845.0
+ },
+ {
+  "ts": "2026-02-25T01:48:13.135997+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T01:49:13.316203+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T01:50:13.485993+00:00",
+  "total_value": 99174.99,
+  "cash": 85700.0,
+  "core": 13474.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -825.01,
+  "unrealized_pnl": -825.01
+ },
+ {
+  "ts": "2026-02-25T01:51:13.649386+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T01:52:13.808782+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T01:53:14.026319+00:00",
+  "total_value": 99174.99,
+  "cash": 85700.0,
+  "core": 13474.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -825.01,
+  "unrealized_pnl": -825.01
+ },
+ {
+  "ts": "2026-02-25T01:54:14.205734+00:00",
+  "total_value": 99155.0,
+  "cash": 85700.0,
+  "core": 13455.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -845.0,
+  "unrealized_pnl": -845.0
+ },
+ {
+  "ts": "2026-02-25T01:55:14.417862+00:00",
+  "total_value": 99174.99,
+  "cash": 85700.0,
+  "core": 13474.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -825.01,
+  "unrealized_pnl": -825.01
+ },
+ {
+  "ts": "2026-02-25T01:56:14.608317+00:00",
+  "total_value": 99245.01,
+  "cash": 85700.0,
+  "core": 13545.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -754.99,
+  "unrealized_pnl": -754.99
+ },
+ {
+  "ts": "2026-02-25T01:57:14.808919+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T01:58:15.020113+00:00",
+  "total_value": 99245.01,
+  "cash": 85700.0,
+  "core": 13545.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -754.99,
+  "unrealized_pnl": -754.99
+ },
+ {
+  "ts": "2026-02-25T01:59:15.217081+00:00",
+  "total_value": 99245.01,
+  "cash": 85700.0,
+  "core": 13545.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -754.99,
+  "unrealized_pnl": -754.99
+ },
+ {
+  "ts": "2026-02-25T02:00:15.378208+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T02:01:15.524614+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T02:02:15.681711+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T02:03:15.872526+00:00",
+  "total_value": 99155.0,
+  "cash": 85700.0,
+  "core": 13455.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -845.0,
+  "unrealized_pnl": -845.0
+ },
+ {
+  "ts": "2026-02-25T02:04:16.066228+00:00",
+  "total_value": 99165.0,
+  "cash": 85700.0,
+  "core": 13465.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -835.0,
+  "unrealized_pnl": -835.0
+ },
+ {
+  "ts": "2026-02-25T02:05:16.237717+00:00",
+  "total_value": 99165.0,
+  "cash": 85700.0,
+  "core": 13465.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -835.0,
+  "unrealized_pnl": -835.0
+ },
+ {
+  "ts": "2026-02-25T02:06:16.420373+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T02:07:16.601322+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T02:08:16.791592+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T02:09:17.018076+00:00",
+  "total_value": 99274.99,
+  "cash": 85700.0,
+  "core": 13574.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -725.01,
+  "unrealized_pnl": -725.01
+ },
+ {
+  "ts": "2026-02-25T02:10:17.194902+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T02:11:17.395794+00:00",
+  "total_value": 99274.99,
+  "cash": 85700.0,
+  "core": 13574.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -725.01,
+  "unrealized_pnl": -725.01
+ },
+ {
+  "ts": "2026-02-25T02:12:17.637224+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T02:13:17.832664+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T02:14:17.999806+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T02:15:18.165327+00:00",
+  "total_value": 99174.99,
+  "cash": 85700.0,
+  "core": 13474.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -825.01,
+  "unrealized_pnl": -825.01
+ },
+ {
+  "ts": "2026-02-25T02:16:18.380155+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T02:17:18.557594+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T02:18:18.759624+00:00",
+  "total_value": 99195.01,
+  "cash": 85700.0,
+  "core": 13495.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -804.99,
+  "unrealized_pnl": -804.99
+ },
+ {
+  "ts": "2026-02-25T02:19:18.924299+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T02:20:19.094421+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T02:21:19.268788+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T02:22:19.420183+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T02:23:19.612596+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T02:24:19.790596+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T02:25:19.978541+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T02:26:20.129793+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T02:27:20.307855+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T02:28:20.490051+00:00",
+  "total_value": 99195.01,
+  "cash": 85700.0,
+  "core": 13495.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -804.99,
+  "unrealized_pnl": -804.99
+ },
+ {
+  "ts": "2026-02-25T02:29:20.709271+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T02:30:20.901890+00:00",
+  "total_value": 99265.0,
+  "cash": 85700.0,
+  "core": 13565.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -735.0,
+  "unrealized_pnl": -735.0
+ },
+ {
+  "ts": "2026-02-25T02:31:21.100226+00:00",
+  "total_value": 99315.0,
+  "cash": 85700.0,
+  "core": 13615.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -685.0,
+  "unrealized_pnl": -685.0
+ },
+ {
+  "ts": "2026-02-25T02:32:21.309927+00:00",
+  "total_value": 99345.01,
+  "cash": 85700.0,
+  "core": 13645.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -654.99,
+  "unrealized_pnl": -654.99
+ },
+ {
+  "ts": "2026-02-25T02:33:21.456965+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T02:34:21.616728+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T02:35:21.820205+00:00",
+  "total_value": 99245.01,
+  "cash": 85700.0,
+  "core": 13545.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -754.99,
+  "unrealized_pnl": -754.99
+ },
+ {
+  "ts": "2026-02-25T02:36:21.993199+00:00",
+  "total_value": 99274.99,
+  "cash": 85700.0,
+  "core": 13574.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -725.01,
+  "unrealized_pnl": -725.01
+ },
+ {
+  "ts": "2026-02-25T02:37:22.154145+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T02:38:22.341158+00:00",
+  "total_value": 99305.0,
+  "cash": 85700.0,
+  "core": 13605.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -695.0,
+  "unrealized_pnl": -695.0
+ },
+ {
+  "ts": "2026-02-25T02:39:22.693045+00:00",
+  "total_value": 99305.0,
+  "cash": 85700.0,
+  "core": 13605.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -695.0,
+  "unrealized_pnl": -695.0
+ },
+ {
+  "ts": "2026-02-25T02:40:22.866216+00:00",
+  "total_value": 99295.01,
+  "cash": 85700.0,
+  "core": 13595.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -704.99,
+  "unrealized_pnl": -704.99
+ },
+ {
+  "ts": "2026-02-25T02:41:23.026083+00:00",
+  "total_value": 99335.0,
+  "cash": 85700.0,
+  "core": 13635.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -665.0,
+  "unrealized_pnl": -665.0
+ },
+ {
+  "ts": "2026-02-25T02:42:23.197836+00:00",
+  "total_value": 99395.01,
+  "cash": 85700.0,
+  "core": 13695.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -604.99,
+  "unrealized_pnl": -604.99
+ },
+ {
+  "ts": "2026-02-25T02:43:23.373297+00:00",
+  "total_value": 99395.01,
+  "cash": 85700.0,
+  "core": 13695.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -604.99,
+  "unrealized_pnl": -604.99
+ },
+ {
+  "ts": "2026-02-25T02:44:23.553444+00:00",
+  "total_value": 99345.01,
+  "cash": 85700.0,
+  "core": 13645.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -654.99,
+  "unrealized_pnl": -654.99
+ },
+ {
+  "ts": "2026-02-25T02:45:23.753000+00:00",
+  "total_value": 99274.99,
+  "cash": 85700.0,
+  "core": 13574.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -725.01,
+  "unrealized_pnl": -725.01
+ },
+ {
+  "ts": "2026-02-25T02:46:23.942289+00:00",
+  "total_value": 99305.0,
+  "cash": 85700.0,
+  "core": 13605.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -695.0,
+  "unrealized_pnl": -695.0
+ },
+ {
+  "ts": "2026-02-25T02:47:24.159091+00:00",
+  "total_value": 99324.99,
+  "cash": 85700.0,
+  "core": 13624.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -675.01,
+  "unrealized_pnl": -675.01
+ },
+ {
+  "ts": "2026-02-25T02:48:24.342304+00:00",
+  "total_value": 99365.0,
+  "cash": 85700.0,
+  "core": 13665.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -635.0,
+  "unrealized_pnl": -635.0
+ },
+ {
+  "ts": "2026-02-25T02:49:24.557267+00:00",
+  "total_value": 99345.01,
+  "cash": 85700.0,
+  "core": 13645.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -654.99,
+  "unrealized_pnl": -654.99
+ },
+ {
+  "ts": "2026-02-25T02:50:24.729491+00:00",
+  "total_value": 99265.0,
+  "cash": 85700.0,
+  "core": 13565.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -735.0,
+  "unrealized_pnl": -735.0
+ },
+ {
+  "ts": "2026-02-25T02:51:24.875798+00:00",
+  "total_value": 99315.0,
+  "cash": 85700.0,
+  "core": 13615.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -685.0,
+  "unrealized_pnl": -685.0
+ },
+ {
+  "ts": "2026-02-25T02:52:25.093403+00:00",
+  "total_value": 99305.0,
+  "cash": 85700.0,
+  "core": 13605.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -695.0,
+  "unrealized_pnl": -695.0
+ },
+ {
+  "ts": "2026-02-25T02:53:25.273122+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T02:54:25.447718+00:00",
+  "total_value": 99324.99,
+  "cash": 85700.0,
+  "core": 13624.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -675.01,
+  "unrealized_pnl": -675.01
+ },
+ {
+  "ts": "2026-02-25T02:55:25.651100+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T02:56:25.819434+00:00",
+  "total_value": 99295.01,
+  "cash": 85700.0,
+  "core": 13595.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -704.99,
+  "unrealized_pnl": -704.99
+ },
+ {
+  "ts": "2026-02-25T02:57:25.993649+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T02:58:26.179729+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T02:59:26.343722+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T03:00:26.513558+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T03:01:26.667806+00:00",
+  "total_value": 99165.0,
+  "cash": 85700.0,
+  "core": 13465.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -835.0,
+  "unrealized_pnl": -835.0
+ },
+ {
+  "ts": "2026-02-25T03:02:26.821077+00:00",
+  "total_value": 99195.01,
+  "cash": 85700.0,
+  "core": 13495.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -804.99,
+  "unrealized_pnl": -804.99
+ },
+ {
+  "ts": "2026-02-25T03:03:26.995725+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T03:04:27.168689+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T03:05:27.333417+00:00",
+  "total_value": 99295.01,
+  "cash": 85700.0,
+  "core": 13595.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -704.99,
+  "unrealized_pnl": -704.99
+ },
+ {
+  "ts": "2026-02-25T03:06:27.516187+00:00",
+  "total_value": 99274.99,
+  "cash": 85700.0,
+  "core": 13574.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -725.01,
+  "unrealized_pnl": -725.01
+ },
+ {
+  "ts": "2026-02-25T03:07:27.673377+00:00",
+  "total_value": 99295.01,
+  "cash": 85700.0,
+  "core": 13595.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -704.99,
+  "unrealized_pnl": -704.99
+ },
+ {
+  "ts": "2026-02-25T03:08:27.850607+00:00",
+  "total_value": 99374.99,
+  "cash": 85700.0,
+  "core": 13674.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -625.01,
+  "unrealized_pnl": -625.01
+ },
+ {
+  "ts": "2026-02-25T03:09:28.044496+00:00",
+  "total_value": 99385.0,
+  "cash": 85700.0,
+  "core": 13685.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -615.0,
+  "unrealized_pnl": -615.0
+ },
+ {
+  "ts": "2026-02-25T03:10:28.246684+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-25T03:11:28.467468+00:00",
+  "total_value": 99405.0,
+  "cash": 85700.0,
+  "core": 13705.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -595.0,
+  "unrealized_pnl": -595.0
+ },
+ {
+  "ts": "2026-02-25T03:12:28.644017+00:00",
+  "total_value": 99365.0,
+  "cash": 85700.0,
+  "core": 13665.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -635.0,
+  "unrealized_pnl": -635.0
+ },
+ {
+  "ts": "2026-02-25T03:13:28.819278+00:00",
+  "total_value": 99345.01,
+  "cash": 85700.0,
+  "core": 13645.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -654.99,
+  "unrealized_pnl": -654.99
+ },
+ {
+  "ts": "2026-02-25T03:14:28.995877+00:00",
+  "total_value": 99355.0,
+  "cash": 85700.0,
+  "core": 13655.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -645.0,
+  "unrealized_pnl": -645.0
+ },
+ {
+  "ts": "2026-02-25T03:15:29.175717+00:00",
+  "total_value": 99315.0,
+  "cash": 85700.0,
+  "core": 13615.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -685.0,
+  "unrealized_pnl": -685.0
+ },
+ {
+  "ts": "2026-02-25T03:16:29.361564+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T03:17:29.551139+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T03:18:29.700146+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T03:19:29.892636+00:00",
+  "total_value": 99155.0,
+  "cash": 85700.0,
+  "core": 13455.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -845.0,
+  "unrealized_pnl": -845.0
+ },
+ {
+  "ts": "2026-02-25T03:20:30.078276+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T03:21:30.251386+00:00",
+  "total_value": 99165.0,
+  "cash": 85700.0,
+  "core": 13465.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -835.0,
+  "unrealized_pnl": -835.0
+ },
+ {
+  "ts": "2026-02-25T03:22:30.444319+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T03:23:30.614594+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T03:24:30.787697+00:00",
+  "total_value": 99155.0,
+  "cash": 85700.0,
+  "core": 13455.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -845.0,
+  "unrealized_pnl": -845.0
+ },
+ {
+  "ts": "2026-02-25T03:25:30.977788+00:00",
+  "total_value": 99165.0,
+  "cash": 85700.0,
+  "core": 13465.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -835.0,
+  "unrealized_pnl": -835.0
+ },
+ {
+  "ts": "2026-02-25T03:26:31.206100+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T03:27:31.406333+00:00",
+  "total_value": 99024.99,
+  "cash": 85700.0,
+  "core": 13324.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -975.01,
+  "unrealized_pnl": -975.01
+ },
+ {
+  "ts": "2026-02-25T03:28:31.578850+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T03:29:31.815558+00:00",
+  "total_value": 99085.0,
+  "cash": 85700.0,
+  "core": 13385.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -915.0,
+  "unrealized_pnl": -915.0
+ },
+ {
+  "ts": "2026-02-25T03:30:32.005604+00:00",
+  "total_value": 99095.01,
+  "cash": 85700.0,
+  "core": 13395.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -904.99,
+  "unrealized_pnl": -904.99
+ },
+ {
+  "ts": "2026-02-25T03:31:32.170059+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T03:32:32.346990+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T03:33:32.520463+00:00",
+  "total_value": 98955.0,
+  "cash": 85700.0,
+  "core": 13255.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1045.0,
+  "unrealized_pnl": -1045.0
+ },
+ {
+  "ts": "2026-02-25T03:34:32.722222+00:00",
+  "total_value": 98965.0,
+  "cash": 85700.0,
+  "core": 13265.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1035.0,
+  "unrealized_pnl": -1035.0
+ },
+ {
+  "ts": "2026-02-25T03:35:32.900137+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T03:36:33.098210+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T03:37:33.259906+00:00",
+  "total_value": 99015.0,
+  "cash": 85700.0,
+  "core": 13315.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -985.0,
+  "unrealized_pnl": -985.0
+ },
+ {
+  "ts": "2026-02-25T03:38:33.435884+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T03:39:33.596239+00:00",
+  "total_value": 98985.0,
+  "cash": 85700.0,
+  "core": 13285.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1015.0,
+  "unrealized_pnl": -1015.0
+ },
+ {
+  "ts": "2026-02-25T03:40:33.767271+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T03:41:33.937897+00:00",
+  "total_value": 99024.99,
+  "cash": 85700.0,
+  "core": 13324.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -975.01,
+  "unrealized_pnl": -975.01
+ },
+ {
+  "ts": "2026-02-25T03:42:34.077926+00:00",
+  "total_value": 98945.01,
+  "cash": 85700.0,
+  "core": 13245.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1054.99,
+  "unrealized_pnl": -1054.99
+ },
+ {
+  "ts": "2026-02-25T03:43:34.280545+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T03:44:34.465150+00:00",
+  "total_value": 98785.0,
+  "cash": 85700.0,
+  "core": 13085.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1215.0,
+  "unrealized_pnl": -1215.0
+ },
+ {
+  "ts": "2026-02-25T03:45:34.644384+00:00",
+  "total_value": 98765.0,
+  "cash": 85700.0,
+  "core": 13065.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1235.0,
+  "unrealized_pnl": -1235.0
+ },
+ {
+  "ts": "2026-02-25T03:46:34.824709+00:00",
+  "total_value": 98724.99,
+  "cash": 85700.0,
+  "core": 13024.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1275.01,
+  "unrealized_pnl": -1275.01
+ },
+ {
+  "ts": "2026-02-25T03:47:35.016389+00:00",
+  "total_value": 98674.99,
+  "cash": 85700.0,
+  "core": 12974.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1325.01,
+  "unrealized_pnl": -1325.01
+ },
+ {
+  "ts": "2026-02-25T03:48:35.200201+00:00",
+  "total_value": 98845.01,
+  "cash": 85700.0,
+  "core": 13145.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1154.99,
+  "unrealized_pnl": -1154.99
+ },
+ {
+  "ts": "2026-02-25T03:49:35.371262+00:00",
+  "total_value": 98805.0,
+  "cash": 85700.0,
+  "core": 13105.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1195.0,
+  "unrealized_pnl": -1195.0
+ },
+ {
+  "ts": "2026-02-25T03:50:35.520089+00:00",
+  "total_value": 98815.0,
+  "cash": 85700.0,
+  "core": 13115.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1185.0,
+  "unrealized_pnl": -1185.0
+ },
+ {
+  "ts": "2026-02-25T03:51:35.727742+00:00",
+  "total_value": 98835.0,
+  "cash": 85700.0,
+  "core": 13135.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1165.0,
+  "unrealized_pnl": -1165.0
+ },
+ {
+  "ts": "2026-02-25T03:52:35.873218+00:00",
+  "total_value": 98855.0,
+  "cash": 85700.0,
+  "core": 13155.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1145.0,
+  "unrealized_pnl": -1145.0
+ },
+ {
+  "ts": "2026-02-25T03:53:36.056207+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T03:54:36.261349+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T03:55:36.441113+00:00",
+  "total_value": 98955.0,
+  "cash": 85700.0,
+  "core": 13255.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1045.0,
+  "unrealized_pnl": -1045.0
+ },
+ {
+  "ts": "2026-02-25T03:56:36.633888+00:00",
+  "total_value": 98965.0,
+  "cash": 85700.0,
+  "core": 13265.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1035.0,
+  "unrealized_pnl": -1035.0
+ },
+ {
+  "ts": "2026-02-25T03:57:36.817678+00:00",
+  "total_value": 99095.01,
+  "cash": 85700.0,
+  "core": 13395.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -904.99,
+  "unrealized_pnl": -904.99
+ },
+ {
+  "ts": "2026-02-25T03:58:37.002427+00:00",
+  "total_value": 99124.99,
+  "cash": 85700.0,
+  "core": 13424.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -875.01,
+  "unrealized_pnl": -875.01
+ },
+ {
+  "ts": "2026-02-25T03:59:37.176258+00:00",
+  "total_value": 99085.0,
+  "cash": 85700.0,
+  "core": 13385.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -915.0,
+  "unrealized_pnl": -915.0
+ },
+ {
+  "ts": "2026-02-25T04:00:37.376916+00:00",
+  "total_value": 99135.0,
+  "cash": 85700.0,
+  "core": 13435.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -865.0,
+  "unrealized_pnl": -865.0
+ },
+ {
+  "ts": "2026-02-25T04:01:37.570884+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T04:02:37.723163+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T04:03:37.903861+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T04:04:38.101100+00:00",
+  "total_value": 99265.0,
+  "cash": 85700.0,
+  "core": 13565.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -735.0,
+  "unrealized_pnl": -735.0
+ },
+ {
+  "ts": "2026-02-25T04:05:38.283922+00:00",
+  "total_value": 99285.0,
+  "cash": 85700.0,
+  "core": 13585.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -715.0,
+  "unrealized_pnl": -715.0
+ },
+ {
+  "ts": "2026-02-25T04:06:38.447309+00:00",
+  "total_value": 99345.01,
+  "cash": 85700.0,
+  "core": 13645.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -654.99,
+  "unrealized_pnl": -654.99
+ },
+ {
+  "ts": "2026-02-25T04:07:38.630261+00:00",
+  "total_value": 99265.0,
+  "cash": 85700.0,
+  "core": 13565.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -735.0,
+  "unrealized_pnl": -735.0
+ },
+ {
+  "ts": "2026-02-25T04:08:38.779175+00:00",
+  "total_value": 99265.0,
+  "cash": 85700.0,
+  "core": 13565.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -735.0,
+  "unrealized_pnl": -735.0
+ },
+ {
+  "ts": "2026-02-25T04:09:38.926787+00:00",
+  "total_value": 99274.99,
+  "cash": 85700.0,
+  "core": 13574.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -725.01,
+  "unrealized_pnl": -725.01
+ },
+ {
+  "ts": "2026-02-25T04:10:39.100445+00:00",
+  "total_value": 98885.0,
+  "cash": 85700.0,
+  "core": 13185.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1115.0,
+  "unrealized_pnl": -1115.0
+ },
+ {
+  "ts": "2026-02-25T04:11:39.281310+00:00",
+  "total_value": 99124.99,
+  "cash": 85700.0,
+  "core": 13424.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -875.01,
+  "unrealized_pnl": -875.01
+ },
+ {
+  "ts": "2026-02-25T04:12:39.455919+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T04:13:39.635913+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T04:14:39.798543+00:00",
+  "total_value": 99074.99,
+  "cash": 85700.0,
+  "core": 13374.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -925.01,
+  "unrealized_pnl": -925.01
+ },
+ {
+  "ts": "2026-02-25T04:15:40.004391+00:00",
+  "total_value": 99105.0,
+  "cash": 85700.0,
+  "core": 13405.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -895.0,
+  "unrealized_pnl": -895.0
+ },
+ {
+  "ts": "2026-02-25T04:16:40.181180+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T04:17:40.355924+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T04:18:40.519016+00:00",
+  "total_value": 99065.0,
+  "cash": 85700.0,
+  "core": 13365.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -935.0,
+  "unrealized_pnl": -935.0
+ },
+ {
+  "ts": "2026-02-25T04:19:40.712997+00:00",
+  "total_value": 99045.01,
+  "cash": 85700.0,
+  "core": 13345.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -954.99,
+  "unrealized_pnl": -954.99
+ },
+ {
+  "ts": "2026-02-25T04:20:40.947642+00:00",
+  "total_value": 98985.0,
+  "cash": 85700.0,
+  "core": 13285.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1015.0,
+  "unrealized_pnl": -1015.0
+ },
+ {
+  "ts": "2026-02-25T04:21:41.132325+00:00",
+  "total_value": 98985.0,
+  "cash": 85700.0,
+  "core": 13285.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1015.0,
+  "unrealized_pnl": -1015.0
+ },
+ {
+  "ts": "2026-02-25T04:22:41.289520+00:00",
+  "total_value": 98974.99,
+  "cash": 85700.0,
+  "core": 13274.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1025.01,
+  "unrealized_pnl": -1025.01
+ },
+ {
+  "ts": "2026-02-25T04:23:41.452854+00:00",
+  "total_value": 98935.0,
+  "cash": 85700.0,
+  "core": 13235.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1065.0,
+  "unrealized_pnl": -1065.0
+ },
+ {
+  "ts": "2026-02-25T04:24:41.634073+00:00",
+  "total_value": 98935.0,
+  "cash": 85700.0,
+  "core": 13235.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1065.0,
+  "unrealized_pnl": -1065.0
+ },
+ {
+  "ts": "2026-02-25T04:25:41.838319+00:00",
+  "total_value": 98974.99,
+  "cash": 85700.0,
+  "core": 13274.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1025.01,
+  "unrealized_pnl": -1025.01
+ },
+ {
+  "ts": "2026-02-25T04:26:41.993690+00:00",
+  "total_value": 98974.99,
+  "cash": 85700.0,
+  "core": 13274.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1025.01,
+  "unrealized_pnl": -1025.01
+ },
+ {
+  "ts": "2026-02-25T04:27:42.192949+00:00",
+  "total_value": 98935.0,
+  "cash": 85700.0,
+  "core": 13235.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1065.0,
+  "unrealized_pnl": -1065.0
+ },
+ {
+  "ts": "2026-02-25T04:28:42.365519+00:00",
+  "total_value": 98974.99,
+  "cash": 85700.0,
+  "core": 13274.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1025.01,
+  "unrealized_pnl": -1025.01
+ },
+ {
+  "ts": "2026-02-25T04:29:42.520336+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T04:30:42.718279+00:00",
+  "total_value": 98924.99,
+  "cash": 85700.0,
+  "core": 13224.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1075.01,
+  "unrealized_pnl": -1075.01
+ },
+ {
+  "ts": "2026-02-25T04:31:42.888078+00:00",
+  "total_value": 98955.0,
+  "cash": 85700.0,
+  "core": 13255.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1045.0,
+  "unrealized_pnl": -1045.0
+ },
+ {
+  "ts": "2026-02-25T04:32:43.092161+00:00",
+  "total_value": 98974.99,
+  "cash": 85700.0,
+  "core": 13274.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1025.01,
+  "unrealized_pnl": -1025.01
+ },
+ {
+  "ts": "2026-02-25T04:33:43.247334+00:00",
+  "total_value": 98995.01,
+  "cash": 85700.0,
+  "core": 13295.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1004.99,
+  "unrealized_pnl": -1004.99
+ },
+ {
+  "ts": "2026-02-25T04:34:43.449067+00:00",
+  "total_value": 98985.0,
+  "cash": 85700.0,
+  "core": 13285.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -1015.0,
+  "unrealized_pnl": -1015.0
+ },
+ {
+  "ts": "2026-02-25T04:35:43.623959+00:00",
+  "total_value": 99015.0,
+  "cash": 85700.0,
+  "core": 13315.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -985.0,
+  "unrealized_pnl": -985.0
+ },
+ {
+  "ts": "2026-02-25T04:36:43.789329+00:00",
+  "total_value": 99035.0,
+  "cash": 85700.0,
+  "core": 13335.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -965.0,
+  "unrealized_pnl": -965.0
+ },
+ {
+  "ts": "2026-02-25T04:37:43.950914+00:00",
+  "total_value": 99055.0,
+  "cash": 85700.0,
+  "core": 13355.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -945.0,
+  "unrealized_pnl": -945.0
+ },
+ {
+  "ts": "2026-02-25T04:38:44.114914+00:00",
+  "total_value": 99085.0,
+  "cash": 85700.0,
+  "core": 13385.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -915.0,
+  "unrealized_pnl": -915.0
+ },
+ {
+  "ts": "2026-02-25T04:39:44.315121+00:00",
+  "total_value": 99135.0,
+  "cash": 85700.0,
+  "core": 13435.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -865.0,
+  "unrealized_pnl": -865.0
+ },
+ {
+  "ts": "2026-02-25T04:40:44.492100+00:00",
+  "total_value": 99155.0,
+  "cash": 85700.0,
+  "core": 13455.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -845.0,
+  "unrealized_pnl": -845.0
+ },
+ {
+  "ts": "2026-02-25T04:41:44.673952+00:00",
+  "total_value": 99185.0,
+  "cash": 85700.0,
+  "core": 13485.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -815.0,
+  "unrealized_pnl": -815.0
+ },
+ {
+  "ts": "2026-02-25T04:42:44.856526+00:00",
+  "total_value": 99195.01,
+  "cash": 85700.0,
+  "core": 13495.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -804.99,
+  "unrealized_pnl": -804.99
+ },
+ {
+  "ts": "2026-02-25T04:43:45.051232+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T04:44:45.220045+00:00",
+  "total_value": 99235.0,
+  "cash": 85700.0,
+  "core": 13535.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -765.0,
+  "unrealized_pnl": -765.0
+ },
+ {
+  "ts": "2026-02-25T04:45:45.408180+00:00",
+  "total_value": 99245.01,
+  "cash": 85700.0,
+  "core": 13545.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -754.99,
+  "unrealized_pnl": -754.99
+ },
+ {
+  "ts": "2026-02-25T04:46:45.593419+00:00",
+  "total_value": 99245.01,
+  "cash": 85700.0,
+  "core": 13545.01,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -754.99,
+  "unrealized_pnl": -754.99
+ },
+ {
+  "ts": "2026-02-25T04:47:45.766612+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T04:48:45.944983+00:00",
+  "total_value": 99224.99,
+  "cash": 85700.0,
+  "core": 13524.99,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -775.01,
+  "unrealized_pnl": -775.01
+ },
+ {
+  "ts": "2026-02-25T04:49:46.121194+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T04:50:46.285514+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T04:51:46.459523+00:00",
+  "total_value": 99255.0,
+  "cash": 85700.0,
+  "core": 13555.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -745.0,
+  "unrealized_pnl": -745.0
+ },
+ {
+  "ts": "2026-02-25T04:52:46.670860+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T04:53:46.818412+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T04:54:46.982325+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T04:55:47.153703+00:00",
+  "total_value": 99205.0,
+  "cash": 85700.0,
+  "core": 13505.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -795.0,
+  "unrealized_pnl": -795.0
+ },
+ {
+  "ts": "2026-02-25T04:56:47.295506+00:00",
+  "total_value": 99215.0,
+  "cash": 85700.0,
+  "core": 13515.0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": -785.0,
+  "unrealized_pnl": -785.0
+ },
+ {
+  "ts": "2026-02-25T04:57:47.299292+00:00",
+  "total_value": 100000.0,
+  "cash": 100000.0,
+  "core": 0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": 0.0,
+  "unrealized_pnl": 0.0
+ },
+ {
+  "ts": "2026-02-25T04:58:47.302868+00:00",
+  "total_value": 100000.0,
+  "cash": 100000.0,
+  "core": 0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": 0.0,
+  "unrealized_pnl": 0.0
+ },
+ {
+  "ts": "2026-02-25T04:59:47.306451+00:00",
+  "total_value": 100000.0,
+  "cash": 100000.0,
+  "core": 0,
+  "vrp": 0,
+  "selector": 0,
+  "total_pnl": 0.0,
+  "unrealized_pnl": 0.0
  }
 ]

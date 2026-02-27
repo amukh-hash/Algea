@@ -22,10 +22,33 @@ from backend.app.schemas.fill_position import (
     normalize_fill,
     normalize_position,
 )
+import re
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_STATE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "paper_account"
+
+# Approximate CME initial margin per contract (paper-mode defaults)
+_MARGIN_PER_CONTRACT: dict[str, float] = {
+    "ES": 13_200, "NQ": 18_700, "RTY": 7_150, "YM": 9_500,
+    "MES": 1_320, "MNQ": 1_870, "MYM": 950, "M2K": 715,
+    "CL": 6_500, "GC": 10_000, "SI": 9_000, "HG": 4_500,
+    "ZN": 2_200, "ZB": 4_400,
+    "6E": 2_500, "6J": 3_300, "6B": 2_500, "6A": 1_800,
+}
+
+
+def _parse_futures_root(symbol: str) -> str | None:
+    """Return futures root if symbol looks like a CME futures ticker, else None.
+
+    E.g. RTYM6 -> RTY, ESZ5 -> ES, MESZ25 -> MES.
+    """
+    m = re.match(r"^([A-Z0-9]{1,4}?)([FGHJKMNQUVXZ]\d{1,2})$", symbol)
+    if m:
+        root = m.group(1)
+        if root in _MARGIN_PER_CONTRACT:
+            return root
+    return None
 
 
 @dataclass
@@ -256,15 +279,26 @@ class PersistentPaperBroker:
         # Try live
         return self.get_quote(symbol)
 
+    def _cash_impact(self, symbol: str, signed_qty: float, price: float) -> float:
+        """Return the cash debit/credit for a fill.
+
+        For equities: cash impact = signed_qty * price (buy costs, sell receives).
+        For futures: cash is NOT touched — NAV is computed via P&L, not cash.
+        """
+        root = _parse_futures_root(symbol)
+        if root is not None:
+            return 0.0  # futures don't affect cash; NAV uses starting_equity + P&L
+        return signed_qty * price
+
     def _apply_fill(self, symbol: str, signed_qty: float, price: float) -> None:
         """Update position and cash for a fill.  signed_qty is positive for buy."""
         pos = self._positions.get(symbol)
+        cash_delta = self._cash_impact(symbol, signed_qty, price)
 
         if pos is None:
             # New position
             self._positions[symbol] = _Position(symbol=symbol, qty=signed_qty, avg_cost=price)
-            # Deduct cash (buy costs money, sell receives)
-            self._cash -= signed_qty * price
+            self._cash -= cash_delta
         else:
             old_qty = pos.qty
             new_qty = old_qty + signed_qty
@@ -273,24 +307,35 @@ class PersistentPaperBroker:
                 # Was flat, opening fresh
                 pos.qty = new_qty
                 pos.avg_cost = price
-                self._cash -= signed_qty * price
+                self._cash -= cash_delta
             elif (old_qty > 0 and signed_qty > 0) or (old_qty < 0 and signed_qty < 0):
                 # Adding to position — average the cost
                 total_cost = pos.avg_cost * abs(old_qty) + price * abs(signed_qty)
                 pos.qty = new_qty
                 pos.avg_cost = total_cost / abs(new_qty)
-                self._cash -= signed_qty * price
+                self._cash -= cash_delta
             else:
                 # Reducing or flipping position — realize P&L on closed portion
                 closed_qty = min(abs(signed_qty), abs(old_qty))
-                if old_qty > 0:
-                    # Was long, selling
-                    realized = (price - pos.avg_cost) * closed_qty
+                root = _parse_futures_root(symbol)
+                if root is not None:
+                    # Futures P&L uses multiplier
+                    try:
+                        from sleeves.cooc_reversal_futures.contract_master import CONTRACT_MASTER
+                        multiplier = CONTRACT_MASTER[root].multiplier
+                    except (ImportError, KeyError):
+                        multiplier = 1.0
+                    if old_qty > 0:
+                        realized = (price - pos.avg_cost) * closed_qty * multiplier
+                    else:
+                        realized = (pos.avg_cost - price) * closed_qty * multiplier
                 else:
-                    # Was short, buying to cover
-                    realized = (pos.avg_cost - price) * closed_qty
+                    if old_qty > 0:
+                        realized = (price - pos.avg_cost) * closed_qty
+                    else:
+                        realized = (pos.avg_cost - price) * closed_qty
                 self._realized_pnl += realized
-                self._cash -= signed_qty * price
+                self._cash -= cash_delta
 
                 if abs(new_qty) < 1e-10:
                     # Position closed

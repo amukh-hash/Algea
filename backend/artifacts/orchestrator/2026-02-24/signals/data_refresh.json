@@ -1,7 +1,7 @@
 {
   "asof_date": "2026-02-24",
-  "refreshed_at": "2026-02-24T20:43:51.494424+00:00",
-  "session": "intraday",
+  "refreshed_at": "2026-02-25T04:55:23.346822+00:00",
+  "session": "premarket",
   "source": "orchestrator_fallback",
   "status": "ok"
 }

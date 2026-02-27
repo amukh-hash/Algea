@@ -397,39 +397,55 @@ def get_portfolio_summary() -> dict[str, Any]:
     config = OrchestratorConfig()
     today = date.today().isoformat()
 
-    # ── Load positions ───────────────────────────────────────────────
-    pos_path = _ARTIFACT_ROOT / today / "fills" / "positions.json"
-    positions: list[dict[str, Any]] = []
-    if pos_path.exists():
-        data = json.loads(pos_path.read_text(encoding="utf-8"))
-        positions = data.get("positions", [])
-
-    # Fallback: persistent paper account state (survives restarts)
-    paper_state_path = _ARTIFACT_ROOT / "paper_account" / "state.json"
-    paper_cash = 100_000.0
+    # ── Load persistent paper account state (source of truth) ────────
+    _PAPER_STATE_PATH = Path(__file__).resolve().parents[2] / "artifacts" / "paper_account" / "state.json"
+    paper_cash = config.account_equity
+    paper_starting_equity = config.account_equity
     paper_realized_pnl = 0.0
-    if not positions and paper_state_path.exists():
+    positions: list[dict[str, Any]] = []
+
+    logger.info("paper_state path=%s exists=%s", _PAPER_STATE_PATH, _PAPER_STATE_PATH.exists())
+    if _PAPER_STATE_PATH.exists():
         try:
-            pstate = json.loads(paper_state_path.read_text(encoding="utf-8-sig"))
+            pstate = json.loads(_PAPER_STATE_PATH.read_text(encoding="utf-8-sig"))
             positions = pstate.get("positions", [])
-            paper_cash = float(pstate.get("cash", 100_000.0))
+            paper_cash = float(pstate.get("cash", config.account_equity))
+            paper_starting_equity = float(pstate.get("starting_equity", config.account_equity))
             paper_realized_pnl = float(pstate.get("realized_pnl", 0.0))
+            logger.info("Loaded paper state: cash=%.2f equity=%.2f positions=%d", paper_cash, paper_starting_equity, len(positions))
+        except Exception as exc:
+            logger.warning("Failed to load paper state from %s: %s", _PAPER_STATE_PATH, exc)
+
+    # Override with today's date-scoped positions if fills_reconcile has run
+    pos_path = _ARTIFACT_ROOT / today / "fills" / "positions.json"
+    if pos_path.exists():
+        try:
+            data = json.loads(pos_path.read_text(encoding="utf-8"))
+            day_positions = data.get("positions", [])
+            if day_positions:
+                positions = day_positions
         except Exception:
             pass
 
-    # ── Fetch live prices (with strict timeout to keep response fast) ──
+    # ── Fetch live + closing prices (with strict timeout) ──────────────
     live_prices: dict[str, float] = {}
+    closing_prices: dict[str, float] = {}
     if positions:
         try:
-            from backend.app.api.live_prices import get_live_prices
+            from backend.app.api.live_prices import get_live_prices, get_closing_prices
             import concurrent.futures
             symbols = [p.get("symbol", "") for p in positions if p.get("symbol")]
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(get_live_prices, symbols)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                live_future = pool.submit(get_live_prices, symbols)
+                close_future = pool.submit(get_closing_prices, symbols)
                 try:
-                    live_prices = future.result(timeout=5)
+                    live_prices = live_future.result(timeout=5)
                 except concurrent.futures.TimeoutError:
-                    pass  # fall back to avg_cost — prices will cache for next call
+                    pass
+                try:
+                    closing_prices = close_future.result(timeout=5)
+                except concurrent.futures.TimeoutError:
+                    pass
         except Exception:
             pass  # fall back to avg_cost
 
@@ -450,7 +466,7 @@ def get_portfolio_summary() -> dict[str, Any]:
 
     for pos in positions:
         symbol = pos.get("symbol", "")
-        qty = float(pos.get("qty", 0))
+        qty = float(pos.get("qty", pos.get("quantity", 0)))
         avg_cost_raw = float(pos.get("avg_cost", 0))
         root = _parse_root(symbol)
         spec = CONTRACT_MASTER.get(root)
@@ -467,8 +483,9 @@ def get_portfolio_summary() -> dict[str, Any]:
             if multiplier > 1 and avg_cost > multiplier * 500:
                 avg_cost = avg_cost_raw / multiplier
 
-            # Live price is in raw index points
-            last_price = live_prices.get(symbol, float(pos.get("last_price", avg_cost)))
+            # Fallback: live price > closing price > avg_cost
+            fallback = closing_prices.get(symbol, avg_cost)
+            last_price = live_prices.get(symbol, float(pos.get("last_price", fallback)))
             # If no live price and fallback last_price also looks notional, normalize
             if symbol not in live_prices and last_price > multiplier * 500:
                 last_price = last_price / multiplier
@@ -483,7 +500,8 @@ def get_portfolio_summary() -> dict[str, Any]:
             instrument_type = "equity"
             multiplier = 1.0
             avg_cost = avg_cost_raw
-            last_price = live_prices.get(symbol, float(pos.get("last_price", avg_cost)))
+            fallback = closing_prices.get(symbol, avg_cost)
+            last_price = live_prices.get(symbol, float(pos.get("last_price", fallback)))
             notional = abs(qty * avg_cost)
             margin_posted = notional  # stocks = full cash outlay
             unrealized_pnl = (last_price - avg_cost) * qty
@@ -524,12 +542,18 @@ def get_portfolio_summary() -> dict[str, Any]:
         realized_pnl += float(pnl)
 
     # ── Portfolio-level computation ──────────────────────────────────
-    account_equity = config.account_equity
-    # Cash = equity - margin posted on futures - equity cost + realized P&L
-    cash = account_equity - total_margin - total_equity_cost + realized_pnl
-    # Total value = cash + margin deposits + equity positions + unrealized P&L
-    total_value = cash + total_margin + total_equity_cost + total_unrealized_pnl
+    account_equity = paper_starting_equity
+    cash = paper_cash
+
+    # NAV = starting equity + all P&L (independent of cash/margin model)
+    # This is always correct regardless of instrument type, flips, or margin
+    total_value = account_equity + paper_realized_pnl + total_unrealized_pnl
     total_pnl = total_value - account_equity
+
+    # Diagnostics for ongoing validation
+    equity_cost_basis = sum(
+        h["qty"] * h["avg_cost"] for h in holdings if h["instrument_type"] == "equity"
+    )
 
     # ── Per-sleeve summaries ─────────────────────────────────────────
     sleeves_summary = {}
@@ -552,11 +576,16 @@ def get_portfolio_summary() -> dict[str, Any]:
         "total_unrealized_pnl": round(total_unrealized_pnl, 2),
         "total_value": round(total_value, 2),
         "total_pnl": round(total_pnl, 2),
-        "realized_pnl": round(realized_pnl, 2),
+        "realized_pnl": round(paper_realized_pnl, 2),
         "position_count": len(holdings),
         "fill_count": len(fills),
         "holdings": holdings,
         "sleeves": sleeves_summary,
+        "_diagnostics": {
+            "nav_formula": "starting_equity + realized_pnl + unrealized_pnl",
+            "equity_cost_basis": round(equity_cost_basis, 2),
+            "required_margin": round(total_margin, 2),
+        },
     }
 
 

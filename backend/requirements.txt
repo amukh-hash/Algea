@@ -33,3 +33,7 @@ mlflow
 # Phase 1 Additions
 polars
 exchange_calendars
+
+# AI-Native Architecture
+pot>=0.9.0
+signatory>=1.2.0

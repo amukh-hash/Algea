@@ -53,6 +53,15 @@ class JobRunner:
             artifacts = []
         return JobResult("success", 0, None, str(stdout_path), str(stderr_path), artifacts)
 
+    def _run_handler_with_loop(self, job: Job, context: dict[str, Any], stdout_path: Path, stderr_path: Path) -> JobResult:
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return self._run_handler(job, context, stdout_path, stderr_path)
+        finally:
+            loop.close()
+
     def run(self, job: Job, context: dict[str, Any], jobs_dir: Path) -> JobResult:
         jobs_dir.mkdir(parents=True, exist_ok=True)
         stdout_path = jobs_dir / f"{job.name}.stdout.log"
@@ -65,7 +74,7 @@ class JobRunner:
             started = datetime.now().timestamp()
             try:
                 with ThreadPoolExecutor(max_workers=1) as pool:
-                    fut = pool.submit(self._run_handler, job, context, stdout_path, stderr_path)
+                    fut = pool.submit(self._run_handler_with_loop, job, context, stdout_path, stderr_path)
                     try:
                         result = fut.result(timeout=job.timeout_s)
                     except FutureTimeoutError as exc:

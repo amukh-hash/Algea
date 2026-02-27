@@ -104,6 +104,13 @@ class Orchestrator:
         self.runner.dry_run = dry_run
 
         for job in jobs:
+            # --- idempotency check (top priority, preserves DB status) ---
+            prior = self.state.get_job_status(asof_date.isoformat(), session.value, job.name)
+            if prior == "success":
+                skipped.append(job.name)
+                # Intentionally DO NOT call mark_job_skipped here to preserve "success" status
+                continue
+
             # --- cooldown / min-interval check (before dependency resolution) ---
             if job.min_interval_s > 0:
                 last_ok = self.state.get_last_success_at(job.name)
@@ -122,12 +129,6 @@ class Orchestrator:
             if any(dep in failed_set for dep in job.deps):
                 skipped.append(job.name)
                 self.state.mark_job_skipped(run_id, asof_date.isoformat(), session.value, job.name, "blocked_by_dependency")
-                continue
-
-            prior = self.state.get_job_status(asof_date.isoformat(), session.value, job.name)
-            if prior == "success":
-                skipped.append(job.name)
-                self.state.mark_job_skipped(run_id, asof_date.isoformat(), session.value, job.name, "idempotent_success")
                 continue
 
             self.state.mark_job_running(run_id, asof_date.isoformat(), session.value, job.name)

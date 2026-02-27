@@ -17,16 +17,16 @@ python scripts/run_three_sleeves_ibkr.py --mode ibkr --asof 2026-02-17
 
 ## Prerequisites
 
-1. **TWS** running in paper mode on port **7497**
+1. **IB Gateway** running in paper mode on port **4002**
 2. **API settings** in TWS: File → Global Configuration → API → Settings
    - ✅ Enable ActiveX and Socket Clients
    - ✅ Read-Only API **unchecked**
-   - Socket port: **7497**
+   - Socket port: **4002** (Gateway paper)
    - Allow connections from localhost
 3. **ib_insync** installed: `pip install ib_insync`
 4. **`.env`** configured with:
    ```
-   IBKR_GATEWAY_URL=127.0.0.1:7497
+   IBKR_GATEWAY_URL=127.0.0.1:4002
    IBKR_ACCOUNT_ID=<your_paper_account>
    IBKR_CLIENT_ID=17
    IBKR_PAPER_ONLY=1
@@ -55,9 +55,9 @@ Delegates to the existing `run_paper_cycle_ibkr.py` infrastructure. Uses the YAM
 
 ### 2. VRP (Options)
 
-**Week 1: NOOP only** — computes target positions but does not submit orders.
+Runs in **IBKR paper mode** — computes target positions and routes orders via IB Gateway.
 
-> ⚠️ **SPX sizing warning**: 1 SPX contract = ~$500,000 notional. This can dominate or blow through your entire paper account. Week-1 noop mode prevents accidental oversizing. When ready, use `--vrp-mode ibkr` to enable (with SPY, not SPX).
+> ⚠️ **SPX sizing warning**: 1 SPX contract = ~$500,000 notional. Use SPY options (~$50K/contract), not SPX, for paper trading. VRP mode follows the orchestrator's `ORCH_MODE` setting.
 
 ### 3. Selector (Individual Equities)
 

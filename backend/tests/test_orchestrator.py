@@ -61,8 +61,8 @@ def _stub_signal_jobs() -> list[Job]:
             lambda ctx: _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])),
         Job("signals_generate_selector", {Session.PREMARKET, Session.INTRADAY}, ["data_refresh_intraday"], {"paper", "live", "noop"}, 120, 0,
             lambda ctx: _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"])),
-        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
-        Job("order_build_and_route", {Session.OPEN}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
+        Job("risk_checks_global", {Session.PREMARKET, Session.OPEN, Session.INTRADAY, Session.PRECLOSE}, ["signals_generate_core", "signals_generate_vrp", "signals_generate_selector"], {"paper", "live", "noop"}, 120, 0, handle_risk_checks_global),
+        Job("order_build_and_route", {Session.OPEN, Session.INTRADAY}, ["risk_checks_global"], {"paper", "live"}, 120, 0, handle_order_build_and_route),
         Job("fills_reconcile", {Session.INTRADAY, Session.CLOSE}, [], {"paper", "live", "noop"}, 120, 0, handle_fills_reconcile, min_interval_s=300),
         Job("eod_reports", {Session.CLOSE, Session.OVERNIGHT}, ["fills_reconcile"], {"paper", "live", "noop"}, 120, 0, handle_eod_reports),
     ]
