@@ -1,0 +1,60 @@
+# DAG Topology — Declarative Job Definitions
+#
+# ML inference jobs are dispatched to GPUProcessSupervisor per target_gpu.
+# Non-GPU jobs (risk checks, order routing, EOD) remain in job_defs.py
+# and are merged into the DAG via the Orchestrator.
+#
+# The intent_aggregator barrier runs AFTER all ML inference jobs complete,
+# collecting *_intents.json files and pushing them through the risk gateway.
+
+jobs:
+  - id: signals_generate_mera
+    plugin_path: backend.app.sleeves.mera_plugin
+    target_gpu: 0        # RTX 3090 Ti (24GB VRAM) — heavy batch
+    timeout_s: 120
+    sessions: [premarket, intraday]
+    deps: [concept_drift_check]
+    modes: [paper, live, noop]
+
+  - id: signals_generate_kronos
+    plugin_path: backend.app.sleeves.kronos_plugin
+    target_gpu: 1        # RTX 4070 Super (12GB VRAM) — fast inference
+    timeout_s: 120
+    optimize_ada: true   # F10: Enable TF32 + torch.compile + BF16
+    sessions: [premarket]
+    deps: [concept_drift_check]
+    modes: [paper, live, noop]
+
+  - id: signals_generate_vrp
+    plugin_path: backend.app.sleeves.vrp_plugin
+    target_gpu: 1
+    timeout_s: 120
+    sessions: [premarket]
+    deps: [concept_drift_check]
+    modes: [paper, live, noop]
+
+  - id: signals_generate_statarb
+    plugin_path: backend.app.sleeves.statarb_plugin
+    target_gpu: 1
+    timeout_s: 120
+    sessions: [premarket, intraday]
+    deps: [concept_drift_check]
+    modes: [paper, live, noop]
+
+  # ── TFT Core Reversal (Open-to-Close gap forecasting) ──────────────
+  - id: data_ingest_core_tft
+    plugin_path: backend.app.jobs.data_ingest_core
+    target_gpu: null     # CPU-bound network I/O — no GPU allocation
+    timeout_s: 30
+    sessions: [premarket]
+    deps: []
+    modes: [paper, live, noop]
+
+  - id: signals_generate_core_tft
+    plugin_path: backend.app.sleeves.core_tft_plugin
+    target_gpu: 1        # RTX 4070 Super
+    timeout_s: 60
+    optimize_ada: true
+    sessions: [premarket]
+    deps: [data_ingest_core_tft]  # Strict dependency enforces causal data availability
+    modes: [paper, live, noop]
