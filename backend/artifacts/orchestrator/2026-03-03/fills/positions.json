@@ -1,0 +1,217 @@
+{
+  "app": "Algae",
+  "positions": [
+    {
+      "asof_date": null,
+      "avg_cost": 2666.15,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 2.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "RTYM6"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 84.419375,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 224.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "ASTS"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 18.54570722,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -1011.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "CCOI"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 4.8079328,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 3899.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "DAVA"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 100.12010638,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -188.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "DUOL"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 22.6106747,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -830.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "IBTA"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 9.49183797,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -1975.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "LAKE"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 84.59737556,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -221.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "LRN"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 47.15452261,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -398.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "LW"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 8.9332,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -2100.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "MARA"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 8.76586916,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -2140.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "MBLY"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 16.52435242,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 1135.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "METC"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 5.29530209,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -3542.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "NEXT"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 5.07533297,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 3694.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "OPEN"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 12.74330843,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 1472.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "RCAT"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 17.9243021,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 1046.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "RGTI"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 16.17587576,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 1159.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "SGML"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 18.3711546,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 1022.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "SRPT"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 7.30249221,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 2568.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "TE"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 23.02190798,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": -815.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "TTD"
+    },
+    {
+      "asof_date": null,
+      "avg_cost": 20.35696312,
+      "confidence_bin": null,
+      "predicted_probability": null,
+      "quantity": 922.0,
+      "schema_version": "positions.v1",
+      "source": "paper",
+      "symbol": "WOLF"
+    }
+  ],
+  "schema_version": "positions.v1",
+  "version": "4.0.0"
+}

@@ -1,0 +1,8 @@
+{
+  "mean_return": -0.06208297728856183,
+  "max_drawdown": 0.1360097612299282,
+  "constraint_violation_rate": 0.0,
+  "seed_stability_score": 0.9415460198344802,
+  "calibration_score": 0.7,
+  "sharpe": 1.1
+}

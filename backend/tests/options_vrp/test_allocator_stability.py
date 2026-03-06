@@ -6,9 +6,9 @@ from datetime import date
 
 import pytest
 
-from algea.data.options.vrp_features import VolRegime
-from algea.execution.options.config import VRPConfig
-from algea.trading.meta_allocator import (
+from algae.data.options.vrp_features import VolRegime
+from algae.execution.options.config import VRPConfig
+from algae.trading.meta_allocator import (
     AllocationResult,
     AllocatorState,
     MetaAllocator,

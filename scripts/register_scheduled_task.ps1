@@ -1,4 +1,4 @@
-# register_scheduled_task.ps1 — Register a Windows Scheduled Task for Algea trading
+# register_scheduled_task.ps1 — Register a Windows Scheduled Task for Algae trading
 # Must be run as Administrator (elevated prompt).
 #
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\register_scheduled_task.ps1
@@ -7,14 +7,14 @@
 # before PREMARKET (7:00 AM). The task runs under the current user account.
 
 param(
-    [string]$TaskName = "Algea-TradingStack",
+    [string]$TaskName = "Algae-TradingStack",
     [string]$StartTime = "06:30",          # 6:30 AM local time (before 7:00 PREMARKET)
     [string]$Broker = "stub",              # "stub" for paper, "ibkr" for live
     [switch]$Remove                         # pass -Remove to unregister the task
 )
 
 $ROOT = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$scriptPath = Join-Path $ROOT "scripts\autostart_trading.ps1"
+$scriptPath = Join-Path $ROOT "scripts\start_trading.ps1"
 
 if ($Remove) {
     Write-Host "Removing scheduled task '$TaskName'..." -ForegroundColor Yellow
@@ -25,19 +25,19 @@ if ($Remove) {
 
 # Verify script exists
 if (-not (Test-Path $scriptPath)) {
-    Write-Error "autostart_trading.ps1 not found at: $scriptPath"
+    Write-Error "start_trading.ps1 not found at: $scriptPath"
     return
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " Registering Algea Scheduled Task"      -ForegroundColor Cyan
+Write-Host " Registering Algae Scheduled Task"      -ForegroundColor Cyan
 Write-Host " Task:     $TaskName"                      -ForegroundColor Cyan
 Write-Host " Time:     $StartTime (weekdays)"          -ForegroundColor Cyan
 Write-Host " Broker:   $Broker"                        -ForegroundColor Cyan
 Write-Host " Script:   $scriptPath"                    -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Build the action — run PowerShell with the autostart script
+# Build the action — run PowerShell with the start_trading script
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
     -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`" -Broker $Broker" `
@@ -66,10 +66,10 @@ try {
         -Trigger $trigger `
         -Settings $settings `
         -Principal $principal `
-        -Description "Launches Algea trading stack (API + Orchestrator + Frontend) before market open." `
+        -Description "Launches Algae trading stack (API + Orchestrator) before market open at $StartTime on weekdays." `
         -Force
 
-    Write-Host "`n✓ Task '$TaskName' registered successfully!" -ForegroundColor Green
+    Write-Host "`n[OK] Task '$TaskName' registered successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Schedule: Every weekday at $StartTime" -ForegroundColor White
     Write-Host "Verify:   Get-ScheduledTaskInfo -TaskName '$TaskName'" -ForegroundColor Gray

@@ -1,0 +1,9 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-03",
+  "refreshed_at": "2026-03-03T14:35:32.549520+00:00",
+  "session": "intraday",
+  "source": "orchestrator_fallback",
+  "status": "ok",
+  "version": "4.0.0"
+}

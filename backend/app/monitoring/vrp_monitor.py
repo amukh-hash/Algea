@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from algea.execution.options.config import VRPConfig
+from algae.execution.options.config import VRPConfig
 
 logger = logging.getLogger(__name__)
 

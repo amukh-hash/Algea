@@ -19,6 +19,7 @@ from .state_store import StateStore
 from .control_state import control_state
 from .tick_context import TickContext
 from .model_versions import record_model_versions
+from .intent_aggregator import collect_and_validate_intents
 from backend.app.version import APP_DISPLAY, with_app_metadata
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,20 @@ class Orchestrator:
         telemetry: bool = False,
     ) -> None:
         self.config = config or OrchestratorConfig()
+
+        # ── State DB Isolation ─────────────────────────────────────────
+        # Stub/noop mode writes to a separate state DB so simulated runs
+        # never poison the idempotency guards of paper/live sessions.
+        if self.config.mode in ("noop", "stub"):
+            stub_db = self.config.db_path.parent / "state_stub.sqlite3"
+            self.config = OrchestratorConfig(
+                **{
+                    k: v for k, v in self.config.__dict__.items() if k != "db_path"
+                },
+                db_path=stub_db,
+            )
+            logger.info("Stub mode detected — routing state to %s", stub_db)
+
         self.calendar = MarketCalendar(self.config)
         self.state = StateStore(self.config.db_path)
         self.jobs = jobs or default_jobs()
@@ -182,6 +197,25 @@ class Orchestrator:
                     result.stderr_path,
                 )
 
+        # ── Intent Aggregation Barrier ────────────────────────────────
+        # After all signal-generation jobs, collect *_intents.json and
+        # push through the atomic risk gateway.
+        try:
+            agg_result = collect_and_validate_intents(
+                artifact_root=day_root,
+                db_path=self.config.db_path,
+                asof_date=asof_date.isoformat(),
+            )
+            if agg_result["status"] == "rejected":
+                logger.error("Risk gateway REJECTED intents: %s", agg_result.get("error"))
+            elif agg_result["n_collected"] > 0:
+                logger.info(
+                    "Intent barrier: %d intents collected, %d validated",
+                    agg_result["n_collected"], agg_result["n_validated"],
+                )
+        except Exception as exc:
+            logger.error("Intent aggregation barrier failed: %s", exc)
+
         status = "failed" if failed else "success"
         tick = TickResult(run_id, asof_date.isoformat(), session.value, ran, skipped, failed)
         self.state.update_run_record(run_id, status, asdict(tick))
@@ -198,6 +232,27 @@ class Orchestrator:
         )
         self._write_heartbeat(day_root, now_et(), session, status)
         logger.info("orchestrator tick complete: %s", tick)
+
+        # ── ZMQ Bridge: push tick results to native frontend ──────────
+        # Throttled to 1Hz max to prevent GIL saturation at high tick rates.
+        try:
+            import time as _time
+            _now = _time.time()
+            _last_bridge = getattr(self, '_last_bridge_ts', 0.0)
+            if (_now - _last_bridge) >= 1.0 or failed:
+                from backend.app.api.zmq_bridge import bridge_control_snapshot, bridge_control_mutation
+                bridge_control_snapshot(control_snapshot)
+                bridge_control_mutation("tick_complete", {
+                    "run_id": run_id,
+                    "session": session.value,
+                    "status": status,
+                    "ran_jobs": ran,
+                    "failed_jobs": failed,
+                })
+                self._last_bridge_ts = _now
+        except Exception:
+            logger.debug("ZMQ bridge tick publish skipped", exc_info=True)
+
         if self._telemetry_bridge:
             self._telemetry_bridge.emit_tick(tick, dry_run=dry_run)
         return tick

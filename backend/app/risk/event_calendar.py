@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import List, Optional, Tuple
 
-from algea.execution.options.config import VRPConfig
+from algae.execution.options.config import VRPConfig
 
 
 # ═══════════════════════════════════════════════════════════════════════════

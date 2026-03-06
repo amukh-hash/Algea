@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-logger = logging.getLogger("algea.api.portfolio_history")
+logger = logging.getLogger("algae.api.portfolio_history")
 
 router = APIRouter(prefix="/api/control", tags=["control"])
 

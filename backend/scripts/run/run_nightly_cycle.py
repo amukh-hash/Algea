@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from algea.data.eligibility.build import build_eligibility
-from algea.data.features.build import build_features
-from algea.data.priors.build import build_priors
-from algea.data.signals.build import build_signals
-from algea.execution.equity_strategy import EquityStrategy
-from algea.execution.interfaces import ExecutionContext, SignalFrame
-from algea.execution.options.executor import NoopExecutor
-from algea.execution.options.strategy import StrikeSelector
-from algea.execution.options_strategy import OptionsStrategy
+from algae.data.eligibility.build import build_eligibility
+from algae.data.features.build import build_features
+from algae.data.priors.build import build_priors
+from algae.data.signals.build import build_signals
+from algae.execution.equity_strategy import EquityStrategy
+from algae.execution.interfaces import ExecutionContext, SignalFrame
+from algae.execution.options.executor import NoopExecutor
+from algae.execution.options.strategy import StrikeSelector
+from algae.execution.options_strategy import OptionsStrategy
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 

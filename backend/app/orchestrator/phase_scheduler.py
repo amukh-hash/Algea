@@ -83,10 +83,12 @@ class PhaseScheduler:
         db_path: str | Path,
         broker: Any = None,
         orchestrator_callback: Callable[..., Coroutine[Any, Any, Any]] | None = None,
+        config: Any = None,
     ) -> None:
         self.db_path = str(db_path)
         self.broker = broker
         self.orchestrator_callback = orchestrator_callback
+        self.config = config
         self._running = False
         self._tasks: list[asyncio.Task] = []
         self.triggers = self._build_triggers()
@@ -132,12 +134,20 @@ class PhaseScheduler:
             )
         )
 
-        # ── Execution Triggers ───────────────────────────────────────
-        # T3: Auction Open — capture MOO liquidity for futures
+        # ── Execution Triggers (Asset-Class Aware) ────────────────────
+        # T3a: Equity MOO — safely beats NYSE 09:28 cutoff
         triggers.append(
             ScheduledTrigger(
-                name="route_auction_open",
-                trigger_time=time(9, 29),  # 09:29:00 EST
+                name="route_equity_moo",
+                trigger_time=time(9, 26),  # 09:26:00 ET (2-min before 09:28 cutoff)
+                callback=self._route_phase,
+            )
+        )
+        # T3b: Futures MKT at exact cash open (no MOO auction on CME)
+        triggers.append(
+            ScheduledTrigger(
+                name="route_futures_open",
+                trigger_time=time(9, 30),  # 09:30:00 ET — exact cash equity open
                 callback=self._route_phase,
             )
         )
@@ -145,20 +155,59 @@ class PhaseScheduler:
         triggers.append(
             ScheduledTrigger(
                 name="route_intraday",
-                trigger_time=time(9, 45),  # Start 09:45 EST
+                trigger_time=time(9, 45),  # Start 09:45 ET
                 callback=self._route_phase,
                 repeat_interval_m=15,
-                repeat_until=time(15, 45),  # Last trigger 15:45 EST
+                repeat_until=time(15, 45),  # Last trigger 15:45 ET
             )
         )
-        # T5: Auction Close — capture MOC liquidity
+        # T5a: Commodity metals close — GC/SI/HG 2-min before 13:30 settlement
         triggers.append(
             ScheduledTrigger(
-                name="route_auction_close",
-                trigger_time=time(15, 59),  # 15:59:00 EST
+                name="route_close_metals",
+                trigger_time=time(13, 28),  # 13:28:00 ET
                 callback=self._route_phase,
             )
         )
+        # T5b: Commodity energy close — CL 2-min before 14:30 settlement
+        triggers.append(
+            ScheduledTrigger(
+                name="route_close_energy",
+                trigger_time=time(14, 28),  # 14:28:00 ET
+                callback=self._route_phase,
+            )
+        )
+        # T6a: Equity MOC — safely beats NYSE 15:50 cutoff
+        triggers.append(
+            ScheduledTrigger(
+                name="route_equity_moc",
+                trigger_time=time(15, 48),  # 15:48:00 ET (2-min before 15:50 cutoff)
+                callback=self._route_phase,
+            )
+        )
+        # T6b: Futures MKT close — 10s before cash close (no CME TAS conflicts)
+        triggers.append(
+            ScheduledTrigger(
+                name="route_futures_close",
+                trigger_time=time(15, 59, 50),  # 15:59:50 ET
+                callback=self._route_phase,
+            )
+        )
+
+        # ── Conditional: StatArb 5-minute routing ────────────────────
+        # Only registered when the StatArb sleeve is enabled (not in
+        # stub/lockdown mode).  4-second offset guarantees the prior
+        # 5-minute candle has closed and propagated over the broker API.
+        if self.config and getattr(self.config, "enable_statarb_sleeve", False):
+            triggers.append(
+                ScheduledTrigger(
+                    name="route_statarb",
+                    trigger_time=time(9, 35, 4),  # 09:35:04 ET (4s propagation delay)
+                    callback=self._route_phase,
+                    repeat_interval_m=5,
+                    repeat_until=time(15, 55, 4),  # 15:55:04 ET
+                )
+            )
 
         return triggers
 
@@ -190,9 +239,14 @@ class PhaseScheduler:
         """Execute phase-aware order routing."""
         # Map trigger name → ExecutionPhase
         phase_map = {
-            "route_auction_open": ExecutionPhase.AUCTION_OPEN,
+            "route_equity_moo": ExecutionPhase.AUCTION_OPEN,
+            "route_futures_open": ExecutionPhase.FUTURES_OPEN,
             "route_intraday": ExecutionPhase.INTRADAY,
-            "route_auction_close": ExecutionPhase.AUCTION_CLOSE,
+            "route_statarb": ExecutionPhase.INTRADAY,
+            "route_close_metals": ExecutionPhase.COMMODITY_CLOSE,
+            "route_close_energy": ExecutionPhase.COMMODITY_CLOSE,
+            "route_equity_moc": ExecutionPhase.AUCTION_CLOSE,
+            "route_futures_close": ExecutionPhase.FUTURES_CLOSE,
         }
         phase = phase_map.get(trigger.name, ExecutionPhase.INTRADAY)
         asof_date = _now_et().strftime("%Y-%m-%d")

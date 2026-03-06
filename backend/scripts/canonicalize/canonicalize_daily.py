@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from algea.core.config import PipelineConfig
-from algea.core.paths import ArtifactPaths
-from algea.data.canonical.validate import quarantine_invalid_returns, validate_canonical_daily
-from algea.data.canonical.writer import write_canonical_daily
+from algae.core.config import PipelineConfig
+from algae.core.paths import ArtifactPaths
+from algae.data.canonical.validate import quarantine_invalid_returns, validate_canonical_daily
+from algae.data.canonical.writer import write_canonical_daily
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 

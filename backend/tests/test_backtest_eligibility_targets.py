@@ -2,10 +2,10 @@ from datetime import date
 
 import pandas as pd
 
-from algea.data.eligibility.build import build_eligibility
-from algea.research.backtest_engine import BacktestConfig, BacktestEngine
-from algea.trading.portfolio import Portfolio, Position
-from algea.trading.risk import PortfolioTargetBuilder, PortfolioTargetConfig
+from algae.data.eligibility.build import build_eligibility
+from algae.research.backtest_engine import BacktestConfig, BacktestEngine
+from algae.trading.portfolio import Portfolio, Position
+from algae.trading.risk import PortfolioTargetBuilder, PortfolioTargetConfig
 
 
 def test_multiday_targets_exist_on_many_dates():

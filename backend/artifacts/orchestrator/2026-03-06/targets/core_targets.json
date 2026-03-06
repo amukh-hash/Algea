@@ -1,0 +1,21 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-06",
+  "is_stub": false,
+  "schema_version": "targets.v1",
+  "sleeve": "core",
+  "status": "ok",
+  "targets": [
+    {
+      "asof_date": "2026-03-06",
+      "asset_class": "FUTURE",
+      "dte": -1,
+      "execution_phase": "auction_open",
+      "multiplier": 50.0,
+      "sleeve": "core",
+      "symbol": "ES",
+      "target_weight": 0.0
+    }
+  ],
+  "version": "4.0.0"
+}

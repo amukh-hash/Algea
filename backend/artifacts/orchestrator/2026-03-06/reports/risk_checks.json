@@ -1,0 +1,151 @@
+{
+  "allocator": {
+    "constraints": {},
+    "enabled": false,
+    "inputs": {},
+    "outputs": {},
+    "reasons": [],
+    "status": "disabled"
+  },
+  "app": "Algae",
+  "asof_date": "2026-03-06",
+  "checked_at": "2026-03-06T15:56:41.355334+00:00",
+  "inputs": {
+    "target_paths": {
+      "core": "backend\\artifacts\\orchestrator\\2026-03-06\\targets\\core_targets.json",
+      "futures_overnight": "backend\\artifacts\\orchestrator\\2026-03-06\\targets\\futures_overnight_targets.json",
+      "selector": "backend\\artifacts\\orchestrator\\2026-03-06\\targets\\selector_targets.json",
+      "statarb": "backend\\artifacts\\orchestrator\\2026-03-06\\targets\\statarb_targets.json",
+      "vrp": "backend\\artifacts\\orchestrator\\2026-03-06\\targets\\vrp_targets.json"
+    }
+  },
+  "limits": {
+    "max_gross": 1.5,
+    "max_net_abs": 0.5,
+    "max_symbol_abs_weight": 0.1,
+    "max_symbols": 200
+  },
+  "metrics": {
+    "gross_exposure": 0.35,
+    "nan_or_inf": false,
+    "net_exposure": 0.05,
+    "num_symbols": 8,
+    "per_sleeve": {
+      "core": {
+        "gross": 0.0,
+        "ml": {},
+        "net": 0.0,
+        "num_symbols": 0
+      },
+      "futures_overnight": {
+        "gross": 0.02,
+        "ml": {
+          "drift_score": 100.72,
+          "fallback_used": false,
+          "latency_ms": 1.2635000020964071,
+          "model_version": "v1.0.0",
+          "ood_score": 100.72,
+          "uncertainty": 0.7112355446685683
+        },
+        "net": 0.02,
+        "num_symbols": 1
+      },
+      "selector": {
+        "gross": 0.3,
+        "ml": {
+          "context_sensitivity_score": 0.002893046968943708,
+          "drift_score": 0.0,
+          "expert_collapse_score": 1.0,
+          "expert_utilization": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 6
+          },
+          "fallback_used": false,
+          "latency_ms_p95": 1.0817000002134591,
+          "load_balance_score": 1.5,
+          "model_alias": "prod",
+          "model_name": "selector_smoe",
+          "model_version": "v1.0.0",
+          "ood_score": 0.0,
+          "router_entropy_mean": 1.3798528700395638,
+          "specialization_by_bucket": {
+            "risk_on": {
+              "0": 0,
+              "1": 0,
+              "2": 0,
+              "3": 6
+            }
+          }
+        },
+        "net": 0.0,
+        "num_symbols": 6
+      },
+      "statarb": {
+        "gross": 0.0,
+        "ml": {},
+        "net": 0.0,
+        "num_symbols": 0
+      },
+      "vrp": {
+        "gross": 0.03,
+        "ml": {
+          "drift_score": 0.1875,
+          "edge_by_tenor": {
+            "14": 0.05000000000000002,
+            "30": 0.04999999999999999,
+            "60": 0.04999999999999999,
+            "7": 0.04000000000000001
+          },
+          "expert_utilization": {},
+          "fallback_used": false,
+          "latency_ms_p95": 0.6509000013465993,
+          "load_balance_score": 0.0,
+          "model_alias": "prod",
+          "model_name": "vol_surface",
+          "model_version": "v1.0.0",
+          "ood_score": 0.1875,
+          "predicted_rv": {
+            "14": {
+              "0.10": 0.15839999999999999,
+              "0.50": 0.18,
+              "0.90": 0.2016
+            },
+            "30": {
+              "0.10": 0.16720000000000002,
+              "0.50": 0.19,
+              "0.90": 0.21280000000000002
+            },
+            "60": {
+              "0.10": 0.17600000000000002,
+              "0.50": 0.2,
+              "0.90": 0.22400000000000003
+            },
+            "7": {
+              "0.10": 0.15839999999999999,
+              "0.50": 0.18,
+              "0.90": 0.2016
+            }
+          },
+          "rl_policy": {},
+          "router_entropy_mean": 0.0,
+          "uncertainty": {
+            "14": 0.043200000000000016,
+            "30": 0.0456,
+            "60": 0.048000000000000015,
+            "7": 0.043200000000000016
+          }
+        },
+        "net": 0.03,
+        "num_symbols": 1
+      }
+    }
+  },
+  "missing_sleeves": [],
+  "reason": null,
+  "session": "intraday",
+  "status": "ok",
+  "version": "4.0.0",
+  "violations": []
+}

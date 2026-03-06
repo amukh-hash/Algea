@@ -1,0 +1,23 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-06",
+  "is_stub": false,
+  "ml_risk": {
+    "drift_score": 100.72,
+    "fallback_used": false,
+    "latency_ms": 1.2635000020964071,
+    "model_version": "v1.0.0",
+    "ood_score": 100.72,
+    "uncertainty": 0.7112355446685683
+  },
+  "schema_version": "targets.v1",
+  "sleeve": "futures_overnight",
+  "status": "ok",
+  "targets": [
+    {
+      "symbol": "ES",
+      "target_weight": 0.02
+    }
+  ],
+  "version": "4.0.0"
+}

@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.execution.options.config import VRPConfig
-from algea.execution.options.vrp_strategy import VRPStrategy
-from algea.data.options.vrp_features import VolRegime
+from algae.execution.options.config import VRPConfig
+from algae.execution.options.vrp_strategy import VRPStrategy
+from algae.data.options.vrp_features import VolRegime
 
 
 def _make_test_chain(

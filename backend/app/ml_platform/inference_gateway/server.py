@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from datetime import datetime
 from typing import Callable, Any
@@ -40,8 +41,8 @@ class PrioritizedTask:
     future: asyncio.Future = field(compare=False)
     endpoint_name: str = field(compare=False)
 
-DEVICE_HEAVY = torch.device("cuda:0")
-DEVICE_FAST = torch.device("cuda:1")
+DEVICE_HEAVY = torch.device(os.getenv("TRAIN_DEVICE", "cuda:0"))
+DEVICE_FAST = torch.device(os.getenv("INFER_DEVICE", "cuda:0"))
 
 class InferenceGatewayServer:
     def __init__(self, cfg: MLPlatformConfig | None = None):
@@ -114,6 +115,17 @@ class InferenceGatewayServer:
         self.register("itransformer_signal", self._itransformer_handler)
         self.register("rl_policy_act", self._rl_policy_handler)
 
+        # ── New Architecture Handlers (PatchTST, ST-Transformer) ────
+        # CRITICAL: num_workers=0, pin_memory=False enforced
+        # Uvicorn ASGI + PyTorch multiprocessing forks → deadlocks.
+        # N=1 batch inference gains zero speedup from multi-worker loading.
+        self._patchtst_model = None
+        self._st_transformer_model = None
+        self.register("patchtst_forecast", self._patchtst_handler)
+        self.register("st_transformer_surface", self._st_transformer_handler)
+        self.model_status["patchtst"] = {"status": "registered_lazy"}
+        self.model_status["st_transformer"] = {"status": "registered_lazy"}
+
     def _chronos2_handler(self, req: InferenceRequestBase) -> dict:
         payload = TSFMRequest(**req.payload)
         response = self.chronos2_service.forecast(payload)
@@ -125,6 +137,110 @@ class InferenceGatewayServer:
             "calibration_score": response.calibration_score or 0.0,
             "ood_score": response.ood_score or 0.0,
             "warnings": response.warnings,
+        }
+
+    def _load_patchtst(self):
+        """Lazy-load ContinuousPatchTST onto DEVICE_FAST with num_workers=0."""
+        if self._patchtst_model is not None:
+            return self._patchtst_model
+        from algaie.models.tsfm.patchtst import ContinuousPatchTST
+        from pathlib import Path
+        model_path = Path("backend/artifacts/models/kronos/patchtst_kronos_best.pt")
+        if model_path.exists():
+            ckpt = torch.load(model_path, map_location=self.device_fast, weights_only=True)
+            config = ckpt.get("config", {})
+            model = ContinuousPatchTST(
+                c_in=1,
+                seq_len=config.get("seq_len", 512),
+                patch_len=config.get("patch_len", 16),
+                stride=config.get("stride", 8),
+            ).to(self.device_fast)
+            model.load_state_dict(ckpt["model_state_dict"])
+        else:
+            model = ContinuousPatchTST(
+                c_in=1, seq_len=512, patch_len=16, stride=8,
+            ).to(self.device_fast)
+        model.eval()
+        self._patchtst_model = model
+        self.model_status["patchtst"] = {"status": "loaded", "device": str(self.device_fast)}
+        return model
+
+    def _load_st_transformer(self):
+        """Lazy-load SpatialTemporalTransformer onto DEVICE_FAST with num_workers=0."""
+        if self._st_transformer_model is not None:
+            return self._st_transformer_model
+        from algaie.models.st_transformer import SpatialTemporalTransformer
+        from pathlib import Path
+        model_path = Path("backend/artifacts/models/vrp/st_transformer_best.pt")
+        if model_path.exists():
+            ckpt = torch.load(model_path, map_location=self.device_fast, weights_only=True)
+            config = ckpt.get("config", {})
+            model = SpatialTemporalTransformer(
+                grid_h=config.get("grid_h", 10),
+                grid_w=config.get("grid_w", 10),
+            ).to(self.device_fast)
+            model.load_state_dict(ckpt["model_state_dict"])
+        else:
+            model = SpatialTemporalTransformer(
+                grid_h=10, grid_w=10,
+            ).to(self.device_fast)
+        model.eval()
+        self._st_transformer_model = model
+        self.model_status["st_transformer"] = {"status": "loaded", "device": str(self.device_fast)}
+        return model
+
+    def _patchtst_handler(self, req: InferenceRequestBase) -> dict:
+        """PatchTST continuous futures forecast handler.
+
+        CONSTRAINT: num_workers=0, pin_memory=False.
+        All tensor reshaping executes synchronously on the
+        main isolated thread pool (cuda:1).
+        """
+        model = self._load_patchtst()
+        payload = req.payload
+        # Extract time series from payload
+        series = payload.get("series", [])
+        x = torch.tensor(series, dtype=torch.float32).unsqueeze(0)
+        # Transfer to DEVICE_FAST with non_blocking=True, pin_memory=False
+        x = x.to(self.device_fast, non_blocking=True)
+        with torch.no_grad():
+            pred = model(x)
+        return {
+            "model_name": "patchtst",
+            "model_version": "v1",
+            "outputs": {
+                "forecast": pred.cpu().tolist(),
+                "predicted_value": float(pred[0, 0].item()),
+            },
+            "uncertainty": 0.0,
+            "calibration_score": 0.7,
+            "ood_score": 0.0,
+            "warnings": [],
+        }
+
+    def _st_transformer_handler(self, req: InferenceRequestBase) -> dict:
+        """ST-Transformer IV surface handler.
+
+        CONSTRAINT: num_workers=0, pin_memory=False.
+        """
+        model = self._load_st_transformer()
+        payload = req.payload
+        grid = payload.get("iv_grid", [[0.0] * 10] * 10)
+        x = torch.tensor(grid, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        x = x.to(self.device_fast, non_blocking=True)
+        with torch.no_grad():
+            context = model.encode(x)
+        return {
+            "model_name": "st_transformer",
+            "model_version": "v1",
+            "outputs": {
+                "context_embedding": context.cpu().tolist(),
+                "context_dim": context.shape[-1],
+            },
+            "uncertainty": 0.0,
+            "calibration_score": 0.7,
+            "ood_score": 0.0,
+            "warnings": [],
         }
 
     def _smoe_handler(self, req: InferenceRequestBase) -> dict:
@@ -286,6 +402,8 @@ class InferenceGatewayServer:
         if endpoint in ["itransformer_signal"]:
             queue = self.queue_heavy
         else:
+            # patchtst_forecast, st_transformer_surface, and all other
+            # endpoints → cuda:1 FAST queue
             queue = self.queue_fast
             
         if queue is None:

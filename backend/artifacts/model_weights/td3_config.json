@@ -1,0 +1,17 @@
+{
+  "raw_dim": 10,
+  "embed_dim": 256,
+  "action_dim": 2,
+  "features": [
+    "SPY_ret_1d",
+    "SPY_ret_5d",
+    "SPY_vol_21d",
+    "VIX_change",
+    "VIX_level",
+    "TNX_shock",
+    "USD_shock",
+    "Credit_Spread",
+    "Trend_200d",
+    "Drift_Proxy"
+  ]
+}

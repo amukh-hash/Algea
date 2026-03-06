@@ -26,7 +26,7 @@ try:
 except ImportError:
     pass
 
-from algea.trading.broker_ibkr import IBKRLiveBroker
+from algae.trading.broker_ibkr import IBKRLiveBroker
 
 logging.basicConfig(
     level=logging.INFO,

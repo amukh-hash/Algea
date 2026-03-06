@@ -1,0 +1,17 @@
+{
+  "context_sensitivity_score": 0.002893046968943708,
+  "expert_collapse_score": 1.0,
+  "expert_utilization": {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 6
+  },
+  "latency_ms": 0.12630000128410757,
+  "model_name": "selector_smoe",
+  "model_version": "v1.0.0",
+  "output_hash": "04fee46371470f0f32dde46a3a6e4d7c9c3362b148cca3dce7b55142bd428fc1",
+  "request_hash": "077d5f06e859194d06e28ab650900493f8bb13d23e707b8cf83cb338ea3c1a0a",
+  "router_entropy_mean": 1.3798528700395638,
+  "trace_id": "selector_2026-03-06"
+}

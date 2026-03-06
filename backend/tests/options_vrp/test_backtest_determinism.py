@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.execution.options.backtest_adapter import (
+from algae.execution.options.backtest_adapter import (
     BacktestResult,
     DailyPnLRecord,
     OptionsFillResult,
     simulate_entry_fill,
 )
-from algea.execution.options.config import VRPConfig
-from algea.execution.options.structures import (
+from algae.execution.options.config import VRPConfig
+from algae.execution.options.structures import (
     DerivativesPosition,
     OptionLeg,
     StructureType,

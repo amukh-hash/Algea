@@ -1,0 +1,30 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "name": "algaie-native-frontend",
+    "version-string": "1.0.0",
+    "description": "Algaie Trading System - Native C++23 Frontend",
+    "dependencies": [
+        "qtbase",
+        "qtdeclarative",
+        {
+            "name": "zeromq",
+            "features": [
+                "sodium"
+            ]
+        },
+        "cppzmq",
+        "protobuf",
+        "arrow",
+        "readerwriterqueue",
+        "boost-interprocess",
+        "boost-headers",
+        "gtest",
+        "vulkan",
+        "libfido2",
+        "openssl",
+        "spdlog",
+        "mimalloc",
+        "kddockwidgets"
+    ],
+    "builtin-baseline": "62159a45e18f3a9ac0548628dcaf74fcb60c6ff9"
+}

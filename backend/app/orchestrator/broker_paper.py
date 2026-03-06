@@ -111,6 +111,8 @@ class PersistentPaperBroker:
         state_dir: Path | None = None,
         starting_equity: float = 100_000.0,
         account_id: str = "PAPER001",
+        slippage_ticks: int = 1,
+        spread_bps: float = 2.0,
     ) -> None:
         self.state_dir = Path(state_dir or os.getenv("PAPER_STATE_DIR", str(_DEFAULT_STATE_DIR)))
         self.state_dir.mkdir(parents=True, exist_ok=True)
@@ -118,6 +120,14 @@ class PersistentPaperBroker:
         self._lock = threading.RLock()
         self.account_id = account_id
         self.is_paper = True
+
+        # Sim-to-real liquidity penalty (Blind Spot 3):
+        # Paper APIs guarantee "fill on touch" — ignoring order book depth,
+        # queue position, and market impact.  Hardcoding adverse execution
+        # forces the ECE tracker and DAG to evaluate against worst-case
+        # real-world liquidity during the 30-day burn-in.
+        self.slippage_ticks = slippage_ticks
+        self.spread_bps = spread_bps
 
         # Load or initialize state
         if self._state_path.exists():
@@ -158,15 +168,18 @@ class PersistentPaperBroker:
                 symbol = str(o["symbol"])
                 qty = float(o["qty"])
                 side = str(o["side"]).upper()
-                fill_price = self._resolve_price(symbol, o)
+                raw_price = self._resolve_price(symbol, o)
 
-                if fill_price is None:
+                if raw_price is None:
                     logger.warning("No price for %s, skipping order", symbol)
                     routed.append({
                         "ticker": symbol, "qty": qty, "side": side,
                         "status": "rejected", "reason": "no_price",
                     })
                     continue
+
+                # Apply synthetic slippage: cross spread + adverse tick
+                fill_price = self._apply_slippage(raw_price, side)
 
                 # Execute the fill
                 signed_qty = qty if side == "BUY" else -qty
@@ -265,6 +278,61 @@ class PersistentPaperBroker:
             }
 
     # ── Internal helpers ────────────────────────────────────────────────
+
+    def _apply_slippage(self, price: float, side: str, exec_ts: datetime | None = None) -> float:
+        """Simulate worst-case execution: cross bid-ask spread + adverse ticks.
+
+        BUY fills execute above mid-price; SELL fills execute below mid-price.
+        This physically forces the system to evaluate performance against
+        real-world liquidity conditions during paper trading.
+
+        Opening Auction Spread Multiplier (Blind Spot 3):
+        If the fill occurs within 60 seconds of a session open (Globex
+        futures at 18:00 EST, equities at 09:30 EST), the slippage is
+        multiplied by 5× to simulate the exponentially wider bid-ask
+        spreads during the opening auction.
+        """
+        half_spread = price * (self.spread_bps / 10_000) / 2.0
+        tick = half_spread  # 1 tick ≈ half-spread granularity
+
+        # Opening auction detection
+        multiplier = 1.0
+        ts = exec_ts or datetime.now(timezone.utc)
+        if self._is_auction_window(ts):
+            multiplier = self.AUCTION_MULTIPLIER
+            logger.info("AUCTION  5× slippage multiplier applied at %s", ts.isoformat())
+
+        adverse = (half_spread + self.slippage_ticks * tick) * multiplier
+        if side == "BUY":
+            return price + adverse
+        else:
+            return price - adverse
+
+    # Opening auction constants
+    AUCTION_WINDOW_SECS = 60
+    AUCTION_MULTIPLIER = 5.0
+
+    def _is_auction_window(self, ts: datetime) -> bool:
+        """Check if timestamp falls within 60s of a session open.
+
+        Session opens:
+        - Globex futures: 18:00 EST (23:00 UTC)
+        - Equity market:  09:30 EST (14:30 UTC)
+        """
+        from zoneinfo import ZoneInfo
+        est = ts.astimezone(ZoneInfo("US/Eastern"))
+        h, m, s = est.hour, est.minute, est.second
+        total_secs_into_minute = s
+
+        # Globex futures open: 18:00 EST
+        if h == 18 and m == 0 and total_secs_into_minute < self.AUCTION_WINDOW_SECS:
+            return True
+
+        # Equity open: 09:30 EST
+        if h == 9 and m == 30 and total_secs_into_minute < self.AUCTION_WINDOW_SECS:
+            return True
+
+        return False
 
     def _resolve_price(self, symbol: str, order: dict) -> float | None:
         """Find a price: est_price from order > cache > live fetch."""

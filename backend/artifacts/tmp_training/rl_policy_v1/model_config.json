@@ -1,0 +1,5 @@
+{
+  "algo": "td3",
+  "hidden_size": 32,
+  "seed": 7
+}

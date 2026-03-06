@@ -1,0 +1,10 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-05",
+  "is_stub": false,
+  "schema_version": "targets.v1",
+  "sleeve": "vrp",
+  "status": "ok",
+  "targets": [],
+  "version": "4.0.0"
+}

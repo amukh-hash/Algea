@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algea.training.chronos_dataset import ChronosDataset, chronos_collate_fn
+from algae.training.chronos_dataset import ChronosDataset, chronos_collate_fn
 
 logging.basicConfig(
     level=logging.INFO,
@@ -221,7 +221,7 @@ def evaluate(pipeline, val_ds, config, device, max_batches=50):
 
 
 def main():
-    from algea.core.device import get_device
+    from algae.core.device import get_device
     device = get_device()
 
     runs_dir = ROOT / "backend" / "data" / "runs"

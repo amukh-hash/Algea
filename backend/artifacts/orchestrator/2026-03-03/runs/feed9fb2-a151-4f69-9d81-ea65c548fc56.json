@@ -1,0 +1,13 @@
+{
+  "run_id": "feed9fb2-a151-4f69-9d81-ea65c548fc56",
+  "asof_date": "2026-03-03",
+  "session": "close",
+  "ran_jobs": [],
+  "skipped_jobs": [
+    "fills_reconcile",
+    "eod_reports"
+  ],
+  "failed_jobs": [],
+  "app": "Algae",
+  "version": "4.0.0"
+}

@@ -1,0 +1,26 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-05",
+  "generated_at": "2026-03-05T12:00:39.148401+00:00",
+  "is_stub": false,
+  "schema_version": "signals.v1",
+  "session": "premarket",
+  "sleeve": "vrp",
+  "source": "run_vrp",
+  "status": "ok",
+  "version": "4.0.0",
+  "vrp_result": {
+    "asof": "2026-03-05",
+    "capital": 30000.0,
+    "mode": "ibkr",
+    "orders": [],
+    "positions": [],
+    "sleeve": "vrp",
+    "status": "ok",
+    "warnings": [
+      "Spot price fetch failed for SPY: No valid price available for SPY \u2014 ticker: Ticker(contract=Stock(conId=756733, symbol='SPY', exchange='SMART', primaryExchange='ARCA', currency='USD', localSymbol='SPY', tradingClass='SPY'))",
+      "Spot price fetch failed for QQQ: No valid price available for QQQ \u2014 ticker: Ticker(contract=Stock(conId=320227571, symbol='QQQ', exchange='SMART', primaryExchange='NASDAQ', currency='USD', localSymbol='QQQ', tradingClass='NMS'))",
+      "Spot price fetch failed for IWM: No valid price available for IWM \u2014 ticker: Ticker(contract=Stock(conId=9579970, symbol='IWM', exchange='SMART', primaryExchange='ARCA', currency='USD', localSymbol='IWM', tradingClass='IWM'))"
+    ]
+  }
+}

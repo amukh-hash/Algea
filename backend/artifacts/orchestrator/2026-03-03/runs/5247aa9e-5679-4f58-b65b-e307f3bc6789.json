@@ -1,0 +1,21 @@
+{
+  "run_id": "5247aa9e-5679-4f58-b65b-e307f3bc6789",
+  "asof_date": "2026-03-03",
+  "session": "intraday",
+  "ran_jobs": [
+    "data_refresh_intraday",
+    "fills_reconcile",
+    "ece_calibration_check"
+  ],
+  "skipped_jobs": [
+    "signals_generate_selector",
+    "signals_generate_statarb",
+    "order_build_and_route"
+  ],
+  "failed_jobs": [
+    "concept_drift_check",
+    "risk_checks_global"
+  ],
+  "app": "Algae",
+  "version": "4.0.0"
+}

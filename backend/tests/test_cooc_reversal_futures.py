@@ -5,7 +5,7 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from algea.data.options.vrp_features import VolRegime
+from algae.data.options.vrp_features import VolRegime
 from sleeves.cooc_reversal_futures.anchors import anchor_price
 from sleeves.cooc_reversal_futures.labels import r_co, r_oc
 from sleeves.cooc_reversal_futures.portfolio import market_neutral_weights

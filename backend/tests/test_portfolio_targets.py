@@ -1,6 +1,6 @@
 import pandas as pd
 
-from algea.trading.risk import PortfolioTargetBuilder, PortfolioTargetConfig
+from algae.trading.risk import PortfolioTargetBuilder, PortfolioTargetConfig
 
 
 def test_portfolio_target_builder_respects_constraints():

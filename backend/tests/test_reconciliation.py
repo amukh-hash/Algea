@@ -1,7 +1,7 @@
 from datetime import date
 
-from algea.trading.broker_base import BrokerAccount, BrokerPosition
-from algea.trading.reconciliation import reconcile_positions
+from algae.trading.broker_base import BrokerAccount, BrokerPosition
+from algae.trading.reconciliation import reconcile_positions
 
 
 def test_reconciliation_normalizes_positions():

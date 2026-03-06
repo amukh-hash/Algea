@@ -1,0 +1,11 @@
+{
+  "spatial_dim": 125,
+  "temporal_dim": 10,
+  "d_model": 128,
+  "nhead": 4,
+  "num_layers": 3,
+  "output_dim": 256,
+  "head_arch": "256\u219264\u21921",
+  "best_huber": 6.79296875,
+  "best_da": 0.8347107438016529
+}

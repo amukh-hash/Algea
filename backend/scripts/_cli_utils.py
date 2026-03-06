@@ -5,10 +5,10 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import List
 
-from algea.core.config import PipelineConfig, ensure_run_id, load_config
-from algea.core.logging import setup_logging
-from algea.core.paths import ArtifactPaths, ensure_artifact_dirs
-from algea.core.artifacts.registry import ArtifactRegistry
+from algae.core.config import PipelineConfig, ensure_run_id, load_config
+from algae.core.logging import setup_logging
+from algae.core.paths import ArtifactPaths, ensure_artifact_dirs
+from algae.core.artifacts.registry import ArtifactRegistry
 
 
 def load_pipeline_config(config_path: str) -> PipelineConfig:

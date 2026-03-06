@@ -6,7 +6,7 @@ They exercise the dataclass validation logic and schema invariants.
 import math
 import pytest
 
-from algea.models.foundation.chronos2_teacher import ChronosPriors
+from algae.models.foundation.chronos2_teacher import ChronosPriors
 
 
 # ═══════════════════════════════════════════════════════════════════════════

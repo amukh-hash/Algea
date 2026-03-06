@@ -1,6 +1,6 @@
 import pandas as pd
 
-from algea.data.canonical.validate import validate_canonical_daily
+from algae.data.canonical.validate import validate_canonical_daily
 
 
 def test_canonical_validation_flags_close_and_duplicates():

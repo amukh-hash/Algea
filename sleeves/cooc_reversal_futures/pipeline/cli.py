@@ -92,7 +92,7 @@ def main(argv: List[str] | None = None) -> RunManifest:
     print("[1/10] Ingesting bronze data...")
     if data_provider_name in ("ibkr_hist", "hybrid"):
         try:
-            from algea.trading.ibkr_client import IbkrClient
+            from algae.trading.ibkr_client import IbkrClient
             from .ibkr_hist_provider import IBKRHistoricalDataProvider
             client = IbkrClient(port=args.ibkr_port)
             client.connect()

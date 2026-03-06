@@ -140,7 +140,7 @@
       }
     ],
     "errors": [
-      "Breadth aggregation failed: failed to retrieve first file schema (parquet): expanded paths were empty (path expansion input: 'paths: [PlRefPath { inner: \"C:/Users/Aishik/Documents/Workshop/Algea/backend/data_canonical/universe/universe_frame_v2/*.parquet\" }]', glob: true). Hint: passing a schema can allow this scan to succeed with an empty DataFrame.\n\nThis error occurred with the following context stack:\n\t[1] 'parquet scan'\n\t[2] 'group_by'\n\t[3] 'select'\n\t[4] 'sink'\n"
+      "Breadth aggregation failed: failed to retrieve first file schema (parquet): expanded paths were empty (path expansion input: 'paths: [PlRefPath { inner: \"C:/Users/crick/ResolveLabs/Algae/backend/data_canonical/universe/universe_frame_v2/*.parquet\" }]', glob: true). Hint: passing a schema can allow this scan to succeed with an empty DataFrame.\n\nThis error occurred with the following context stack:\n\t[1] 'parquet scan'\n\t[2] 'group_by'\n\t[3] 'select'\n\t[4] 'sink'\n"
     ]
   },
   "chronos_dataset": {

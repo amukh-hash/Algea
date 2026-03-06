@@ -23,6 +23,7 @@ class OrchestratorConfig:
     db_path: Path = field(
         default_factory=lambda: Path(os.getenv("ORCH_DB_PATH", "backend/artifacts/orchestrator_state/state.sqlite3"))
     )
+
     enabled_jobs: list[str] = field(default_factory=list)
     disabled_jobs: list[str] = field(default_factory=list)
     paper_only: bool = field(default_factory=lambda: os.getenv("ORCH_PAPER_ONLY", "1") == "1")
@@ -30,6 +31,16 @@ class OrchestratorConfig:
     max_order_notional: float = field(default_factory=lambda: float(os.getenv("ORCH_MAX_ORDER_NOTIONAL", "5000")))
     max_total_order_notional: float = field(default_factory=lambda: float(os.getenv("ORCH_MAX_TOTAL_ORDER_NOTIONAL", "25000")))
     max_orders: int = field(default_factory=lambda: int(os.getenv("ORCH_MAX_ORDERS", "20")))
+    # ── Safety Lockdown (2026-03-03) ──────────────────────────────────────
+    # DO NOT enable these sleeves until their ML models have trained weights.
+    # The serving layer currently contains stubs:
+    #   - Chronos2: linear extrapolation (adapter.py) — real teacher exists in algae.models
+    #   - SMoE Selector: hardcoded expert weights — real RankTransformer exists in algae.models
+    #   - Vol Surface VRP: patch averaging — no real architecture exists
+    #   - StatArb iTransformer: weighted sum — real architecture now in algae.models.tsfm
+    # Enabling any of these will route deterministic garbage or random-weight
+    # noise through the risk pipeline, poisoning MMD baselines and ECE calibration.
+    # ────────────────────────────────────────────────────────────────────────
     enable_chronos2_sleeve: bool = field(default_factory=lambda: os.getenv("ENABLE_CHRONOS2_SLEEVE", "0") == "1")
     enable_smoe_selector: bool = field(default_factory=lambda: os.getenv("ENABLE_SMOE_SELECTOR", "0") == "1")
     selector_model_alias: str = field(default_factory=lambda: os.getenv("SELECTOR_MODEL_ALIAS", "prod"))

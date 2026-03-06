@@ -1,0 +1,816 @@
+import QtQuick 6.8
+import QtQuick.Controls 6.8
+import QtQuick.Layouts 6.8
+import QtQuick.Window 6.8
+
+ApplicationWindow {
+    id: rootWindow
+    visible: true
+    width: 2560
+    height: 1440
+    title: isSimulation ? "Algaie [SIMULATION]" : "Algaie Trading Orchestrator"
+
+    // Exception-Based UI: Background stays dark unless system degrades
+    color: GlobalStore.dataLossFlag ? "#2A0000" : "#0F111A"
+    Behavior on color { ColorAnimation { duration: 300 } }
+
+    // ── Design tokens ─────────────────────────────────────────────
+    readonly property color colorSurface0: "#0F111A"
+    readonly property color colorSurface1: "#141622"
+    readonly property color colorSurface2: "#1A1D2E"
+    readonly property color colorSurface3: "#222538"
+    readonly property color colorBorder: "#2A2D3E"
+    readonly property color colorTextPrimary: "#E2E8F0"
+    readonly property color colorTextSecondary: "#94A3B8"
+    readonly property color colorTextMuted: "#64748B"
+    readonly property color colorAccent: "#6366F1"
+    readonly property color colorGreen: "#22C55E"
+    readonly property color colorRed: "#EF4444"
+    readonly property color colorAmber: "#F59E0B"
+    readonly property color colorCyan: "#06B6D4"
+
+    // ── Sim Watermark Overlay ──────────────────────────────────────
+    Rectangle {
+        visible: isSimulation
+        anchors.fill: parent
+        z: 999999
+        color: "transparent"
+
+        Repeater {
+            model: 8
+            Text {
+                x: (index % 4) * (rootWindow.width / 3) - 100
+                y: Math.floor(index / 4) * (rootWindow.height / 2) + 100
+                text: "SIMULATED / NON-PRODUCTION"
+                color: "#30ff4444"
+                font.pixelSize: 32
+                font.bold: true
+                rotation: -30
+                opacity: 0.3
+            }
+        }
+    }
+
+    // ── Status Bar ─────────────────────────────────────────────────
+    header: ToolBar {
+        height: 40
+        background: Rectangle { color: "#12141E"
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: colorBorder }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 16
+
+            // App title
+            Label {
+                text: "ALGAIE"
+                color: colorAccent
+                font.pixelSize: 13
+                font.weight: Font.Black
+                font.letterSpacing: 3
+            }
+
+            Rectangle { width: 1; height: 20; color: colorBorder }
+
+            // Broker status
+            Rectangle { width: 8; height: 8; radius: 4; color: GlobalStore.brokerConnected ? colorGreen : colorRed }
+            Label {
+                text: GlobalStore.brokerConnected ? "Connected" : "Disconnected"
+                color: GlobalStore.brokerConnected ? colorGreen : colorRed
+                font.pixelSize: 11
+            }
+
+            // Session badge
+            Rectangle {
+                radius: 3; color: colorSurface3
+                implicitWidth: sessLabel.implicitWidth + 12; implicitHeight: 20
+                Label { id: sessLabel; anchors.centerIn: parent; text: GlobalStore.currentSession.toUpperCase(); color: colorCyan; font.pixelSize: 9; font.bold: true; font.letterSpacing: 1 }
+            }
+
+            // Execution mode badge
+            Rectangle {
+                radius: 3
+                color: GlobalStore.executionMode === "ibkr" ? "#7F1D1D" : GlobalStore.executionMode === "paper" ? "#78350F" : colorSurface3
+                implicitWidth: modeText.implicitWidth + 12; implicitHeight: 20
+                Label { id: modeText; anchors.centerIn: parent; text: GlobalStore.executionMode.toUpperCase(); color: "white"; font.pixelSize: 9; font.bold: true }
+            }
+
+            // Paused
+            Label { visible: GlobalStore.systemPaused; text: "⏸ PAUSED"; color: colorAmber; font.pixelSize: 11; font.bold: true }
+
+            // Data loss
+            Label { visible: GlobalStore.dataLossFlag; text: "⚠ ZMQ OVERFLOW"; color: colorRed; font.bold: true; font.pixelSize: 11 }
+
+            Item { Layout.fillWidth: true }
+
+            // Portfolio value
+            Label { text: "Portfolio"; color: colorTextMuted; font.pixelSize: 10 }
+            Label { text: "$" + GlobalStore.totalPortfolioValue.toFixed(2); color: colorTextPrimary; font.pixelSize: 13; font.bold: true }
+
+            Rectangle { width: 1; height: 20; color: colorBorder }
+
+            // PnL
+            Label { text: "PnL"; color: colorTextMuted; font.pixelSize: 10 }
+            Label {
+                text: (GlobalStore.totalPnl >= 0 ? "+$" : "-$") + Math.abs(GlobalStore.totalPnl).toFixed(2)
+                color: GlobalStore.totalPnl >= 0 ? colorGreen : colorRed
+                font.pixelSize: 13; font.bold: true
+            }
+
+            Rectangle { width: 1; height: 20; color: colorBorder }
+
+            // Alerts
+            Label {
+                visible: AlertEngine.activeAlertCount > 0
+                text: "⚠ " + AlertEngine.activeAlertCount
+                color: colorAmber; font.pixelSize: 11
+            }
+
+            // Sequence ID
+            Label { text: "SEQ:" + GlobalStore.lastSequenceId; color: colorTextMuted; font.pixelSize: 9; font.family: "Consolas" }
+        }
+    }
+
+    // ── Domain Tab Bar ─────────────────────────────────────────────
+    TabBar {
+        id: domainTabs
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        background: Rectangle { color: colorSurface1
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: colorBorder }
+        }
+
+        Repeater {
+            model: [
+                "⊞ Overview", "📡 Signals", "🛡 Risk",
+                "⚖ Allocation", "💼 Portfolio",
+                "🔬 Lab", "⚙ Jobs", "🔧 Settings"
+            ]
+            TabButton {
+                text: modelData
+                font.pixelSize: 11
+                width: implicitWidth + 16
+                palette.button: colorSurface1
+                palette.buttonText: domainTabs.currentIndex === index ? colorTextPrimary : colorTextMuted
+                background: Rectangle {
+                    color: domainTabs.currentIndex === index ? colorSurface2 : "transparent"
+                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: domainTabs.currentIndex === index ? colorAccent : "transparent" }
+                }
+            }
+        }
+    }
+
+    StackLayout {
+        anchors.top: domainTabs.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        currentIndex: domainTabs.currentIndex
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 1: System Overview
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            GridLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                columns: 3
+                columnSpacing: 12
+                rowSpacing: 12
+
+                // Top stat cards row
+                Repeater {
+                    model: [
+                        { label: "Portfolio Value", value: "$" + GlobalStore.totalPortfolioValue.toFixed(2), sub: "Total NAV", accent: colorAccent },
+                        { label: "P&L Today", value: (GlobalStore.totalPnl >= 0 ? "+$" : "-$") + Math.abs(GlobalStore.totalPnl).toFixed(2), sub: "Unrealized + Realized", accent: GlobalStore.totalPnl >= 0 ? colorGreen : colorRed },
+                        { label: "Positions", value: GlobalStore.positionCount.toString(), sub: "Active positions", accent: colorCyan }
+                    ]
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 120
+                        radius: 8; color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: 16; spacing: 8
+                            Label { text: modelData.label; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 1 }
+                            Label { text: modelData.value; color: modelData.accent; font.pixelSize: 28; font.bold: true }
+                            Label { text: modelData.sub; color: colorTextMuted; font.pixelSize: 10 }
+                        }
+                    }
+                }
+
+                // System Health Panel
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true; Layout.columnSpan: 2
+                    radius: 8; color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                        Label { text: "SYSTEM HEALTH"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                        GridLayout { columns: 2; columnSpacing: 24; rowSpacing: 12; Layout.fillWidth: true
+                            Label { text: "Broker"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Row { spacing: 6; Rectangle { width: 8; height: 8; radius: 4; color: GlobalStore.brokerConnected ? colorGreen : colorRed; anchors.verticalCenter: parent.verticalCenter }; Label { text: GlobalStore.brokerConnected ? "Connected" : "Disconnected"; color: GlobalStore.brokerConnected ? colorGreen : colorRed; font.pixelSize: 12 } }
+
+                            Label { text: "Session"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Label { text: GlobalStore.currentSession; color: colorCyan; font.pixelSize: 12; font.bold: true }
+
+                            Label { text: "Execution Mode"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Label { text: GlobalStore.executionMode; color: GlobalStore.executionMode === "ibkr" ? colorRed : colorAmber; font.pixelSize: 12; font.bold: true }
+
+                            Label { text: "System Paused"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Label { text: GlobalStore.systemPaused ? "YES" : "No"; color: GlobalStore.systemPaused ? colorAmber : colorGreen; font.pixelSize: 12 }
+
+                            Label { text: "Data Loss"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Label { text: GlobalStore.dataLossFlag ? "⚠ ACTIVE" : "None"; color: GlobalStore.dataLossFlag ? colorRed : colorGreen; font.pixelSize: 12 }
+
+                            Label { text: "Last Sequence ID"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Label { text: GlobalStore.lastSequenceId.toString(); color: colorTextPrimary; font.pixelSize: 12; font.family: "Consolas" }
+
+                            Label { text: "Vol Regime"; color: colorTextSecondary; font.pixelSize: 12 }
+                            Label { text: GlobalStore.volRegimeOverride || "Normal"; color: colorTextPrimary; font.pixelSize: 12 }
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
+                }
+
+                // Alert Summary
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    radius: 8; color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                        Label { text: "ALERTS"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 80; radius: 6; color: colorSurface2
+                            ColumnLayout { anchors.centerIn: parent; spacing: 4
+                                Label { text: AlertEngine.activeAlertCount.toString(); color: AlertEngine.activeAlertCount > 0 ? colorAmber : colorGreen; font.pixelSize: 36; font.bold: true; Layout.alignment: Qt.AlignHCenter }
+                                Label { text: "Active Alerts"; color: colorTextMuted; font.pixelSize: 10; Layout.alignment: Qt.AlignHCenter }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 60; radius: 6; color: colorSurface2
+                            ColumnLayout { anchors.centerIn: parent; spacing: 4
+                                Label { text: AlertEngine.inhibitedCount.toString(); color: colorTextSecondary; font.pixelSize: 24; font.bold: true; Layout.alignment: Qt.AlignHCenter }
+                                Label { text: "Inhibited"; color: colorTextMuted; font.pixelSize: 10; Layout.alignment: Qt.AlignHCenter }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 60; radius: 6
+                            color: GlobalStore.statArbCorrelation > 2.0 ? "#4A0000" : colorSurface2
+                            ColumnLayout { anchors.centerIn: parent; spacing: 4
+                                Label { text: GlobalStore.statArbCorrelation.toFixed(4); color: GlobalStore.statArbCorrelation > 2.0 ? colorRed : colorTextPrimary; font.pixelSize: 24; font.bold: true; font.family: "Consolas"; Layout.alignment: Qt.AlignHCenter }
+                                Label { text: "StatArb Corr"; color: colorTextMuted; font.pixelSize: 10; Layout.alignment: Qt.AlignHCenter }
+                            }
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 2: Signal Generation
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                Label { text: "SIGNAL GENERATION"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                // Sleeves grid
+                GridLayout {
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    columns: 2; columnSpacing: 12; rowSpacing: 12
+
+                    Repeater {
+                        model: [
+                            { name: "Kronos Sleeve", type: "PatchTST / Continuous", desc: "Continuous multi-horizon futures forecaster using patch-level attention over 5-min /ES bars.", status: "Active" },
+                            { name: "CO→OC Reversal", type: "Statistical / Mean-Reversion", desc: "Overnight close-to-open gap reversal on equity indices. Exploits systematic overnight premium decay.", status: "Active" },
+                            { name: "StatArb Sleeve", type: "Cointegration / Pairs", desc: "Cointegrated pairs trading on liquid equities with dynamic entry/exit thresholds.", status: "Monitoring" },
+                            { name: "TFT Sleeve", type: "Temporal Fusion Transformer", desc: "Attention-based multi-step forecasting with static/time-varying covariates for regime-aware positioning.", status: "Training" }
+                        ]
+
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.fillHeight: true
+                            radius: 8; color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                            ColumnLayout {
+                                anchors.fill: parent; anchors.margins: 16; spacing: 10
+
+                                RowLayout { spacing: 8
+                                    Label { text: modelData.name; color: colorTextPrimary; font.pixelSize: 16; font.bold: true }
+                                    Item { Layout.fillWidth: true }
+                                    Rectangle {
+                                        radius: 3; color: modelData.status === "Active" ? "#14532D" : modelData.status === "Training" ? "#78350F" : colorSurface3
+                                        implicitWidth: sleeveStatus.implicitWidth + 12; implicitHeight: 20
+                                        Label { id: sleeveStatus; anchors.centerIn: parent; text: modelData.status; color: modelData.status === "Active" ? colorGreen : modelData.status === "Training" ? colorAmber : colorTextMuted; font.pixelSize: 9; font.bold: true }
+                                    }
+                                }
+
+                                Label { text: modelData.type; color: colorAccent; font.pixelSize: 11; font.weight: Font.DemiBold }
+                                Label { text: modelData.desc; color: colorTextSecondary; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+
+                                Rectangle { Layout.fillWidth: true; height: 1; color: colorBorder }
+
+                                RowLayout { spacing: 16
+                                    ColumnLayout { spacing: 2; Label { text: "TARGET WT"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "—"; color: colorTextPrimary; font.pixelSize: 14; font.family: "Consolas" } }
+                                    ColumnLayout { spacing: 2; Label { text: "CONFIDENCE"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "—"; color: colorTextPrimary; font.pixelSize: 14; font.family: "Consolas" } }
+                                    ColumnLayout { spacing: 2; Label { text: "LAST SIGNAL"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "Awaiting data"; color: colorTextMuted; font.pixelSize: 11 } }
+                                }
+                                Item { Layout.fillHeight: true }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 3: Risk & Safeguards
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+            Rectangle {
+                id: riskBg; anchors.fill: parent
+                color: GlobalStore.statArbCorrelation > 2.0 ? "#200000" : colorSurface0
+                Behavior on color { ColorAnimation { duration: 300 } }
+
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                    Label { text: "RISK & SAFEGUARDS"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                    GridLayout {
+                        Layout.fillWidth: true; columns: 3; columnSpacing: 12; rowSpacing: 12
+
+                        // Risk metrics cards
+                        Repeater {
+                            model: [
+                                { label: "StatArb Correlation", value: GlobalStore.statArbCorrelation.toFixed(4), threshold: "< 2.0", warn: GlobalStore.statArbCorrelation > 2.0 },
+                                { label: "Vol Regime", value: GlobalStore.volRegimeOverride || "Normal", threshold: "Auto", warn: false },
+                                { label: "Active Alerts", value: AlertEngine.activeAlertCount.toString(), threshold: "0", warn: AlertEngine.activeAlertCount > 0 }
+                            ]
+
+                            Rectangle {
+                                Layout.fillWidth: true; height: 100; radius: 8
+                                color: modelData.warn ? "#3B0000" : colorSurface1; border.color: modelData.warn ? colorRed : colorBorder; border.width: 1
+
+                                ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
+                                    Label { text: modelData.label; color: colorTextMuted; font.pixelSize: 10; font.letterSpacing: 1 }
+                                    Label { text: modelData.value; color: modelData.warn ? colorRed : colorTextPrimary; font.pixelSize: 22; font.bold: true; font.family: "Consolas" }
+                                    Label { text: "Threshold: " + modelData.threshold; color: colorTextMuted; font.pixelSize: 9 }
+                                }
+                            }
+                        }
+                    }
+
+                    // Safeguards table
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                        color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: 16; spacing: 8
+
+                            Label { text: "CIRCUIT BREAKERS"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                            Repeater {
+                                model: [
+                                    { name: "ECE Tracker", desc: "Expected Calibration Error — halts sleeve if prediction confidence degrades beyond threshold", status: "Armed" },
+                                    { name: "MMD LiveGuard", desc: "Maximum Mean Discrepancy — detects covariate shift between training and live distributions", status: "Armed" },
+                                    { name: "Kill Switch", desc: "OOB hardware kill — shared memory control plane for instant sleeve freeze", status: "Listening" },
+                                    { name: "Max Drawdown", desc: "Automatic position flattening if portfolio drawdown exceeds 2% intraday limit", status: "Armed" },
+                                    { name: "Gap Risk Filter", desc: "Overnight gap protection — reduces position sizing when VIX term structure inverts", status: "Active" },
+                                    { name: "Slippage Monitor", desc: "Fill quality tracker — flags execution venue if realized slippage exceeds 1.5x expected", status: "Monitoring" }
+                                ]
+
+                                Rectangle {
+                                    Layout.fillWidth: true; height: 48; radius: 4; color: colorSurface2
+
+                                    RowLayout { anchors.fill: parent; anchors.margins: 12; spacing: 12
+                                        Rectangle { width: 8; height: 8; radius: 4; color: modelData.status === "Armed" ? colorGreen : modelData.status === "Active" ? colorCyan : colorAmber }
+                                        ColumnLayout { spacing: 1; Layout.fillWidth: true
+                                            Label { text: modelData.name; color: colorTextPrimary; font.pixelSize: 12; font.bold: true }
+                                            Label { text: modelData.desc; color: colorTextMuted; font.pixelSize: 9; elide: Text.ElideRight; Layout.fillWidth: true }
+                                        }
+                                        Label { text: modelData.status; color: modelData.status === "Armed" ? colorGreen : colorAmber; font.pixelSize: 10; font.bold: true }
+                                    }
+                                }
+                            }
+                            Item { Layout.fillHeight: true }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 4: Meta-Allocation
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                Label { text: "META-ALLOCATION"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                // Alpha blend summary
+                Rectangle {
+                    Layout.fillWidth: true; height: 80; radius: 8
+                    color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    RowLayout { anchors.fill: parent; anchors.margins: 16; spacing: 24
+                        ColumnLayout { spacing: 4; Label { text: "BLEND MODE"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "Risk-Parity Weighted"; color: colorAccent; font.pixelSize: 14; font.bold: true } }
+                        ColumnLayout { spacing: 4; Label { text: "REBALANCE"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "Daily @ 09:20 EST"; color: colorTextPrimary; font.pixelSize: 14 } }
+                        ColumnLayout { spacing: 4; Label { text: "TOTAL LEVERAGE"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "—"; color: colorTextPrimary; font.pixelSize: 14; font.family: "Consolas" } }
+                        Item { Layout.fillWidth: true }
+                    }
+                }
+
+                // Sleeve allocation table
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                    color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 16; spacing: 8
+
+                        // Table header
+                        RowLayout { Layout.fillWidth: true; spacing: 4
+                            Label { text: "Sleeve"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 200 }
+                            Label { text: "Target Weight"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 120 }
+                            Label { text: "Current Weight"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 120 }
+                            Label { text: "Deviation"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 120 }
+                            Label { text: "Frozen"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 80 }
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        Rectangle { Layout.fillWidth: true; height: 1; color: colorBorder }
+
+                        Repeater {
+                            model: [
+                                { name: "Kronos (PatchTST)", target: "40%", current: "—", dev: "—", frozen: false },
+                                { name: "CO→OC Reversal", target: "30%", current: "—", dev: "—", frozen: false },
+                                { name: "StatArb Pairs", target: "20%", current: "—", dev: "—", frozen: false },
+                                { name: "TFT Forecaster", target: "10%", current: "—", dev: "—", frozen: false }
+                            ]
+
+                            Rectangle {
+                                Layout.fillWidth: true; height: 40; radius: 4
+                                color: index % 2 === 0 ? "transparent" : colorSurface2
+
+                                RowLayout { anchors.fill: parent; anchors.leftMargin: 0; anchors.rightMargin: 0; spacing: 4
+                                    Label { text: modelData.name; color: colorTextPrimary; font.pixelSize: 12; Layout.preferredWidth: 200 }
+                                    Label { text: modelData.target; color: colorAccent; font.pixelSize: 12; font.family: "Consolas"; Layout.preferredWidth: 120 }
+                                    Label { text: modelData.current; color: colorTextPrimary; font.pixelSize: 12; font.family: "Consolas"; Layout.preferredWidth: 120 }
+                                    Label { text: modelData.dev; color: colorTextSecondary; font.pixelSize: 12; font.family: "Consolas"; Layout.preferredWidth: 120 }
+                                    Label { text: modelData.frozen ? "⛔" : "—"; color: modelData.frozen ? colorRed : colorTextMuted; font.pixelSize: 12; Layout.preferredWidth: 80 }
+                                    Item { Layout.fillWidth: true }
+                                }
+                            }
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 5: Portfolio & Execution
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                Label { text: "PORTFOLIO & EXECUTION"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                // Summary cards
+                RowLayout { Layout.fillWidth: true; spacing: 12
+                    Repeater {
+                        model: [
+                            { label: "NAV", val: "$" + GlobalStore.totalPortfolioValue.toFixed(2), accent: colorAccent },
+                            { label: "Day P&L", val: (GlobalStore.totalPnl >= 0 ? "+" : "") + "$" + GlobalStore.totalPnl.toFixed(2), accent: GlobalStore.totalPnl >= 0 ? colorGreen : colorRed },
+                            { label: "Positions", val: GlobalStore.positionCount.toString(), accent: colorCyan },
+                            { label: "Execution Mode", val: GlobalStore.executionMode.toUpperCase(), accent: GlobalStore.executionMode === "ibkr" ? colorRed : colorAmber }
+                        ]
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 90; radius: 8
+                            color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                            ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
+                                Label { text: modelData.label; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }
+                                Label { text: modelData.val; color: modelData.accent; font.pixelSize: 22; font.bold: true }
+                            }
+                        }
+                    }
+                }
+
+                // Positions table placeholder
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                    color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 16; spacing: 8
+
+                        Label { text: "OPEN POSITIONS"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                        // Table header
+                        RowLayout { Layout.fillWidth: true; spacing: 4
+                            Label { text: "Symbol"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 100 }
+                            Label { text: "Side"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 60 }
+                            Label { text: "Quantity"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 80 }
+                            Label { text: "Avg Price"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 100 }
+                            Label { text: "Market Price"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 100 }
+                            Label { text: "Unrealized P&L"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 120 }
+                            Label { text: "Sleeve"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 140 }
+                            Item { Layout.fillWidth: true }
+                        }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: colorBorder }
+
+                        // Empty state
+                        Item { Layout.fillWidth: true; Layout.fillHeight: true
+                            ColumnLayout { anchors.centerIn: parent; spacing: 8
+                                Label { text: "No open positions"; color: colorTextMuted; font.pixelSize: 14; Layout.alignment: Qt.AlignHCenter }
+                                Label { text: "Positions will appear here when sleeves generate trades"; color: colorTextMuted; font.pixelSize: 11; Layout.alignment: Qt.AlignHCenter }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 6: The Lab / Shadow Mode
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                Label { text: "THE LAB — SHADOW MODE"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                RowLayout { Layout.fillWidth: true; spacing: 12
+                    Repeater {
+                        model: [
+                            { label: "Shadow Runs", val: "0", desc: "Parallel non-execution runs" },
+                            { label: "Pending Promotions", val: "0", desc: "Awaiting CO→OC eval gate" },
+                            { label: "Promoted Models", val: "0", desc: "Passed all validation gates" }
+                        ]
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 100; radius: 8
+                            color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                            ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
+                                Label { text: modelData.label; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }
+                                Label { text: modelData.val; color: colorAccent; font.pixelSize: 28; font.bold: true }
+                                Label { text: modelData.desc; color: colorTextMuted; font.pixelSize: 10 }
+                            }
+                        }
+                    }
+                }
+
+                // Promotion pipeline
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                    color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                        Label { text: "PROMOTION PIPELINE"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                        Repeater {
+                            model: [
+                                { gate: "1. Universe Expansion", desc: "Expand training universe with new features / data sources", status: "Ready" },
+                                { gate: "2. Model Training", desc: "Train candidate model on expanded dataset with cross-validation", status: "Ready" },
+                                { gate: "3. Shadow Evaluation", desc: "Run shadow (non-execution) trades for 30 days against live market", status: "Ready" },
+                                { gate: "4. Statistical Gates", desc: "Sharpe > 1.2, DA > 55%, MaxDD < 3%, ECE < 0.05, p-value < 0.01", status: "Ready" },
+                                { gate: "5. Promotion Decision", desc: "Capital allocation with risk-parity blend into live portfolio", status: "Ready" }
+                            ]
+
+                            Rectangle {
+                                Layout.fillWidth: true; height: 56; radius: 6; color: colorSurface2
+
+                                RowLayout { anchors.fill: parent; anchors.margins: 12; spacing: 12
+                                    Rectangle { width: 28; height: 28; radius: 14; color: colorSurface3
+                                        Label { anchors.centerIn: parent; text: (index + 1).toString(); color: colorTextSecondary; font.pixelSize: 12; font.bold: true }
+                                    }
+                                    ColumnLayout { spacing: 2; Layout.fillWidth: true
+                                        Label { text: modelData.gate; color: colorTextPrimary; font.pixelSize: 12; font.bold: true }
+                                        Label { text: modelData.desc; color: colorTextMuted; font.pixelSize: 10; elide: Text.ElideRight; Layout.fillWidth: true }
+                                    }
+                                    Rectangle { radius: 3; color: colorSurface3; implicitWidth: gateStatus.implicitWidth + 12; implicitHeight: 20
+                                        Label { id: gateStatus; anchors.centerIn: parent; text: modelData.status; color: colorTextMuted; font.pixelSize: 9; font.bold: true }
+                                    }
+                                }
+                            }
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 7: Jobs & Orchestrator
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                Label { text: "JOBS & ORCHESTRATOR"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                RowLayout { Layout.fillWidth: true; spacing: 12
+                    Repeater {
+                        model: [
+                            { label: "Scheduled Jobs", val: "8", desc: "Cron-triggered daily tasks" },
+                            { label: "Running", val: "0", desc: "Currently executing" },
+                            { label: "Failed (24h)", val: "0", desc: "Errors in last 24 hours" }
+                        ]
+
+                        Rectangle {
+                            Layout.fillWidth: true; height: 90; radius: 8
+                            color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                            ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
+                                Label { text: modelData.label; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }
+                                Label { text: modelData.val; color: colorAccent; font.pixelSize: 24; font.bold: true }
+                                Label { text: modelData.desc; color: colorTextMuted; font.pixelSize: 10 }
+                            }
+                        }
+                    }
+                }
+
+                // Job schedule
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                    color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 16; spacing: 8
+
+                        Label { text: "JOB SCHEDULE"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                        // Table header
+                        RowLayout { Layout.fillWidth: true; spacing: 4
+                            Label { text: "Job"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 240 }
+                            Label { text: "Schedule"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 160 }
+                            Label { text: "Last Run"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 160 }
+                            Label { text: "Status"; color: colorTextMuted; font.pixelSize: 10; font.bold: true; Layout.preferredWidth: 100 }
+                            Item { Layout.fillWidth: true }
+                        }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: colorBorder }
+
+                        Repeater {
+                            model: [
+                                { name: "01_ingest_market_data", schedule: "04:00 EST Daily", lastRun: "—", status: "Idle" },
+                                { name: "02_feature_engineering", schedule: "04:30 EST Daily", lastRun: "—", status: "Idle" },
+                                { name: "03_signal_generation", schedule: "05:00 EST Daily", lastRun: "—", status: "Idle" },
+                                { name: "04_risk_checks", schedule: "09:15 EST Daily", lastRun: "—", status: "Idle" },
+                                { name: "05_order_generation", schedule: "09:20 EST Daily", lastRun: "—", status: "Idle" },
+                                { name: "06_execution_monitor", schedule: "09:30–16:00 EST", lastRun: "—", status: "Idle" },
+                                { name: "07_eod_reconciliation", schedule: "16:15 EST Daily", lastRun: "—", status: "Idle" },
+                                { name: "08_t1_resolution", schedule: "17:00 EST T+1", lastRun: "—", status: "Idle" }
+                            ]
+
+                            Rectangle {
+                                Layout.fillWidth: true; height: 36; radius: 4
+                                color: index % 2 === 0 ? "transparent" : colorSurface2
+
+                                RowLayout { anchors.fill: parent; anchors.margins: 4; spacing: 4
+                                    Label { text: modelData.name; color: colorTextPrimary; font.pixelSize: 11; font.family: "Consolas"; Layout.preferredWidth: 240 }
+                                    Label { text: modelData.schedule; color: colorTextSecondary; font.pixelSize: 11; Layout.preferredWidth: 160 }
+                                    Label { text: modelData.lastRun; color: colorTextMuted; font.pixelSize: 11; Layout.preferredWidth: 160 }
+                                    Rectangle { radius: 3; color: colorSurface3; implicitWidth: jobStat.implicitWidth + 10; implicitHeight: 18; Layout.preferredWidth: 100
+                                        Label { id: jobStat; anchors.centerIn: parent; text: modelData.status; color: colorTextMuted; font.pixelSize: 9 }
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                }
+                            }
+                        }
+                        Item { Layout.fillHeight: true }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // DOMAIN 8: Settings & Ops
+        // ════════════════════════════════════════════════════════════
+        Rectangle {
+            color: colorSurface0
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 16; spacing: 12
+
+                Label { text: "SETTINGS & OPERATIONS"; color: colorTextMuted; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                GridLayout {
+                    Layout.fillWidth: true; Layout.fillHeight: true; columns: 2; columnSpacing: 12; rowSpacing: 12
+
+                    // Connection config
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                        color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: 16; spacing: 10
+
+                            Label { text: "CONNECTIONS"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                            GridLayout { columns: 2; columnSpacing: 16; rowSpacing: 8; Layout.fillWidth: true
+                                Label { text: "Backend API"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "http://localhost:8000"; color: colorGreen; font.pixelSize: 11; font.family: "Consolas" }
+
+                                Label { text: "ZMQ Events"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "tcp://localhost:5556"; color: colorGreen; font.pixelSize: 11; font.family: "Consolas" }
+
+                                Label { text: "ZMQ Grid"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "tcp://localhost:5557"; color: colorGreen; font.pixelSize: 11; font.family: "Consolas" }
+
+                                Label { text: "Kill Switch SHM"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "AlgaieControlPlane"; color: colorGreen; font.pixelSize: 11; font.family: "Consolas" }
+
+                                Label { text: "Broker"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: GlobalStore.brokerConnected ? "IBKR TWS Connected" : "Not connected"; color: GlobalStore.brokerConnected ? colorGreen : colorRed; font.pixelSize: 11 }
+                            }
+                            Item { Layout.fillHeight: true }
+                        }
+                    }
+
+                    // Hardware info
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                        color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: 16; spacing: 10
+
+                            Label { text: "HARDWARE PARTITIONING"; color: colorTextMuted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                            GridLayout { columns: 2; columnSpacing: 16; rowSpacing: 8; Layout.fillWidth: true
+                                Label { text: "GPU 0 (iGPU)"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "Qt Scene Graph / OpenGL"; color: colorCyan; font.pixelSize: 11 }
+
+                                Label { text: "GPU 1 (CUDA:0)"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "PatchTST / Kronos Inference"; color: colorAccent; font.pixelSize: 11 }
+
+                                Label { text: "GPU 2 (CUDA:1)"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "TFT Training / Shadow Eval"; color: colorAccent; font.pixelSize: 11 }
+
+                                Label { text: "Render Loop"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "Threaded (16ms frame budget)"; color: colorTextPrimary; font.pixelSize: 11 }
+
+                                Label { text: "CRT Linkage"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "Dynamic (/MD)"; color: colorTextPrimary; font.pixelSize: 11 }
+
+                                Label { text: "FIDO2 Auth"; color: colorTextSecondary; font.pixelSize: 12 }
+                                Label { text: "Not available (stubbed)"; color: colorAmber; font.pixelSize: 11 }
+                            }
+                            Item { Layout.fillHeight: true }
+                        }
+                    }
+
+                    // Build info
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.columnSpan: 2; height: 80; radius: 8
+                        color: colorSurface1; border.color: colorBorder; border.width: 1
+
+                        RowLayout { anchors.fill: parent; anchors.margins: 16; spacing: 24
+                            ColumnLayout { spacing: 2; Label { text: "BUILD"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "Algaie_Sim v1.0.0"; color: colorTextPrimary; font.pixelSize: 12 } }
+                            ColumnLayout { spacing: 2; Label { text: "COMPILER"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "MSVC 19.44 / C++23"; color: colorTextPrimary; font.pixelSize: 12 } }
+                            ColumnLayout { spacing: 2; Label { text: "QT"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "6.10.0 (OpenGL RHI)"; color: colorTextPrimary; font.pixelSize: 12 } }
+                            ColumnLayout { spacing: 2; Label { text: "ARROW"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "23.0.1"; color: colorTextPrimary; font.pixelSize: 12 } }
+                            ColumnLayout { spacing: 2; Label { text: "PROTOBUF"; color: colorTextMuted; font.pixelSize: 9; font.letterSpacing: 1 }; Label { text: "6.33.4"; color: colorTextPrimary; font.pixelSize: 12 } }
+                            Item { Layout.fillWidth: true }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

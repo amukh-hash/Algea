@@ -4,7 +4,7 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-from algea.data.eligibility.build import build_eligibility, load_canonical_files, write_eligibility
+from algae.data.eligibility.build import build_eligibility, load_canonical_files, write_eligibility
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 

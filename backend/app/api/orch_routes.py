@@ -6,6 +6,10 @@ import csv
 import json
 import logging
 import sqlite3
+try:
+    import aiosqlite  # F6: Async SQLite for non-blocking reads
+except ImportError:
+    aiosqlite = None  # type: ignore[assignment]
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -17,7 +21,7 @@ from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/api/orchestrator", tags=["orchestrator"])
-logger = logging.getLogger("algea.api.orchestrator")
+logger = logging.getLogger("algae.api.orchestrator")
 
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
@@ -35,22 +39,97 @@ class AsyncJob:
     job_id: str = field(compare=False)
     payload: dict[str, Any] = field(compare=False)
 
+from concurrent.futures import ThreadPoolExecutor
+
 _job_queue: asyncio.PriorityQueue[AsyncJob] = asyncio.PriorityQueue()
 _job_status: dict[str, dict[str, Any]] = {}
 
+# ── CUDA-Context-Pinned Thread Pool ─────────────────────────────────
+# Automatically calls torch.cuda.set_device() in each worker's
+# initializer, preventing cross-device CUDA context contamination.
+
+class CudaThreadPoolExecutor(ThreadPoolExecutor):
+    """ThreadPoolExecutor that pins each worker thread to a CUDA device.
+
+    ``torch.cuda.set_device()`` is called in the thread initializer,
+    so every task dispatched to this pool automatically runs on the
+    correct GPU without manual ``set_device()`` calls in closures.
+    """
+
+    def __init__(self, device_str: str, **kwargs):
+        import torch
+        device = torch.device(device_str)
+
+        def _init_worker(dev: torch.device):
+            import torch as _torch
+            if _torch.cuda.is_available():
+                _torch.cuda.set_device(dev)
+
+        super().__init__(
+            initializer=_init_worker,
+            initargs=(device,),
+            **kwargs,
+        )
+        self.device = device
+
+
+_heavy_pool = CudaThreadPoolExecutor("cuda:0", max_workers=2, thread_name_prefix="cuda0_batch")
+_fast_pool = CudaThreadPoolExecutor("cuda:1", max_workers=8, thread_name_prefix="cuda1_inference")
+
+
+async def dispatch_inference(task_fn, tensor_data, target_device_str: str = "cuda:1"):
+    """Bridge synchronous PyTorch forward() with the async ASGI loop.
+
+    Transfers tensor with non_blocking=True and dispatches to the
+    correct device pool.  CUDA context is pre-pinned by the pool's
+    initializer — no manual set_device() needed.
+    """
+    import torch
+    loop = asyncio.get_running_loop()
+    target_device = torch.device(target_device_str)
+    pool = _fast_pool if "1" in target_device_str else _heavy_pool
+
+    def _sync_wrapper():
+        local_tensor = tensor_data.to(target_device, non_blocking=True) if hasattr(tensor_data, "to") else tensor_data
+        return task_fn(local_tensor)
+
+    try:
+        return await loop.run_in_executor(pool, _sync_wrapper)
+    except RuntimeError as e:
+        if "CUDA out of memory" in str(e):
+            logger.error("OOM on %s — triggering circuit breaker", target_device_str)
+        raise
+
+
+
 async def _job_worker():
+    """Priority-routed job worker with device-aware dispatch."""
     while True:
         try:
             job = await _job_queue.get()
             _job_status[job.job_id]["status"] = "running"
             try:
-                # Emulate task execution matching target priority GPU
-                # i.e background_heavy -> cuda:0, critical_realtime -> cuda:1
-                await asyncio.sleep(0.1)
+                # Route based on priority:
+                #   URGENT/HIGH (1-2) → fast_pool → cuda:1 (low-latency)
+                #   BACKGROUND (5+)  → heavy_pool → cuda:0 (batch)
+                loop = asyncio.get_running_loop()
+                pool = _fast_pool if job.priority <= TaskPriority.HIGH else _heavy_pool
+                device_label = "cuda:1" if job.priority <= TaskPriority.HIGH else "cuda:0"
+
+                def _execute():
+                    import torch
+                    handler = job.payload.get("handler")
+                    if callable(handler):
+                        return handler(job.payload)
+                    return {"status": "completed"}
+
+                result = await loop.run_in_executor(pool, _execute)
                 _job_status[job.job_id]["status"] = "completed"
+                _job_status[job.job_id]["result"] = result
             except Exception as e:
                 _job_status[job.job_id]["status"] = "failed"
                 _job_status[job.job_id]["error"] = str(e)
+                logger.error("Job %s failed: %s", job.job_id[:8], e)
             finally:
                 _job_queue.task_done()
         except asyncio.CancelledError:
@@ -65,6 +144,15 @@ def _db() -> sqlite3.Connection:
     conn = sqlite3.connect(_DB_PATH, timeout=2)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+async def _adb():
+    """F6: Async SQLite connection — fully unblocks the ASGI event loop."""
+    if aiosqlite is None:
+        raise RuntimeError("aiosqlite not installed — install via pip install aiosqlite")
+    db = await aiosqlite.connect(str(_DB_PATH), timeout=2)
+    db.row_factory = aiosqlite.Row
+    return db
 
 
 def _today() -> str:
@@ -113,6 +201,46 @@ def _get_status_sync() -> dict[str, Any]:
     except sqlite3.Error:
         row = None
     return {"asof_date": asof, "heartbeat": heartbeat, "last_run": dict(row) if row else None}
+
+
+async def _get_status_async() -> dict[str, Any]:
+    """F6: Non-blocking status fetch via aiosqlite."""
+    asof = _today()
+    hb_path = _ARTIFACT_ROOT / asof / "heartbeat.json"
+    heartbeat = json.loads(hb_path.read_text(encoding="utf-8")) if hb_path.exists() else None
+    try:
+        db = await _adb()
+        async with db.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT 1") as cursor:
+            row = await cursor.fetchone()
+        await db.close()
+    except Exception:
+        row = None
+    return {"asof_date": asof, "heartbeat": heartbeat, "last_run": dict(row) if row else None}
+
+
+async def _list_runs_async(limit: int) -> dict[str, Any]:
+    """F6: Non-blocking runs listing."""
+    db = await _adb()
+    async with db.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        payload = dict(row)
+        meta = payload.pop("meta_json", None)
+        if meta:
+            payload["meta"] = json.loads(meta)
+        items.append(payload)
+    return {"items": items, "total": len(items)}
+
+
+async def _get_run_jobs_async(run_id: str) -> dict[str, Any]:
+    """F6: Non-blocking run-jobs fetch."""
+    db = await _adb()
+    async with db.execute("SELECT * FROM jobs WHERE run_id=? ORDER BY started_at", (run_id,)) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return {"items": [dict(r) for r in rows]}
 
 
 def _list_runs_sync(limit: int) -> dict[str, Any]:
@@ -432,16 +560,23 @@ def _list_dates_sync() -> dict[str, Any]:
 
 @router.get("/status")
 async def get_status() -> dict[str, Any]:
+    # F6: Use aiosqlite when available, fallback to sync+thread
+    if aiosqlite is not None:
+        return await _get_status_async()
     return await _with_timeout(_get_status_sync)
 
 
 @router.get("/runs")
 async def list_runs(limit: int = Query(20, ge=1, le=100)) -> dict[str, Any]:
+    if aiosqlite is not None:
+        return await _list_runs_async(limit)
     return await _with_timeout(_list_runs_sync, limit)
 
 
 @router.get("/runs/{run_id}/jobs")
 async def get_run_jobs(run_id: str) -> dict[str, Any]:
+    if aiosqlite is not None:
+        return await _get_run_jobs_async(run_id)
     return await _with_timeout(_get_run_jobs_sync, run_id)
 
 

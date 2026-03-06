@@ -15,7 +15,7 @@ from typing import Any
 import requests
 from fastapi import APIRouter, Query
 
-logger = logging.getLogger("algea.api.prices")
+logger = logging.getLogger("algae.api.prices")
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
 

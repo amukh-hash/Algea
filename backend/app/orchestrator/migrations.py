@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -65,6 +65,40 @@ def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
     conn.execute("UPDATE schema_version SET version=2")
 
 
+def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
+    """Durable control state + order intents for phase-aware risk gateway.
+
+    Resolves F1 (core risk bypass), F2 (volatile control state),
+    and F4 (idempotent intent UPSERT).
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_control_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            is_paused BOOLEAN NOT NULL DEFAULT 0,
+            vol_regime VARCHAR(50) DEFAULT 'NORMAL',
+            gross_exposure_cap REAL DEFAULT 1.5,
+            execution_mode VARCHAR(20) NOT NULL DEFAULT 'paper',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute("INSERT OR IGNORE INTO app_control_state (id) VALUES (1)")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS order_intents (
+            asof_date VARCHAR(10) NOT NULL,
+            execution_phase VARCHAR(20) NOT NULL,
+            sleeve VARCHAR(50) NOT NULL,
+            symbol VARCHAR(20) NOT NULL,
+            target_weight REAL NOT NULL,
+            asset_class VARCHAR(20) NOT NULL,
+            multiplier REAL NOT NULL DEFAULT 1.0,
+            status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+            PRIMARY KEY (asof_date, execution_phase, sleeve, symbol)
+        )
+    """)
+    conn.execute("UPDATE schema_version SET version=3")
+
+
 def apply_migrations(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -72,6 +106,7 @@ def apply_migrations(conn: sqlite3.Connection) -> None:
     if not _table_exists(conn, "schema_version"):
         _create_v1(conn)
         _migrate_v1_to_v2(conn)
+        _migrate_v2_to_v3(conn)
         conn.commit()
         return
 
@@ -97,6 +132,10 @@ def apply_migrations(conn: sqlite3.Connection) -> None:
         if version == 1:
             _migrate_v1_to_v2(conn)
             version = 2
+            continue
+        if version == 2:
+            _migrate_v2_to_v3(conn)
+            version = 3
             continue
         raise RuntimeError(f"No migration path from schema version {version}")
 

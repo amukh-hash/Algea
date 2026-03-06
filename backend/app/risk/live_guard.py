@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any, Dict, List, Optional
 
-from algea.execution.options.config import VRPConfig
+from algae.execution.options.config import VRPConfig
 from backend.app.ml_platform.drift.calibration import expected_calibration_error
 from backend.app.ml_platform.drift.detectors import confidence_entropy_correlation, prediction_consistency_score
 

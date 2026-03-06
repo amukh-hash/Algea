@@ -147,12 +147,12 @@ def run_phase15(
             from sleeves.cooc_reversal_futures.pipeline.ibkr_hist_provider import (
                 IBKRHistoricalDataProvider,
             )
-            from algea.trading.ibkr_client import IbkrClient
+            from algae.trading.ibkr_client import IbkrClient
             from sleeves.cooc_reversal_futures.pipeline.ingest import ingest_bronze
             import os
 
             # Connect to IBKR
-            host, port = os.environ.get("IBKR_GATEWAY_URL", "127.0.0.1:7497").split(":")
+            host, port = os.environ.get("IBKR_GATEWAY_URL", "127.0.0.1:4002").split(":")
             client = IbkrClient(host=host, port=int(port), readonly=True)
             client.connect()
 

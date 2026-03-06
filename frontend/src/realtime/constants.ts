@@ -1,4 +1,0 @@
-export const METRIC_HISTORY_LIMIT = 200;
-export const CHART_HISTORY_LIMIT = 1000;
-export const EVENT_HISTORY_LIMIT = 200;
-export const MAX_SIMULTANEOUS_STREAMS = 6;

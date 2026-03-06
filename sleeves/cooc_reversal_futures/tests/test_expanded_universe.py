@@ -13,7 +13,7 @@ from datetime import date, timedelta
 import pytest
 
 from sleeves.cooc_reversal_futures.contract_master import CONTRACT_MASTER, ContractSpec
-from algea.trading.ibkr_contracts import EXCHANGE_MAP
+from algae.trading.ibkr_contracts import EXCHANGE_MAP
 from sleeves.cooc_reversal_futures.roll import active_contract_for_day
 from sleeves.cooc_reversal_futures.contract_spec_checks import (
     SpecCheckResult,

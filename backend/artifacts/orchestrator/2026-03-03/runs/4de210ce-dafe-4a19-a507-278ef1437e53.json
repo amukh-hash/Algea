@@ -1,0 +1,21 @@
+{
+  "run_id": "4de210ce-dafe-4a19-a507-278ef1437e53",
+  "asof_date": "2026-03-03",
+  "session": "premarket",
+  "ran_jobs": [],
+  "skipped_jobs": [
+    "data_refresh_intraday",
+    "signals_generate_core",
+    "signals_generate_futures_overnight",
+    "signals_generate_selector",
+    "signals_generate_statarb",
+    "signals_generate_vrp",
+    "ece_calibration_check"
+  ],
+  "failed_jobs": [
+    "concept_drift_check",
+    "risk_checks_global"
+  ],
+  "app": "Algae",
+  "version": "4.0.0"
+}

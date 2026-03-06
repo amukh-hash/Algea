@@ -1,0 +1,7 @@
+{
+  "pinball_loss": 0.0020000000000000026,
+  "calibration_score": 1.0,
+  "edge_hit_rate": 0.6,
+  "sharpe": 1.05,
+  "max_drawdown": 0.15
+}

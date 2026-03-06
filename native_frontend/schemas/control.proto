@@ -1,0 +1,70 @@
+// ─────────────────────────────────────────────────────────────────────
+// Algae Native Frontend — Control State (Protobuf)
+//
+// Mirrors the Python ControlState, BrokerStatus, and CalendarInfo
+// models from control_routes.py. Published on the event channel as
+// periodic snapshots (1 Hz) and on state mutation.
+// ─────────────────────────────────────────────────────────────────────
+syntax = "proto3";
+package algae.control;
+
+option cc_enable_arenas = true;
+
+// ── Control State ───────────────────────────────────────────────────
+
+message ControlState {
+    uint64   sequence_id          = 1;
+    bool     paused               = 2;
+    string   vol_regime_override  = 3;  // Empty if no override
+    repeated string blocked_symbols = 4;
+    repeated string frozen_sleeves  = 5;
+    double   gross_exposure_cap   = 6;  // 0.0 if no cap
+    string   execution_mode       = 7;  // "noop" | "paper" | "ibkr"
+}
+
+// ── Broker Status ───────────────────────────────────────────────────
+
+message BrokerStatus {
+    bool   connected    = 1;
+    string gateway_url  = 2;
+    bool   paper_only   = 3;
+    string account_id   = 4;
+    string mode         = 5;
+    string error        = 6;  // Empty if no error
+}
+
+// ── Calendar ────────────────────────────────────────────────────────
+
+message SessionWindow {
+    string start = 1;
+    string end   = 2;
+}
+
+message CalendarInfo {
+    string date             = 1;
+    string current_session  = 2;
+    bool   is_trading_day   = 3;
+    string current_time     = 4;
+    map<string, SessionWindow> session_windows = 5;
+}
+
+// ── Orchestrator Heartbeat ──────────────────────────────────────────
+
+message OrchestratorHeartbeat {
+    uint64 sequence_id = 1;
+    string timestamp   = 2;
+    string session     = 3;
+    string state       = 4;
+    string mode        = 5;
+}
+
+// ── Control Snapshot Envelope ───────────────────────────────────────
+// Published at 1 Hz on the event channel (topic: "control.snapshot")
+
+message ControlSnapshot {
+    uint64              sequence_id = 1;
+    ControlState        state       = 2;
+    BrokerStatus        broker      = 3;
+    CalendarInfo        calendar    = 4;
+    OrchestratorHeartbeat heartbeat = 5;
+}

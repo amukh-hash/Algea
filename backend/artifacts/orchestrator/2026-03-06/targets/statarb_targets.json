@@ -1,0 +1,87 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-06",
+  "beta_neutral_weights": {
+    "GDXJ": 0.094273,
+    "GLD": -0.026035,
+    "ITB": 0.028339,
+    "IWM": -0.094273,
+    "JNK": 0.032111,
+    "KRE": 0.062459,
+    "QQQ": -0.094273,
+    "SMH": -0.002602,
+    "SPY": -0.094273,
+    "TLT": 0.094273,
+    "USO": -0.094273,
+    "VNQ": -0.094273,
+    "XOP": 0.094273,
+    "XRT": 0.094273
+  },
+  "is_stub": false,
+  "schema_version": "targets.v1",
+  "sleeve": "statarb_v3",
+  "status": "ok",
+  "targets": [
+    {
+      "direction": "long",
+      "pair": "KRE_IWM",
+      "pred_delta": 0.5534340143203735,
+      "z_score": -1.8738391399383545
+    },
+    {
+      "direction": "flat",
+      "pair": "XBI_IWM",
+      "pred_delta": 0.04960701987147331,
+      "z_score": 0.4982639253139496
+    },
+    {
+      "direction": "flat",
+      "pair": "ARKK_QQQ",
+      "pred_delta": -0.3124915063381195,
+      "z_score": -0.14072422683238983
+    },
+    {
+      "direction": "long",
+      "pair": "SMH_QQQ",
+      "pred_delta": 0.578325092792511,
+      "z_score": -1.3542813062667847
+    },
+    {
+      "direction": "long",
+      "pair": "GDXJ_GLD",
+      "pred_delta": 0.6048980355262756,
+      "z_score": -2.001268148422241
+    },
+    {
+      "direction": "long",
+      "pair": "XOP_USO",
+      "pred_delta": 0.9199985861778259,
+      "z_score": -3.183488130569458
+    },
+    {
+      "direction": "long",
+      "pair": "ITB_VNQ",
+      "pred_delta": 0.641532838344574,
+      "z_score": -1.5381247997283936
+    },
+    {
+      "direction": "short",
+      "pair": "JNK_TLT",
+      "pred_delta": -0.16043595969676971,
+      "z_score": 1.370017409324646
+    },
+    {
+      "direction": "long",
+      "pair": "TAN_XLE",
+      "pred_delta": 0.4600740969181061,
+      "z_score": -0.9627566337585449
+    },
+    {
+      "direction": "long",
+      "pair": "XRT_SPY",
+      "pred_delta": 0.9459266662597656,
+      "z_score": -1.9308990240097046
+    }
+  ],
+  "version": "4.0.0"
+}

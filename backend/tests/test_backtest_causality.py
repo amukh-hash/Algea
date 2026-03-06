@@ -1,8 +1,8 @@
 import pandas as pd
 
-from algea.data.features.build import build_features
-from algea.data.signals.build import build_signals
-from algea.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
+from algae.data.features.build import build_features
+from algae.data.signals.build import build_signals
+from algae.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
 
 
 def test_backtest_causality_signals_truncated_match():

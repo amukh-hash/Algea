@@ -1,0 +1,143 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-06",
+  "beta_neutral_weights": {
+    "GDXJ": 0.094273,
+    "GLD": -0.026035,
+    "ITB": 0.028339,
+    "IWM": -0.094273,
+    "JNK": 0.032111,
+    "KRE": 0.062459,
+    "QQQ": -0.094273,
+    "SMH": -0.002602,
+    "SPY": -0.094273,
+    "TLT": 0.094273,
+    "USO": -0.094273,
+    "VNQ": -0.094273,
+    "XOP": 0.094273,
+    "XRT": 0.094273
+  },
+  "confirmed_pairs": [
+    {
+      "conviction": 1.0370463174067197,
+      "direction": "long",
+      "pair": "KRE_IWM",
+      "pred": 0.5534340143203735,
+      "z": -1.8738391399383545
+    },
+    {
+      "conviction": 0.7832148621139012,
+      "direction": "long",
+      "pair": "SMH_QQQ",
+      "pred": 0.578325092792511,
+      "z": -1.3542813062667847
+    },
+    {
+      "conviction": 1.2105631715419207,
+      "direction": "long",
+      "pair": "GDXJ_GLD",
+      "pred": 0.6048980355262756,
+      "z": -2.001268148422241
+    },
+    {
+      "conviction": 2.9288045792377915,
+      "direction": "long",
+      "pair": "XOP_USO",
+      "pred": 0.9199985861778259,
+      "z": -3.183488130569458
+    },
+    {
+      "conviction": 0.9867575684979357,
+      "direction": "long",
+      "pair": "ITB_VNQ",
+      "pred": 0.641532838344574,
+      "z": -1.5381247997283936
+    },
+    {
+      "conviction": -0.21980005786628176,
+      "direction": "short",
+      "pair": "JNK_TLT",
+      "pred": -0.16043595969676971,
+      "z": 1.370017409324646
+    },
+    {
+      "conviction": 1.826488876665735,
+      "direction": "long",
+      "pair": "XRT_SPY",
+      "pred": 0.9459266662597656,
+      "z": -1.9308990240097046
+    }
+  ],
+  "ensemble_loaded": true,
+  "generated_at": "2026-03-06T15:56:41.293845+00:00",
+  "is_stub": false,
+  "n_folds": 5,
+  "schema_version": "signals.v1",
+  "session": "intraday",
+  "signals": [
+    {
+      "direction": "long",
+      "pair": "KRE_IWM",
+      "pred_delta": 0.5534340143203735,
+      "z_score": -1.8738391399383545
+    },
+    {
+      "direction": "flat",
+      "pair": "XBI_IWM",
+      "pred_delta": 0.04960701987147331,
+      "z_score": 0.4982639253139496
+    },
+    {
+      "direction": "flat",
+      "pair": "ARKK_QQQ",
+      "pred_delta": -0.3124915063381195,
+      "z_score": -0.14072422683238983
+    },
+    {
+      "direction": "long",
+      "pair": "SMH_QQQ",
+      "pred_delta": 0.578325092792511,
+      "z_score": -1.3542813062667847
+    },
+    {
+      "direction": "long",
+      "pair": "GDXJ_GLD",
+      "pred_delta": 0.6048980355262756,
+      "z_score": -2.001268148422241
+    },
+    {
+      "direction": "long",
+      "pair": "XOP_USO",
+      "pred_delta": 0.9199985861778259,
+      "z_score": -3.183488130569458
+    },
+    {
+      "direction": "long",
+      "pair": "ITB_VNQ",
+      "pred_delta": 0.641532838344574,
+      "z_score": -1.5381247997283936
+    },
+    {
+      "direction": "short",
+      "pair": "JNK_TLT",
+      "pred_delta": -0.16043595969676971,
+      "z_score": 1.370017409324646
+    },
+    {
+      "direction": "long",
+      "pair": "TAN_XLE",
+      "pred_delta": 0.4600740969181061,
+      "z_score": -0.9627566337585449
+    },
+    {
+      "direction": "long",
+      "pair": "XRT_SPY",
+      "pred_delta": 0.9459266662597656,
+      "z_score": -1.9308990240097046
+    }
+  ],
+  "sleeve": "statarb_v3",
+  "source": "itransformer_ensemble_v3",
+  "status": "ok",
+  "version": "4.0.0"
+}

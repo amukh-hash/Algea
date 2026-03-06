@@ -88,11 +88,16 @@ class TelemetryStorage:
             self._stream_seq[run_id] += 1
             envelope = {"id": self._stream_seq[run_id], **payload}
             self._stream_ring[run_id].append(envelope)
+            # F8: Auto-deregister overflowed clients to prevent RAM leak
+            stale: list[Queue[dict[str, Any]]] = []
             for queue in self._listeners[run_id]:
                 try:
                     queue.put_nowait(envelope)
                 except Full:
                     self._dropped_events[run_id] += 1
+                    stale.append(queue)
+            for q in stale:
+                self._listeners[run_id].remove(q)
 
     def stream_snapshot(self, run_id: str) -> dict[str, Any]:
         run = self.get_run(run_id)
@@ -111,7 +116,8 @@ class TelemetryStorage:
             return [item for item in list(self._stream_ring[run_id]) if int(item.get("id", 0)) > last_event_id]
 
     def subscribe(self, run_id: str) -> Queue[dict[str, Any]]:
-        queue: Queue[dict[str, Any]] = Queue(maxsize=1000)
+        # F8: Bounded queue prevents host RAM exhaustion on client disconnect
+        queue: Queue[dict[str, Any]] = Queue(maxsize=100)
         with self._lock:
             self._listeners[run_id].append(queue)
         return queue

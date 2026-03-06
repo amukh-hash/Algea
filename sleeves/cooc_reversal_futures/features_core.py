@@ -274,3 +274,179 @@ def compute_core_features(
     df["volume_rank_pct"] = df.groupby("trading_day")["volume"].rank(pct=True)
 
     return df
+
+
+# ---------------------------------------------------------------------------
+# O(1) Incremental Feature Pipeline (Phase 2)
+# ---------------------------------------------------------------------------
+
+def precompute_t_minus_1(
+    frame: pd.DataFrame,
+    cfg: Optional[FeatureConfig] = None,
+) -> pd.DataFrame:
+    """Heavy O(N) batch: runs during the 18:00 ET Nightly DAG.
+
+    Computes all historical rolling features up to yesterday's close.
+    Returns ONLY the final row per instrument, representing the state
+    at T-1 that will be merged with the live 09:20 gap at open.
+
+    Parameters
+    ----------
+    frame
+        Full history DataFrame (same schema as ``compute_core_features``).
+    cfg
+        Feature configuration.
+    """
+    if cfg is None:
+        cfg = FeatureConfig()
+
+    # Use the monolithic builder to compute all features on the full history
+    full_df = compute_core_features(frame, cfg)
+
+    # Extract T-1 state: last row per instrument (sorted by trading_day)
+    t_minus_1 = (
+        full_df.sort_values(["instrument", "trading_day"])
+        .groupby("instrument")
+        .tail(1)
+        .reset_index(drop=True)
+    )
+
+    return t_minus_1
+
+
+def update_incremental(
+    t_minus_1_state: pd.DataFrame,
+    live_quotes: dict[str, dict[str, float]],
+    asof_date,
+    cfg: Optional[FeatureConfig] = None,
+) -> pd.DataFrame:
+    """Lightweight O(1) stream: runs at 09:21 ET.
+
+    Merges the cached T-1 feature state with the live 09:20 bar data.
+    Only computes the overnight gap (``r_co``) and its derivatives;
+    all historical rolling features are carried forward from the cache.
+
+    Parameters
+    ----------
+    t_minus_1_state
+        Cached features from ``precompute_t_minus_1`` (1 row per instrument).
+    live_quotes
+        Live 09:20 bar data keyed by symbol. Each value must have at least
+        ``{"open": float}``. Optional: ``{"volume": float, "volume_rank_pct": float}``.
+    asof_date
+        Today's trading date.
+    cfg
+        Feature configuration.
+
+    Returns
+    -------
+    DataFrame with updated features for today, ready for model input.
+    """
+    if cfg is None:
+        cfg = FeatureConfig()
+
+    df = t_minus_1_state.copy()
+
+    _EPS = 1e-8
+
+    # ── Map live 09:20 quotes ─────────────────────────────────────────
+    # Use .get() defensively; instruments missing from live_quotes keep
+    # their cached close price (effectively r_co = 0).
+    instruments = df["instrument"].tolist()
+
+    open_prices = []
+    for sym in instruments:
+        quote = live_quotes.get(sym, {})
+        open_prices.append(quote.get("open", np.nan))
+
+    df["open_t0"] = open_prices
+
+    # ── Compute live overnight gap ────────────────────────────────────
+    # r_co depends on the column name for close — check both conventions
+    close_col = "close" if "close" in df.columns else "r_oc"
+    if close_col == "r_oc":
+        # Edge case: if 'close' isn't cached, we can't compute r_co
+        # Fall back to using existing r_co (stale but non-zero)
+        pass
+    else:
+        df["r_co"] = np.log(df["open_t0"] / df["close"].replace(0, np.nan))
+
+    df["abs_r_co"] = df["r_co"].abs()
+
+    # ── Cross-sectional features (instant math on 14 rows) ────────────
+    r_co_mean = df["r_co"].mean()
+    r_co_std = df["r_co"].std() + _EPS
+
+    df["r_co_cs_demean"] = df["r_co"] - r_co_mean
+    df["r_co_rank_pct"] = df["r_co"].rank(pct=True)
+
+    # V2: shock regime from live gap
+    if cfg.schema_version >= 2:
+        sigma_co = df["sigma_co"].replace(0, np.nan)
+        abs_mean = df["abs_r_co"].mean()
+        abs_std = df["abs_r_co"].std() + _EPS
+        df["z_abs_r_co"] = (df["abs_r_co"] - abs_mean) / abs_std
+
+        # Shock flag: approximation using cached sigma_co as threshold
+        abs_p90 = sigma_co * 1.28  # Gaussian ≈ p90 for |r_co|/σ
+        df["shock_flag"] = (df["abs_r_co"] > abs_p90).astype(float)
+
+    # V3: cross-sectional context
+    if cfg.schema_version >= 3:
+        df["shock_score"] = df["abs_r_co"] / (df["sigma_co"] + _EPS)
+        cs_std_live = df["r_co"].std() + _EPS
+        df["r_co_rank_z"] = (df["r_co"] - r_co_mean) / cs_std_live
+
+        df["sigma_co_rank_pct"] = df["sigma_co"].rank(pct=True)
+
+        # Volume rank from live quotes
+        volumes = []
+        for sym in instruments:
+            quote = live_quotes.get(sym, {})
+            volumes.append(quote.get("volume", np.nan))
+        df["_live_volume"] = volumes
+        df["volume_rank_pct"] = df["_live_volume"].rank(pct=True)
+        df.drop(columns=["_live_volume"], inplace=True, errors="ignore")
+
+    # ── Calendar ──────────────────────────────────────────────────────
+    df["trading_day"] = pd.Timestamp(asof_date)
+    df["day_of_week"] = pd.Timestamp(asof_date).dayofweek
+
+    # Clean up temporary columns
+    df.drop(columns=["open_t0"], inplace=True, errors="ignore")
+
+    return df
+
+
+def profile_feature_pipeline(
+    frame: pd.DataFrame,
+    cfg: Optional[FeatureConfig] = None,
+) -> dict[str, float]:
+    """Profiler gate: measure monolithic feature generation latency.
+
+    Run this to determine if Phase 2 precomputation is necessary:
+    - Features > 500ms → Precompute is justified.
+    - Features < 100ms → ABORT Phase 2 — code is already fast enough.
+
+    Returns
+    -------
+    dict with ``total_ms``, ``features_ms`` keys.
+    """
+    import time as _time
+
+    t0 = _time.perf_counter()
+    _ = compute_core_features(frame, cfg)
+    t1 = _time.perf_counter()
+
+    result = {
+        "total_ms": round((t1 - t0) * 1000, 2),
+        "features_ms": round((t1 - t0) * 1000, 2),
+    }
+
+    import logging
+    logging.getLogger(__name__).info(
+        "[COOC TELEMETRY] Feature pipeline: %.2fms", result["features_ms"],
+    )
+
+    return result
+

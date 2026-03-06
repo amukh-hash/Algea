@@ -1,0 +1,8 @@
+{
+  "d_input": 8,
+  "d_model": 128,
+  "n_head": 4,
+  "n_layers": 2,
+  "dropout": 0.32,
+  "max_len": 512
+}

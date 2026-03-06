@@ -1,6 +1,6 @@
 import pandas as pd
 
-from algea.training.datasets import WindowConfig, build_valid_windows
+from algae.training.datasets import WindowConfig, build_valid_windows
 
 
 def test_valid_windows_exclude_invalid_returns():

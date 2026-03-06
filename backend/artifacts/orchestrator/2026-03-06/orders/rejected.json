@@ -1,0 +1,18 @@
+{
+  "app": "Algae",
+  "missing_symbols": [
+    "AAPL",
+    "AMZN",
+    "ES",
+    "GOOG",
+    "META",
+    "MSFT",
+    "NVDA",
+    "SPY"
+  ],
+  "reasons": [
+    "missing_price"
+  ],
+  "status": "failed",
+  "version": "4.0.0"
+}

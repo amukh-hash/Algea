@@ -79,11 +79,15 @@ class SMoEGateNet(nn.Module):
         gate_in = torch.cat([x, market_status], dim=-1)
         
         # Compute gate logits with noisy gating
-        gate_logits = self.gate(gate_in)  # (B, n_experts)
-        if self.training:
-            gate_logits = gate_logits + torch.randn_like(gate_logits) * self.noise_std
-            
-        gate_probs = F.softmax(gate_logits, dim=-1)
+        # BFloat16 autocast prevents Ada Lovelace FP8 tensor cores from
+        # underflowing Gumbel-Softmax probabilities to 0.0, physically
+        # guaranteeing experts receive routing traffic.
+        device_type = "cuda" if gate_in.is_cuda else "cpu"
+        with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+            gate_logits = self.gate(gate_in)  # (B, n_experts)
+            if self.training:
+                gate_logits = gate_logits + torch.randn_like(gate_logits) * self.noise_std
+            gate_probs = F.softmax(gate_logits, dim=-1)
 
         # Top-K selection
         top_k_vals, top_k_idx = torch.topk(gate_probs, self.top_k, dim=-1)

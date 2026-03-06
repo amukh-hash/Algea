@@ -82,7 +82,7 @@
 
 ## 3) Canonical contract inventory (schemas, owners, validation, versions, migration)
 
-> Codex must confirm exact paths via `rg -n "<class|symbol>" backend algea` and create modules where noted.
+> Codex must confirm exact paths via `rg -n "<class|symbol>" backend algae` and create modules where noted.
 
 ### 3.1 SignalArtifact — `signals.v1`
 
@@ -102,7 +102,7 @@
 
 ### 3.3 OrderIntent — `order_intents.v2`
 
-* **Owner:** `algea/trading/orders.py` (canonical)
+* **Owner:** `algae/trading/orders.py` (canonical)
 * **Fields:** `schema_version`, `asof_date`, `tick_id`, `submitted_at` (planned submit time), `symbol`, `side`, `quantity`, `reason`, **required** deterministic `client_order_id`, optional `limit_price`, `time_in_force`
 * **Validation:** pre-persist and pre-submit
 * **Migration:** `v1→v2` adds required `tick_id`, `submitted_at`, deterministic `client_order_id`; missing in paper/live fails closed
@@ -153,7 +153,7 @@
 
 ### 3.10 CalendarService — `calendar_service.v1`
 
-* **Owner:** `algea/trading/calendar_service.py` (new SSoT)
+* **Owner:** `algae/trading/calendar_service.py` (new SSoT)
 * **Methods:** `is_trading_day(date, exchange)`, `session_bounds(date, exchange)`, `trading_sessions(start,end,exchange,tz)`
 * **Exchanges:** explicitly define at least `{XNYS, CME}` or repo-specific set
 * **Parity tests:** required vs orchestrator session logic
@@ -172,18 +172,18 @@
 
 ### 3.13 BacktestEligibilityPanel — `eligibility.v1`
 
-* **Owner:** `algea/data/eligibility/schema.py` + builder
+* **Owner:** `algae/data/eligibility/schema.py` + builder
 * **Fields:** `schema_version`, `date`, `symbol`, `is_eligible`, `reason_codes[]`
 * **Rule:** must be a daily panel across backtest window (not latest snapshot)
 
 ### 3.14 BacktestConfig — `backtest_config.v1`
 
-* **Owner:** `algea/research/config_models.py` (new canonical)
-* **Mapping:** explicit conversion from `algea/core/config.py` with strict unknown-key policy
+* **Owner:** `algae/research/config_models.py` (new canonical)
+* **Mapping:** explicit conversion from `algae/core/config.py` with strict unknown-key policy
 
 ### 3.15 CostModel — `cost_model.v1`
 
-* **Owner:** choose `algea/trading/costs.py` as canonical; keep adapters for legacy module(s)
+* **Owner:** choose `algae/trading/costs.py` as canonical; keep adapters for legacy module(s)
 * **Requirement:** deterministic, unit-documented, equivalence tests vs legacy behavior until legacy removed
 
 ---
@@ -283,9 +283,9 @@
 * **Dependencies:** Patch 3.
 * **Files:**
 
-  * `algea/trading/portfolio.py`
-  * `algea/trading/orders.py`
-  * `algea/trading/fills.py`
+  * `algae/trading/portfolio.py`
+  * `algae/trading/orders.py`
+  * `algae/trading/fills.py`
   * `backend/tests/test_portfolio_accounting.py`
 * **Exact changes:**
 
@@ -317,10 +317,10 @@
 * **Dependencies:** Patch 4.
 * **Files:**
 
-  * `algea/data/eligibility/schema.py` (new if absent)
-  * `algea/data/eligibility/build.py`
-  * `algea/trading/risk.py` (or target builder)
-  * `algea/research/backtest_engine.py`
+  * `algae/data/eligibility/schema.py` (new if absent)
+  * `algae/data/eligibility/build.py`
+  * `algae/trading/risk.py` (or target builder)
+  * `algae/research/backtest_engine.py`
   * `backend/scripts/research/run_backtest.py`
   * `backend/tests/test_backtest_eligibility_targets.py`
 * **Exact changes:**
@@ -416,7 +416,7 @@
 
 * **Goal:** Eliminate duplicate submissions and nondeterminism.
 * **Dependencies:** Patches 2–4.
-* **Files:** `backend/scripts/orchestrate.py`, broker adapters, `algea/trading/orders.py`, cycle scripts, tests.
+* **Files:** `backend/scripts/orchestrate.py`, broker adapters, `algae/trading/orders.py`, cycle scripts, tests.
 * **Exact changes:**
 
   1. Centralize broker mode mapping and document it; remove divergent interpretations (`stub` vs persistent paper).
@@ -503,14 +503,14 @@
 
 * Deny runtime TODO/stubs:
 
-  * `rg -n "TODO|FIXME|XXX|NotImplementedError" backend algea | rg -v "allowlist|tests|docs"`
+  * `rg -n "TODO|FIXME|XXX|NotImplementedError" backend algae | rg -v "allowlist|tests|docs"`
 * Deny wall-clock in adapters/routing:
 
-  * `rg -n "date\.today\(|datetime\.now\(" backend/app/orchestrator backend/scripts algea/trading | rg -v "clock|tests"`
+  * `rg -n "date\.today\(|datetime\.now\(" backend/app/orchestrator backend/scripts algae/trading | rg -v "clock|tests"`
 * Lint/type if present:
 
-  * `ruff check backend algea`
-  * `python -m mypy backend/app/orchestrator backend/app/api algea/trading` (only if enabled)
+  * `ruff check backend algae`
+  * `python -m mypy backend/app/orchestrator backend/app/api algae/trading` (only if enabled)
 
 ### Merge policy
 

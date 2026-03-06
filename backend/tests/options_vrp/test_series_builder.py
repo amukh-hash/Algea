@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.models.tsfm.lag_llama.series_builder import (
+from algae.models.tsfm.lag_llama.series_builder import (
     build_abs_neg_ret_series,
     build_ewma_variance,
     build_log_returns,

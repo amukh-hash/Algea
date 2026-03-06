@@ -1,0 +1,16 @@
+{
+  "drift_score": 0.1875,
+  "latency_ms": 0.1444000008632429,
+  "model_name": "vol_surface",
+  "model_version": "v1.0.0",
+  "ood_score": 0.1875,
+  "output_hash": "2e694f20b7f9f65d159e1cebb8dbd80d362b7f9f30d1007b698791c8699913b7",
+  "request_hash": "6489df53a3a4f10ec6f289c82813936b76dd1c50b405b82e9709ef7ff39c3794",
+  "trace_id": "vrp_2026-03-06",
+  "uncertainty": {
+    "7": 0.043200000000000016,
+    "14": 0.043200000000000016,
+    "30": 0.0456,
+    "60": 0.048000000000000015
+  }
+}

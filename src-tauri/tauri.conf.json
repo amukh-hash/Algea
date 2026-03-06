@@ -6,7 +6,7 @@
     "devPath": "http://localhost:3000",
     "distDir": "../frontend/out"
   },
-  "package": { "productName": "Algea Desktop v4.0", "version": "0.1.0" },
+  "package": { "productName": "Algae Desktop v4.0", "version": "0.1.0" },
   "tauri": {
     "allowlist": { "all": false, "shell": { "all": false, "open": true } },
     "bundle": { "active": true, "targets": ["msi"] },

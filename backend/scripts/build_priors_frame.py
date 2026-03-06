@@ -34,8 +34,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algea.data.priors.feature_utils import build_features
-from algea.data.priors.selector_schema import (
+from algae.data.priors.feature_utils import build_features
+from algae.data.priors.selector_schema import (
     ALL_FRAME_COLS,
     META_COLS,
     MODEL_FEATURE_COLS,

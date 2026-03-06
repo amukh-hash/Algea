@@ -5,9 +5,9 @@ from datetime import date
 
 import pytest
 
-from algea.execution.options.config import VRPConfig
-from algea.execution.options.exits import DeRiskPolicy, ExitReason
-from algea.execution.options.structures import (
+from algae.execution.options.config import VRPConfig
+from algae.execution.options.exits import DeRiskPolicy, ExitReason
+from algae.execution.options.structures import (
     DerivativesPosition,
     OptionLeg,
     StructureType,

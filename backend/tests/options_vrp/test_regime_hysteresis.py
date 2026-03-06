@@ -5,14 +5,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.data.options.vrp_features import (
+from algae.data.options.vrp_features import (
     RegimeState,
     RegimeThresholds,
     VolRegime,
     classify_regime,
     classify_regime_with_hysteresis,
 )
-from algea.execution.options.config import VRPConfig
+from algae.execution.options.config import VRPConfig
 
 
 def _crash_features():

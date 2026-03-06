@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from algea.execution.options.config import VRPConfig
+from algae.execution.options.config import VRPConfig
 from backend.app.monitoring.vrp_monitor import (
     DailySnapshot,
     MonitorAlert,

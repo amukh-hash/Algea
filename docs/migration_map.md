@@ -27,10 +27,10 @@
 ## Module Imports
 | Legacy Import | New Import |
 | --- | --- |
-| `backend.app.data.*` | `algea.data.*` |
-| `backend.app.models.*` | `algea.models.*` |
-| `backend.app.engine.*` | `algea.execution.*` |
-| `backend.app.ops.*` | `algea.core.*` |
+| `backend.app.data.*` | `algae.data.*` |
+| `backend.app.models.*` | `algae.models.*` |
+| `backend.app.engine.*` | `algae.execution.*` |
+| `backend.app.ops.*` | `algae.core.*` |
 
 ## Deprecated Code
 Legacy code has been moved into `deprecated/backend_app_snapshot/` and `deprecated/legacy_scripts/`.

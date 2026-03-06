@@ -38,25 +38,25 @@ from torch.utils.data import DataLoader
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algea.data.priors.selector_schema import MODEL_FEATURE_COLS
-from algea.eval.selector_metrics import (
+from algae.data.priors.selector_schema import MODEL_FEATURE_COLS
+from algae.eval.selector_metrics import (
     apply_risk_adjustment,
     compute_bucketed_metrics,
     diagnose_target_alignment,
     diagnose_zscore_universe,
     per_date_metrics,
 )
-from algea.eval.portfolio import (
+from algae.eval.portfolio import (
     build_equity_curve,
     build_portfolio,
     compute_portfolio_metrics,
     compute_portfolio_returns,
     compute_regime_breakdown,
 )
-from algea.portfolio.portfolio_rules import PortfolioConfig, construct_portfolio as construct_portfolio_v2
-from algea.portfolio.cost_model import CostConfig, apply_costs as apply_costs_v2, compute_turnover_and_cost
-from algea.portfolio.vol_scaling import VolTargetConfig, compute_leverage, apply_leverage
-from algea.models.ranker.baseline_scorer import (
+from algae.portfolio.portfolio_rules import PortfolioConfig, construct_portfolio as construct_portfolio_v2
+from algae.portfolio.cost_model import CostConfig, apply_costs as apply_costs_v2, compute_turnover_and_cost
+from algae.portfolio.vol_scaling import VolTargetConfig, compute_leverage, apply_leverage
+from algae.models.ranker.baseline_scorer import (
     blend_scores,
     compute_baseline_score,
     compute_gate_input,
@@ -65,7 +65,7 @@ from algea.models.ranker.baseline_scorer import (
     sanity_check_gate_monotonicity,
     tune_gate_params,
 )
-from algea.data.priors.feature_utils import (
+from algae.data.priors.feature_utils import (
     add_date_regime_features,
     compute_date_cross_sectional_stats,
     diagnose_cross_sectional_variance,
@@ -73,7 +73,7 @@ from algea.data.priors.feature_utils import (
     make_cs_feature_spec,
     recompute_regime_risk,
 )
-from algea.training.selector_dataset import (
+from algae.training.selector_dataset import (
     SelectorDataset,
     make_time_split,
     selector_collate_fn,
@@ -384,7 +384,7 @@ def run_ridge_baseline(
 # ═══════════════════════════════════════════════════════════════════════════
 
 def train(args):
-    from algea.core.device import get_device
+    from algae.core.device import get_device
     device = get_device()
 
     # Load priors frame (partitioned parquet)
@@ -476,7 +476,7 @@ def train(args):
     # Model
     model_type = getattr(args, 'model_type', 'mlp')
     if model_type == 'transformer':
-        from algea.models.ranker.rank_transformer import RankTransformer
+        from algae.models.ranker.rank_transformer import RankTransformer
         model = RankTransformer(
             d_input=len(feature_cols),
             d_model=args.d_model,
@@ -485,7 +485,7 @@ def train(args):
             dropout=args.dropout,
         ).to(device)
     else:
-        from algea.models.ranker.mlp_selector import MLPSelector
+        from algae.models.ranker.mlp_selector import MLPSelector
         model = MLPSelector(
             d_input=len(feature_cols),
             hidden=args.mlp_hidden,
@@ -1212,7 +1212,7 @@ def _run_portfolio_eval(scored_splits, target_col, out_dir, args):
         logger.info(f"\n  ── {split_name.upper()} portfolio ──")
 
         # Signal layer metrics
-        from algea.eval.selector_metrics import per_date_metrics as pdm
+        from algae.eval.selector_metrics import per_date_metrics as pdm
         dm = pdm(scored, "score_final", target_col)
         sig = {
             "ic": round(float(dm["ic"].mean()), 4),

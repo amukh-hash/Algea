@@ -17,7 +17,7 @@ from .dataset import assert_no_leakage
 from .train import FEATURE_COLUMNS, Preprocessor
 from .types import CoverageReport, GateResult, ModelBundle, PromotionWindow, PromotionWindowsReport, SplitSpec, ValidationReport
 
-from algea.data.options.vrp_features import VolRegime
+from algae.data.options.vrp_features import VolRegime
 
 
 # ---------------------------------------------------------------------------

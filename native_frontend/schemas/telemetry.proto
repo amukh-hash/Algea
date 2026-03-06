@@ -1,0 +1,115 @@
+// ─────────────────────────────────────────────────────────────────────
+// Algae Native Frontend — Telemetry Event Channel (Protobuf)
+//
+// Covers: tick events, orchestrator events, alerts, and metric points
+// streamed over ZMQ PUB port 5556.
+//
+// Compiled to C++ headers via protoc during CMake build step.
+// ─────────────────────────────────────────────────────────────────────
+syntax = "proto3";
+package algae.streaming;
+
+option cc_enable_arenas = true;
+
+// ── Enums ───────────────────────────────────────────────────────────
+
+enum RunStatus {
+    RUN_STATUS_UNKNOWN   = 0;
+    RUN_STATUS_STARTING  = 1;
+    RUN_STATUS_RUNNING   = 2;
+    RUN_STATUS_PAUSED    = 3;
+    RUN_STATUS_STOPPED   = 4;
+    RUN_STATUS_COMPLETED = 5;
+    RUN_STATUS_ERROR     = 6;
+}
+
+enum EventLevel {
+    EVENT_LEVEL_UNKNOWN = 0;
+    EVENT_LEVEL_DEBUG   = 1;
+    EVENT_LEVEL_INFO    = 2;
+    EVENT_LEVEL_WARN    = 3;
+    EVENT_LEVEL_ERROR   = 4;
+}
+
+enum EventType {
+    EVENT_TYPE_UNKNOWN          = 0;
+    EVENT_TYPE_DECISION_MADE    = 1;
+    EVENT_TYPE_GATE_TRIPPED     = 2;
+    EVENT_TYPE_ORDER_SUBMITTED  = 3;
+    EVENT_TYPE_ORDER_FILLED     = 4;
+    EVENT_TYPE_ORDER_REJECTED   = 5;
+    EVENT_TYPE_RISK_LIMIT       = 6;
+    EVENT_TYPE_ERROR            = 7;
+    EVENT_TYPE_CHECKPOINT_SAVED = 8;
+    EVENT_TYPE_EVAL_COMPLETE    = 9;
+    EVENT_TYPE_BACKTEST_COMPLETE = 10;
+}
+
+// ── Market Data ─────────────────────────────────────────────────────
+
+message TickEvent {
+    uint64 sequence_id   = 1;  // Mandatory invariant for state reconciliation
+    uint64 timestamp_ns  = 2;  // Nanosecond-precision UTC timestamp
+    string symbol        = 3;
+    double bid           = 4;
+    double ask           = 5;
+    double last          = 6;
+    double volume        = 7;
+}
+
+// ── Telemetry Events ────────────────────────────────────────────────
+
+message MetricPoint {
+    uint64     sequence_id = 1;
+    string     run_id      = 2;
+    uint64     timestamp_ns = 3;
+    string     key         = 4;
+    double     value       = 5;
+    map<string, string> labels = 6;
+}
+
+message TelemetryEvent {
+    uint64     sequence_id  = 1;
+    string     run_id       = 2;
+    uint64     timestamp_ns = 3;
+    EventLevel level        = 4;
+    EventType  type         = 5;
+    string     message      = 6;
+    map<string, string> payload = 7;
+}
+
+message RunUpdate {
+    uint64     sequence_id  = 1;
+    string     run_id       = 2;
+    RunStatus  status       = 3;
+    string     name         = 4;
+    string     sleeve_name  = 5;
+    uint64     started_at_ns = 6;
+    uint64     ended_at_ns   = 7;  // 0 if still running
+}
+
+// ── Alert System ────────────────────────────────────────────────────
+
+message Alert {
+    string id            = 1;
+    string root_cause_id = 2;  // Empty if this IS the root cause
+    uint32 severity      = 3;  // 1=info, 2=warn, 3=critical
+    string message       = 4;
+    string source        = 5;  // e.g. "sleeve_3", "risk_engine"
+    uint64 timestamp_ns  = 6;
+}
+
+// ── Wrapper Envelope ────────────────────────────────────────────────
+// All messages on the event channel are wrapped in this envelope
+// so the C++ deserializer can dispatch by type.
+
+message StreamEnvelope {
+    uint64 sequence_id = 1;
+    oneof payload {
+        TickEvent       tick    = 10;
+        MetricPoint     metric  = 11;
+        TelemetryEvent  event   = 12;
+        RunUpdate       run     = 13;
+        Alert           alert   = 14;
+    }
+}

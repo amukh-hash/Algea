@@ -34,7 +34,7 @@ def load_teacher(run_dir: Path):
         config = json.load(f)
 
     model_id = config.get("model_id", "amazon/chronos-2")
-    from algea.core.device import get_device
+    from algae.core.device import get_device
     device = get_device()
 
     from chronos import Chronos2Pipeline
@@ -70,7 +70,7 @@ def load_teacher(run_dir: Path):
     pipeline.model.eval().to(device)
 
     # Wrap for infer_priors
-    from algea.models.foundation.chronos2_teacher import Chronos2NativeWrapper
+    from algae.models.foundation.chronos2_teacher import Chronos2NativeWrapper
     model = pipeline.model
     model.predict = pipeline.predict
     native = Chronos2NativeWrapper(model, model_type="chronos-2",
@@ -82,7 +82,7 @@ def load_teacher(run_dir: Path):
 # 2. Verification
 # -------------------------------------------------------------------------
 def verify_teacher(name: str, run_dir: Path) -> bool:
-    from algea.models.foundation.chronos2_teacher import infer_priors, ChronosPriors
+    from algae.models.foundation.chronos2_teacher import infer_priors, ChronosPriors
 
     logger.info(f"=== {name} ===")
     model, pipeline, device, config = load_teacher(run_dir)

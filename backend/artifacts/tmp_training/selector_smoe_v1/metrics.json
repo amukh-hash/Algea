@@ -1,0 +1,10 @@
+{
+  "ic_mean": 0.6666666666666666,
+  "rank_ic": 0.6666666666666666,
+  "top_bottom_spread": 0.05,
+  "load_balance_score": 1.5,
+  "router_entropy_mean": 1.3861589631548148,
+  "calibration_score": 0.7,
+  "sharpe": 1.1,
+  "max_drawdown": 0.1
+}

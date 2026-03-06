@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.execution.shadow_runner import (
+from algae.execution.shadow_runner import (
     ShadowRunConfig,
     ShadowReport,
     shadow_evaluate,

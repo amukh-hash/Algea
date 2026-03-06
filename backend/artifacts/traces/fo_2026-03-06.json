@@ -1,0 +1,10 @@
+{
+  "instrument_id": "ES",
+  "latency_ms": 0.6273999970289879,
+  "model_alias": "prod",
+  "model_name": "chronos2",
+  "model_version": "v1.0.0",
+  "output_hash": "67817d088759b9d00e13adc87f4bf033d04b26feb8f3b460c36ac88ed98a7f14",
+  "request_hash": "d9cd790d6847783a902ac600cbc5d263b937d5f9b016a144fd12d2c190edacaf",
+  "trace_id": "fo_2026-03-06"
+}

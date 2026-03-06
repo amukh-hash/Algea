@@ -13,15 +13,29 @@ param(
     [switch]$DryRun                      # pass -DryRun for noop mode
 )
 
+# --- DISASTER RECOVERY TIME GUARD ---
+# Prevents the stack from booting on weekends or outside trading hours.
+# Essential when using the "At Log On" Task Scheduler trigger for DR.
+$now = Get-Date
+$startWindow = (Get-Date).Date.AddHours(6).AddMinutes(25)  # 06:25 AM
+$endWindow = (Get-Date).Date.AddHours(16).AddMinutes(10) # 04:10 PM
+$isWeekday = ($now.DayOfWeek -ge [System.DayOfWeek]::Monday) -and ($now.DayOfWeek -le [System.DayOfWeek]::Friday)
+
+if (-not $isWeekday -or ($now -lt $startWindow) -or ($now -gt $endWindow)) {
+    Write-Host "System booted outside active trading window ($now). Aborting auto-start." -ForegroundColor Yellow
+    exit 0
+}
+# ------------------------------------
+
 $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $ROOT
 
-# Set IBKR Gateway connection for paper trading (port 4002)
+# Set IBKR TWS connection for paper trading (port 7497)
 # TWS uses 7497 (live) / 7496 (paper); Gateway uses 4001 (live) / 4002 (paper)
 if ($Broker -eq "ibkr" -and -not $env:IBKR_GATEWAY_URL) {
-    $env:IBKR_GATEWAY_URL = "127.0.0.1:4002"
-    Write-Host "  Set IBKR_GATEWAY_URL=$env:IBKR_GATEWAY_URL (Gateway paper)" -ForegroundColor Gray
+    $env:IBKR_GATEWAY_URL = "127.0.0.1:7497"
+    Write-Host "  Set IBKR_GATEWAY_URL=$env:IBKR_GATEWAY_URL (TWS paper)" -ForegroundColor Gray
 }
 
 # Ensure log directory exists
@@ -37,17 +51,17 @@ Write-Host " Poll:     ${PollInterval}s"             -ForegroundColor Cyan
 Write-Host " Dry-run:  $DryRun"                      -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# --- 1. Start IBKR Gateway via IBC (if applicable) ---
+# --- 1. Start IBKR TWS via IBC (if applicable) ---
 if ($Broker -eq "ibkr") {
-    $ibcPath = "C:\IBC\StartGateway.bat"
+    $ibcPath = "C:\IBC\StartTWS.bat"
     if (Test-Path $ibcPath) {
-        Write-Host "`n[0/2] Starting IBKR Gateway via IBC..." -ForegroundColor Green
+        Write-Host "`n[0/2] Starting IBKR TWS via IBC..." -ForegroundColor Green
         Start-Process -FilePath $ibcPath -WindowStyle Minimized
-        Write-Host "  Waiting 20 seconds for Gateway to initialize and login..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 20
+        Write-Host "  Waiting 30 seconds for TWS to initialize and login..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 30
     }
     else {
-        Write-Host "`n[0/2] Warning: C:\IBC\StartGateway.bat not found. Assuming Gateway is already running." -ForegroundColor Yellow
+        Write-Host "`n[0/2] Warning: C:\IBC\StartTWS.bat not found. Assuming TWS is already running." -ForegroundColor Yellow
     }
 }
 
@@ -101,14 +115,37 @@ Write-Host "  Stop-Process -Id $($apiProc.Id), $($orchProc.Id) -Force"
 Write-Host "`nTo tail orchestrator log:"
 Write-Host "  Get-Content '$orchLog' -Wait -Tail 20"
 
-# Wait for either process to exit
+# Wait for orchestrator daemon exit or Ctrl+C, while watchdog-restarting the API
 Write-Host "`nMonitoring... (press Ctrl+C to stop)" -ForegroundColor Yellow
+Write-Host "  API watchdog: auto-restart on crash (5s cooldown)" -ForegroundColor Gray
+
+function Start-ApiProcess {
+    $ts = Get-Date -Format "yyyy-MM-dd_HHmmss"
+    $log = Join-Path $logDir "api_${ts}.log"
+    $err = Join-Path $logDir "api_${ts}_err.log"
+    $proc = Start-Process -FilePath "py" `
+        -ArgumentList "-m", "uvicorn", "backend.app.api.main:app", "--host", "127.0.0.1", "--port", "8000", "--log-level", "info" `
+        -WorkingDirectory $ROOT `
+        -RedirectStandardOutput $log `
+        -RedirectStandardError $err `
+        -PassThru -NoNewWindow
+    Write-Host "  API (re)started PID=$($proc.Id) | Log: $log" -ForegroundColor Green
+    return $proc
+}
+
 try {
-    while (-not $apiProc.HasExited -and -not $orchProc.HasExited) {
+    while ($true) {
+        if ($apiProc.HasExited) {
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] API process died (exit code $($apiProc.ExitCode)) — restarting in 5s..." -ForegroundColor Red
+            Start-Sleep -Seconds 5
+            $apiProc = Start-ApiProcess
+        }
+        if ($orchProc.HasExited) {
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Orchestrator daemon exited with code $($orchProc.ExitCode)" -ForegroundColor Red
+            break
+        }
         Start-Sleep -Seconds 5
     }
-    if ($apiProc.HasExited) { Write-Host "API server exited with code $($apiProc.ExitCode)" -ForegroundColor Red }
-    if ($orchProc.HasExited) { Write-Host "Orchestrator exited with code $($orchProc.ExitCode)" -ForegroundColor Red }
 }
 finally {
     # Cleanup on Ctrl+C

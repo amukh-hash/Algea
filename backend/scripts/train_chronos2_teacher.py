@@ -35,7 +35,7 @@ from torch.utils.data import DataLoader
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from algea.training.chronos_dataset import ChronosDataset, chronos_collate_fn
+from algae.training.chronos_dataset import ChronosDataset, chronos_collate_fn
 from backend.scripts._cli_utils import detect_ffn_modules
 
 # --- Logging ----------------------------------------------------------------
@@ -409,7 +409,7 @@ def validate(
 # --- Setup helpers ----------------------------------------------------------
 def setup_device():
     """Configure CUDA device with TF32 if available, return device."""
-    from algea.core.device import get_device
+    from algae.core.device import get_device
     device = get_device()
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -451,7 +451,7 @@ def load_optional_covariates(args):
 
     logger.info(f"Covariates not found at {cov_path}, attempting to build...")
     try:
-        from algea.data.market.covariates import build_and_persist_covariates
+        from algae.data.market.covariates import build_and_persist_covariates
         ticker_dir = ROOT / "backend" / "data" / "canonical" / "per_ticker"
         return build_and_persist_covariates(ticker_dir, cov_path, overwrite=False)
     except Exception as e:

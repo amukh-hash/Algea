@@ -1,0 +1,45 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-03",
+  "models": {
+    "chronos2": {
+      "endpoint_name": "",
+      "model_alias": "",
+      "model_name": "chronos2",
+      "model_version": "unknown"
+    },
+    "itransformer": {
+      "endpoint_name": "",
+      "model_alias": "",
+      "model_name": "itransformer",
+      "model_version": "unknown"
+    },
+    "rl_policy": {
+      "endpoint_name": "",
+      "model_alias": "",
+      "model_name": "rl_policy",
+      "model_version": "unknown"
+    },
+    "selector_smoe": {
+      "endpoint_name": "",
+      "model_alias": "",
+      "model_name": "selector_smoe",
+      "model_version": "unknown"
+    },
+    "vol_surface": {
+      "endpoint_name": "",
+      "model_alias": "",
+      "model_name": "vol_surface",
+      "model_version": "unknown"
+    },
+    "vol_surface_grid": {
+      "endpoint_name": "",
+      "model_alias": "",
+      "model_name": "vol_surface_grid",
+      "model_version": "unknown"
+    }
+  },
+  "run_id": "0daf8081-c270-44ae-96f4-daaba9d44f1a",
+  "session": "overnight",
+  "version": "4.0.0"
+}

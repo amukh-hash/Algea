@@ -1,0 +1,8 @@
+{
+  "rank_ic": 0.5,
+  "ic_mean": 0.5,
+  "pair_stability": 0.8,
+  "calibration_score": 0.7,
+  "sharpe": 1.0,
+  "max_drawdown": 0.15
+}

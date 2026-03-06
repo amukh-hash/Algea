@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from algea.data.options.greeks_engine import (
+from algae.data.options.greeks_engine import (
     bs_delta,
     bs_gamma,
     bs_price,

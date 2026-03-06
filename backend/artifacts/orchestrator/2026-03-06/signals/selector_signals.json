@@ -1,0 +1,66 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-06",
+  "generated_at": "2026-03-06T15:56:39.443870+00:00",
+  "is_stub": false,
+  "ml_risk": {
+    "context_sensitivity_score": 0.002893046968943708,
+    "drift_score": 0.0,
+    "expert_collapse_score": 1.0,
+    "expert_utilization": {
+      "0": 0,
+      "1": 0,
+      "2": 0,
+      "3": 6
+    },
+    "fallback_used": false,
+    "latency_ms_p95": 1.0817000002134591,
+    "load_balance_score": 1.5,
+    "model_alias": "prod",
+    "model_name": "selector_smoe",
+    "model_version": "v1.0.0",
+    "ood_score": 0.0,
+    "router_entropy_mean": 1.3798528700395638,
+    "specialization_by_bucket": {
+      "risk_on": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 6
+      }
+    }
+  },
+  "run_type": "intraday",
+  "schema_version": "signals.v1",
+  "session": "intraday",
+  "signals": [
+    {
+      "symbol": "AAPL",
+      "target_weight": -0.05
+    },
+    {
+      "symbol": "AMZN",
+      "target_weight": 0.05
+    },
+    {
+      "symbol": "GOOG",
+      "target_weight": 0.05
+    },
+    {
+      "symbol": "META",
+      "target_weight": 0.05
+    },
+    {
+      "symbol": "MSFT",
+      "target_weight": -0.05
+    },
+    {
+      "symbol": "NVDA",
+      "target_weight": -0.05
+    }
+  ],
+  "sleeve": "selector",
+  "source": "smoe_rank",
+  "status": "ok",
+  "version": "4.0.0"
+}

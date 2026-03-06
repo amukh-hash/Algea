@@ -1,6 +1,6 @@
 import pandas as pd
 
-from algea.data.features.build import build_features
+from algae.data.features.build import build_features
 
 
 def test_feature_build_deterministic():

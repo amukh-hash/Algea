@@ -9,13 +9,13 @@ from datetime import date
 import numpy as np
 import pytest
 
-from algea.execution.options.structures import (
+from algae.execution.options.structures import (
     DerivativesPosition,
     DerivativesPositionFrame,
     OptionLeg,
     StructureType,
 )
-from algea.trading.derivatives_risk import (
+from algae.trading.derivatives_risk import (
     compute_position_scenario_pnl,
     compute_scenario_grid,
 )

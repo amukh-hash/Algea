@@ -40,9 +40,9 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from algea.trading.broker_ibkr import IBKRLiveBroker
-from algea.trading.broker_base import BrokerAccount
-from algea.trading.orders import OrderIntent, Order
+from algae.trading.broker_ibkr import IBKRLiveBroker
+from algae.trading.broker_base import BrokerAccount
+from algae.trading.orders import OrderIntent, Order
 
 logging.basicConfig(
     level=logging.INFO,
@@ -211,8 +211,8 @@ def run_vrp(
     }
 
     try:
-        from algea.execution.options.vrp_strategy import VRPStrategy
-        from algea.execution.options.config import VRPConfig
+        from algae.execution.options.vrp_strategy import VRPStrategy
+        from algae.execution.options.config import VRPConfig
         from backend.app.trading.ibkr_option_chain import fetch_option_chain
         from backend.app.trading.ibkr_market_data import (
             fetch_underlying_closes,

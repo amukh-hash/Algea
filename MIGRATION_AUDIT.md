@@ -1,4 +1,4 @@
-# Algea Codebase Migration Audit
+# Algae Codebase Migration Audit
 
 **Date:** February 16, 2026
 **Context:** Folder migration to new Windows user (`crick`) after PC upgrade (dual GPU: 4070 Super + 3090 Ti)
@@ -25,7 +25,7 @@ The codebase structure and Python module connectivity are **healthy** — no bro
 
 **Before:**
 ```python
-RUN = r"C:\Users\Aishik\Documents\Workshop\Algea\backend\data\selector\runs\SEL-20260211-141209"
+RUN = r"C:\Users\Aishik\Documents\Workshop\Algae\backend\data\selector\runs\SEL-20260211-141209"
 ```
 
 **After:**
@@ -36,7 +36,7 @@ RUN = str(Path(__file__).resolve().parents[1] / "data" / "selector" / "runs" / "
 
 ### 3. All GPU Scripts Now Route to 3090 Ti (cuda:1)  ✅
 
-Created a centralised device selection module: **`algea/core/device.py`**
+Created a centralised device selection module: **`Algae/core/device.py`**
 
 Resolution order:
 1. Explicit `override` argument
@@ -50,10 +50,10 @@ Includes automatic validation — if `cuda:1` doesn't exist at runtime, falls ba
 
 | File | Change |
 |---|---|
-| `algea/models/tsfm/lag_llama/config.py` | Default `"cuda"` → `"cuda:1"` |
-| `algea/training/foundation_train.py` | `torch.device(...)` → `get_device()` |
-| `algea/training/ranker_train.py` | `torch.device(...)` → `get_device()` |
-| `algea/training/selector_train.py` | `torch.device(...)` → `get_device()` |
+| `Algae/models/tsfm/lag_llama/config.py` | Default `"cuda"` → `"cuda:1"` |
+| `Algae/training/foundation_train.py` | `torch.device(...)` → `get_device()` |
+| `Algae/training/ranker_train.py` | `torch.device(...)` → `get_device()` |
+| `Algae/training/selector_train.py` | `torch.device(...)` → `get_device()` |
 | `backend/scripts/build_priors_cache.py` | `torch.device(...)` → `get_device()` |
 | `backend/scripts/eval_chronos_metrics.py` | `torch.device(...)` → `get_device()` |
 | `backend/scripts/train_chronos2_teacher.py` | `setup_device()` → uses `get_device()` + GradScaler fix |
@@ -79,16 +79,16 @@ set ALGAIE_CUDA_DEVICE=cuda:0
 ### 5. Missing `__init__.py` Files Added  ✅
 
 Created empty `__init__.py` in:
-- `algea/core/artifacts/`
+- `Algae/core/artifacts/`
 - `backend/app/data/`
 - `backend/app/portfolio/`
 
-### 6. `algea/models/__init__.py` Fixed  ✅
+### 6. `Algae/models/__init__.py` Fixed  ✅
 
 **Before:** `__all__ = ["foundation", "ranker", "common"]`
 **After:** `__all__ = ["foundation", "ranker", "common", "tsfm"]`
 
-### 7. `algea/core/__init__.py` Updated  ✅
+### 7. `Algae/core/__init__.py` Updated  ✅
 
 Added `"device"` to `__all__` for the new device selection module.
 
@@ -122,13 +122,13 @@ The `.env` file has Alpaca and FRED API keys. Verify they still work from your n
 
 ### Run Manifest JSON Files (85+) Contain Old `Aishik` Paths
 
-Files in `backend/data/runs/RUN-2026-02-07-*` and `RUN-2026-02-08-*` have hardcoded paths. These are historical records and don't affect runtime (code uses `algea.core.paths` for dynamic resolution). If you want to clean them up:
+Files in `backend/data/runs/RUN-2026-02-07-*` and `RUN-2026-02-08-*` have hardcoded paths. These are historical records and don't affect runtime (code uses `Algae.core.paths` for dynamic resolution). If you want to clean them up:
 
 ```python
 # One-time migration script
 import json, pathlib
-old = r"C:\Users\Aishik\Documents\Workshop\Algea"
-new = r"C:\Users\crick\Documents\Workshop\Algea"
+old = r"C:\Users\Aishik\Documents\Workshop\Algae"
+new = r"C:\Users\crick\ResolveLabs\Algae"
 for f in pathlib.Path("backend/data/runs").rglob("*.json"):
     text = f.read_text()
     if old in text:
@@ -151,9 +151,9 @@ Contains old `Aishik` paths in Bash command patterns. Regenerate for your new Cl
 
 ## What's Working Well
 
-- **`algea/core/paths.py`** — Dynamic `Path` resolution with relative segments. Survived migration cleanly.
-- **`algea/core/config.py`** — All config loading uses `Path` objects, no hardcoded strings.
-- **All Python imports** — 137 algea files and 216 backend files verified. Zero broken imports, zero circular dependencies, clean `algea ← backend` separation.
+- **`Algae/core/paths.py`** — Dynamic `Path` resolution with relative segments. Survived migration cleanly.
+- **`Algae/core/config.py`** — All config loading uses `Path` objects, no hardcoded strings.
+- **All Python imports** — 137 Algae files and 216 backend files verified. Zero broken imports, zero circular dependencies, clean `Algae ← backend` separation.
 - **Data artifacts** — All 5,571 canonical ticker files, 998 prior cache files, model checkpoints, universe manifests present and intact.
 - **`venv_gpu/`** — Correctly configured for the `crick` user.
 - **PROD_POINTER.json** — Production model pointer intact and properly versioned.

@@ -8,14 +8,14 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from algea.execution.options.config import VRPConfig
-from algea.execution.options.structures import (
+from algae.execution.options.config import VRPConfig
+from algae.execution.options.structures import (
     DerivativesPosition,
     DerivativesPositionFrame,
     OptionLeg,
     StructureType,
 )
-from algea.trading.derivatives_risk import (
+from algae.trading.derivatives_risk import (
     build_dynamic_shock_grid,
     check_expiry_concentration,
     check_strike_spacing,

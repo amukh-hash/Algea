@@ -1,7 +1,7 @@
 from datetime import date
 
-from algea.trading.orders import Fill
-from algea.trading.portfolio import Portfolio, Position
+from algae.trading.orders import Fill
+from algae.trading.portfolio import Portfolio, Position
 
 
 def test_partial_reduce_long_realized_pnl():

@@ -13,25 +13,25 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.data.options.vrp_features import VolRegime, classify_regime
-from algea.execution.options.config import VRPConfig
-from algea.execution.options.exits import (
+from algae.data.options.vrp_features import VolRegime, classify_regime
+from algae.execution.options.config import VRPConfig
+from algae.execution.options.exits import (
     ActionType,
     DeRiskAction,
     DeRiskPolicy,
     DeRiskSummary,
     ExitReason,
 )
-from algea.execution.options.structures import (
+from algae.execution.options.structures import (
     DerivativesPosition,
     OptionLeg,
     StructureType,
 )
-from algea.trading.derivatives_risk import (
+from algae.trading.derivatives_risk import (
     HeadroomResult,
     compute_scenario_headroom,
 )
-from algea.trading.meta_allocator import (
+from algae.trading.meta_allocator import (
     AllocatorInvariantError,
     AllocatorState,
     AllocationResult,
@@ -374,7 +374,7 @@ class TestRegimeOscillationFixture:
 
     def test_hysteresis_prevents_flip_flop(self, chop_data):
         """With hysteresis, regime changes should be fewer than raw classifier."""
-        from algea.data.options.vrp_features import (
+        from algae.data.options.vrp_features import (
             RegimeState, classify_regime_with_hysteresis,
         )
         cfg = VRPConfig(regime_min_days_in_state=2)
@@ -407,7 +407,7 @@ class TestRegimeOscillationFixture:
 
     def test_crash_not_stuck_indefinitely(self, chop_data):
         """After crash spike, regime should eventually de-escalate."""
-        from algea.data.options.vrp_features import (
+        from algae.data.options.vrp_features import (
             RegimeState, classify_regime_with_hysteresis,
         )
         cfg = VRPConfig(regime_min_days_in_state=2)
@@ -435,7 +435,7 @@ class TestRegimeOscillationFixture:
         With min_days_in_state=3 the hysteresis holds crash long enough
         to pass through CAUTION on the way down.
         """
-        from algea.data.options.vrp_features import (
+        from algae.data.options.vrp_features import (
             RegimeState, classify_regime_with_hysteresis,
         )
         # Use min_days=3 to ensure we stay in crash long enough

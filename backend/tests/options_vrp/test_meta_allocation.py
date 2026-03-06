@@ -11,9 +11,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.data.options.vrp_features import VolRegime
-from algea.execution.options.config import VRPConfig
-from algea.trading.meta_allocator import AllocationResult, MetaAllocator, SleeveResult
+from algae.data.options.vrp_features import VolRegime
+from algae.execution.options.config import VRPConfig
+from algae.trading.meta_allocator import AllocationResult, MetaAllocator, SleeveResult
 
 
 def _make_sleeves(

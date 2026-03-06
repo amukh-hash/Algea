@@ -1,5 +1,5 @@
 # autostart_trading.ps1 — Headless launcher for Windows Task Scheduler
-# Starts the full Algea trading stack (API + Orchestrator + Frontend dev server)
+# Starts the full Algae trading stack (API + Orchestrator + Frontend dev server)
 # Designed to run unattended before market open.
 #
 # Usage (manual): powershell -ExecutionPolicy Bypass -File scripts\autostart_trading.ps1
@@ -32,18 +32,16 @@ function Log($msg) {
     Add-Content -Path $masterLog -Value $entry
 }
 
-Log "=== ALGAIE Auto-Start ==="
+Log "=== Algae Auto-Start ==="
 Log "Broker: $Broker | Root: $ROOT"
 
-# ── Kill any stale processes on our ports ──
-Log "Cleaning up stale processes on ports 8000 and 3000..."
-foreach ($port in @(8000, 3000)) {
-    Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue |
-    Select-Object -ExpandProperty OwningProcess -Unique |
-    ForEach-Object {
-        Log "  Killing PID $_ on port $port"
-        taskkill /F /PID $_ 2>$null
-    }
+# ── Kill any stale processes on port 8000 ──
+Log "Cleaning up stale processes on port 8000..."
+Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue |
+Select-Object -ExpandProperty OwningProcess -Unique |
+ForEach-Object {
+    Log "  Killing PID $_ on port 8000"
+    taskkill /F /PID $_ 2>$null
 }
 Start-Sleep -Seconds 2
 
@@ -91,18 +89,32 @@ $orchProc = Start-Process -FilePath "python" `
     -PassThru -WindowStyle Hidden
 Log "  Orchestrator PID: $($orchProc.Id)"
 
-# ── 3. Start Frontend (optional) ──
+# ── 3. Launch Native Frontend (optional) ──
+$feProc = $null
 if (-not $SkipFrontend) {
-    $feLog = Join-Path $logDir "frontend_${timestamp}.log"
-    $feErrLog = Join-Path $logDir "frontend_${timestamp}_err.log"
-    Log "[3/3] Starting frontend dev server on port 3000..."
-    $feProc = Start-Process -FilePath "npm" `
-        -ArgumentList "run", "dev" `
-        -WorkingDirectory (Join-Path $ROOT "frontend") `
-        -RedirectStandardOutput $feLog `
-        -RedirectStandardError $feErrLog `
-        -PassThru -WindowStyle Hidden
-    Log "  Frontend PID: $($feProc.Id)"
+    $FrontendExe = Join-Path $ROOT "native_frontend\build\Release\Algae_Sim.exe"
+    Log "[3/3] Launching native frontend..."
+
+    $existing = Get-Process -Name "Algae_Sim" -ErrorAction SilentlyContinue
+    if ($existing) {
+        Log "  Algae_Sim already running (PID: $($existing.Id))"
+    }
+    elseif (Test-Path $FrontendExe) {
+        $feProc = Start-Process -FilePath $FrontendExe `
+            -WorkingDirectory (Split-Path $FrontendExe) `
+            -PassThru -WindowStyle Normal
+        Start-Sleep -Seconds 3
+        $fe = Get-Process -Name "Algae_Sim" -ErrorAction SilentlyContinue
+        if ($fe) {
+            Log "  Algae_Sim launched (PID: $($fe.Id))"
+        }
+        else {
+            Log "  [WARN] Algae_Sim may have failed to start"
+        }
+    }
+    else {
+        Log "  [ERROR] Frontend not found: $FrontendExe"
+    }
 }
 else {
     Log "[3/3] Frontend skipped (-SkipFrontend)"
@@ -117,6 +129,5 @@ Log "PIDs written to $pidFile"
 
 Log "=== Auto-Start Complete ==="
 Log "API:          http://localhost:8000"
-Log "Frontend:     http://localhost:3000"
-Log "Dashboard:    http://localhost:3000/execution"
+Log "Frontend:     Algae_Sim [SIMULATION]"
 Log "Logs:         $logDir"

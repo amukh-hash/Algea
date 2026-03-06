@@ -1,0 +1,133 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-04",
+  "beta_neutral_weights": {
+    "ARKK": -0.170528,
+    "GDXJ": 0.059772,
+    "GLD": 0.038257,
+    "ITB": 0.119255,
+    "QQQ": 0.068423,
+    "SMH": 0.056302,
+    "TAN": 0.046386,
+    "USO": -0.06437,
+    "VNQ": -0.164368,
+    "XLE": -0.100734,
+    "XOP": 0.111606
+  },
+  "confirmed_pairs": [
+    {
+      "conviction": -1.1042680807120036,
+      "direction": "short",
+      "pair": "ARKK_QQQ",
+      "pred": -0.7434705495834351,
+      "z": 1.4852882623672485
+    },
+    {
+      "conviction": 0.6113674724070322,
+      "direction": "long",
+      "pair": "SMH_QQQ",
+      "pred": 0.43479642271995544,
+      "z": -1.4061005115509033
+    },
+    {
+      "conviction": 0.2526254608927392,
+      "direction": "long",
+      "pair": "GDXJ_GLD",
+      "pred": 0.20721904933452606,
+      "z": -1.2191227674484253
+    },
+    {
+      "conviction": 0.8002865638892303,
+      "direction": "long",
+      "pair": "XOP_USO",
+      "pred": 0.5279723405838013,
+      "z": -1.5157736539840698
+    },
+    {
+      "conviction": 0.9263731767669512,
+      "direction": "long",
+      "pair": "ITB_VNQ",
+      "pred": 0.4978831708431244,
+      "z": -1.8606235980987549
+    },
+    {
+      "conviction": 0.5802933976018281,
+      "direction": "long",
+      "pair": "TAN_XLE",
+      "pred": 0.3958350718021393,
+      "z": -1.4659979343414307
+    }
+  ],
+  "ensemble_loaded": true,
+  "generated_at": "2026-03-04T23:37:18.451929+00:00",
+  "is_stub": false,
+  "n_folds": 5,
+  "schema_version": "signals.v1",
+  "session": "premarket",
+  "signals": [
+    {
+      "direction": "long",
+      "pair": "KRE_IWM",
+      "pred_delta": 0.4229716360569,
+      "z_score": -0.7876057028770447
+    },
+    {
+      "direction": "flat",
+      "pair": "XBI_IWM",
+      "pred_delta": -0.06018037721514702,
+      "z_score": -0.034096986055374146
+    },
+    {
+      "direction": "short",
+      "pair": "ARKK_QQQ",
+      "pred_delta": -0.7434705495834351,
+      "z_score": 1.4852882623672485
+    },
+    {
+      "direction": "long",
+      "pair": "SMH_QQQ",
+      "pred_delta": 0.43479642271995544,
+      "z_score": -1.4061005115509033
+    },
+    {
+      "direction": "long",
+      "pair": "GDXJ_GLD",
+      "pred_delta": 0.20721904933452606,
+      "z_score": -1.2191227674484253
+    },
+    {
+      "direction": "long",
+      "pair": "XOP_USO",
+      "pred_delta": 0.5279723405838013,
+      "z_score": -1.5157736539840698
+    },
+    {
+      "direction": "long",
+      "pair": "ITB_VNQ",
+      "pred_delta": 0.4978831708431244,
+      "z_score": -1.8606235980987549
+    },
+    {
+      "direction": "short",
+      "pair": "JNK_TLT",
+      "pred_delta": 0.0370972640812397,
+      "z_score": 0.9468026161193848
+    },
+    {
+      "direction": "long",
+      "pair": "TAN_XLE",
+      "pred_delta": 0.3958350718021393,
+      "z_score": -1.4659979343414307
+    },
+    {
+      "direction": "long",
+      "pair": "XRT_SPY",
+      "pred_delta": 0.548616886138916,
+      "z_score": -0.6644715070724487
+    }
+  ],
+  "sleeve": "statarb_v3",
+  "source": "itransformer_ensemble_v3",
+  "status": "ok",
+  "version": "4.0.0"
+}

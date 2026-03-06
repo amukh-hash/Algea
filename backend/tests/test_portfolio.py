@@ -1,5 +1,5 @@
 """
-Unit tests for the portfolio module (algea/eval/portfolio.py).
+Unit tests for the portfolio module (algae/eval/portfolio.py).
 
 Covers:
 - Portfolio construction (equal, score_proportional, softmax weighting)
@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from algea.eval.portfolio import (
+from algae.eval.portfolio import (
     build_equity_curve,
     build_portfolio,
     compute_portfolio_metrics,

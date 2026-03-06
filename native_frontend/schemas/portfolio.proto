@@ -1,0 +1,124 @@
+// ─────────────────────────────────────────────────────────────────────
+// Algae Native Frontend — Portfolio & Risk (Protobuf)
+//
+// Mirrors PortfolioSummary, PortfolioHolding, RiskChecksReport,
+// OrchTarget, OrchPosition, and CurvePoint from the Python backend.
+//
+// Dense tabular data (execution grids) use the Arrow IPC channel
+// on port 5557. This proto covers structural/summary messages
+// on the event channel.
+// ─────────────────────────────────────────────────────────────────────
+syntax = "proto3";
+package algae.portfolio;
+
+option cc_enable_arenas = true;
+
+// ── Portfolio ───────────────────────────────────────────────────────
+
+message PortfolioHolding {
+    string symbol          = 1;
+    string root            = 2;
+    string instrument_type = 3;  // "future" | "equity"
+    string sleeve          = 4;  // "core" | "vrp" | "selector"
+    int32  qty             = 5;
+    double avg_cost        = 6;
+    double last_price      = 7;
+    double multiplier      = 8;
+    double notional        = 9;
+    double margin_posted   = 10;
+    double unrealized_pnl  = 11;
+}
+
+message SleeveSummary {
+    double margin           = 1;
+    double notional         = 2;
+    double unrealized_pnl   = 3;
+    double equity_cost      = 4;
+    int32  position_count   = 5;
+}
+
+message PortfolioSummary {
+    uint64  sequence_id         = 1;
+    string  asof_date           = 2;
+    double  account_equity      = 3;
+    double  cash                = 4;
+    double  total_margin        = 5;
+    double  total_notional      = 6;
+    double  total_equity_cost   = 7;
+    double  total_unrealized_pnl = 8;
+    double  total_value         = 9;
+    double  total_pnl           = 10;
+    double  realized_pnl        = 11;
+    int32   position_count      = 12;
+    int32   fill_count          = 13;
+    repeated PortfolioHolding holdings = 14;
+    map<string, SleeveSummary> sleeves = 15;
+}
+
+// ── Orchestrator Targets & Positions ────────────────────────────────
+
+message OrchTarget {
+    string symbol        = 1;
+    double target_weight = 2;
+    double score         = 3;
+    string side          = 4;
+}
+
+message OrchPosition {
+    string symbol   = 1;
+    int32  qty      = 2;
+    double avg_cost = 3;
+}
+
+message CurvePoint {
+    string t                    = 1;
+    double cum_net_unscaled     = 2;
+    double cum_net_volscaled    = 3;
+    double drawdown             = 4;
+    double rolling_vol          = 5;
+    double rolling_sharpe       = 6;
+    double turnover             = 7;
+    double cost                 = 8;
+}
+
+// ── Risk ────────────────────────────────────────────────────────────
+
+message RiskViolation {
+    string code    = 1;
+    string message = 2;
+}
+
+message RiskChecksReport {
+    uint64   sequence_id     = 1;
+    string   schema_version  = 2;  // "canonical" | "legacy_normalized"
+    string   status          = 3;
+    string   checked_at      = 4;
+    string   asof_date       = 5;
+    string   session         = 6;
+    string   reason          = 7;
+    repeated string missing_sleeves = 8;
+    repeated RiskViolation violations = 9;
+}
+
+// ── Orchestrator Runs & Jobs ────────────────────────────────────────
+
+message OrchRun {
+    string run_id     = 1;
+    string asof_date  = 2;
+    string session    = 3;
+    string started_at = 4;
+    string ended_at   = 5;  // Empty if still running
+    string status     = 6;
+}
+
+message OrchJob {
+    string run_id        = 1;
+    string asof_date     = 2;
+    string session       = 3;
+    string job_name      = 4;
+    string status        = 5;
+    string started_at    = 6;
+    string ended_at      = 7;
+    int32  exit_code     = 8;
+    string error_summary = 9;
+}

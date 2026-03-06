@@ -1,0 +1,989 @@
+2026-03-01T19:30:51-0500 WARNING ntp [23408] ntplib not installed — NTP check skipped
+2026-03-01T19:31:30-0500 WARNING ntp [1808] ntplib not installed — NTP check skipped
+2026-03-01T19:31:30-0500 INFO algea.zmq_streamer [1808] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-01T19:31:30-0500 INFO algea.kill_switch [1808] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-01T19:31:42-0500 INFO algea.api [1808] req_start request_id=37fe84b2-1d6 method=GET path=/healthz
+2026-03-01T19:31:42-0500 WARNING algea.api [1808] req_end request_id=37fe84b2-1d6 method=GET path=/healthz status=503 duration_ms=8.8
+2026-03-01T19:31:54-0500 INFO algea.api [1808] req_start request_id=922603a8-11c method=GET path=/api/control/broker-status
+2026-03-01T19:31:54-0500 INFO algea.api [1808] req_end request_id=922603a8-11c method=GET path=/api/control/broker-status status=200 duration_ms=3.1
+2026-03-01T19:32:21-0500 INFO algea.api [1808] req_start request_id=23fbc1c2-04b method=POST path=/api/control/broker/connect
+2026-03-01T19:32:21-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:32:21-0500 INFO algea.api [1808] req_end request_id=23fbc1c2-04b method=POST path=/api/control/broker/connect status=200 duration_ms=4.4
+2026-03-01T19:32:28-0500 INFO algea.api [1808] req_start request_id=3906aa39-b76 method=GET path=/api/control/broker-status
+2026-03-01T19:32:28-0500 INFO algea.api [1808] req_end request_id=3906aa39-b76 method=GET path=/api/control/broker-status status=200 duration_ms=1.0
+2026-03-01T19:32:39-0500 INFO algea.api [1808] req_start request_id=28c6bb99-568 method=POST path=/api/control/broker/connect
+2026-03-01T19:32:39-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:32:39-0500 INFO algea.api [1808] req_end request_id=28c6bb99-568 method=POST path=/api/control/broker/connect status=200 duration_ms=2.3
+2026-03-01T19:32:57-0500 INFO algea.api [1808] req_start request_id=bf8c9eba-c10 method=POST path=/api/control/broker/connect
+2026-03-01T19:32:57-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:32:57-0500 INFO algea.api [1808] req_end request_id=bf8c9eba-c10 method=POST path=/api/control/broker/connect status=200 duration_ms=1.6
+2026-03-01T19:33:15-0500 INFO algea.api [1808] req_start request_id=146e3c32-6ad method=POST path=/api/control/broker/connect
+2026-03-01T19:33:16-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:33:16-0500 INFO algea.api [1808] req_end request_id=146e3c32-6ad method=POST path=/api/control/broker/connect status=200 duration_ms=1.7
+2026-03-01T19:33:34-0500 INFO algea.api [1808] req_start request_id=3a4361b1-5a3 method=POST path=/api/control/broker/connect
+2026-03-01T19:33:34-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:33:34-0500 INFO algea.api [1808] req_end request_id=3a4361b1-5a3 method=POST path=/api/control/broker/connect status=200 duration_ms=2.1
+2026-03-01T19:35:12-0500 INFO algea.api [1808] req_start request_id=9085b27c-88d method=POST path=/api/control/broker/connect
+2026-03-01T19:35:12-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:35:12-0500 INFO algea.api [1808] req_end request_id=9085b27c-88d method=POST path=/api/control/broker/connect status=200 duration_ms=2.4
+2026-03-01T19:35:30-0500 INFO algea.api [1808] req_start request_id=601ef579-828 method=POST path=/api/control/broker/connect
+2026-03-01T19:35:30-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:35:30-0500 INFO algea.api [1808] req_end request_id=601ef579-828 method=POST path=/api/control/broker/connect status=200 duration_ms=2.1
+2026-03-01T19:35:48-0500 INFO algea.api [1808] req_start request_id=dc315b88-d5e method=POST path=/api/control/broker/connect
+2026-03-01T19:35:48-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:35:48-0500 INFO algea.api [1808] req_end request_id=dc315b88-d5e method=POST path=/api/control/broker/connect status=200 duration_ms=1.9
+2026-03-01T19:36:06-0500 INFO algea.api [1808] req_start request_id=38f4dc36-a56 method=POST path=/api/control/broker/connect
+2026-03-01T19:36:06-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:36:06-0500 INFO algea.api [1808] req_end request_id=38f4dc36-a56 method=POST path=/api/control/broker/connect status=200 duration_ms=1.7
+2026-03-01T19:36:24-0500 INFO algea.api [1808] req_start request_id=f6606d96-307 method=POST path=/api/control/broker/connect
+2026-03-01T19:36:24-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:36:24-0500 INFO algea.api [1808] req_end request_id=f6606d96-307 method=POST path=/api/control/broker/connect status=200 duration_ms=1.6
+2026-03-01T19:48:27-0500 INFO algea.api [1808] req_start request_id=f632f2ce-f35 method=GET path=/healthz
+2026-03-01T19:48:27-0500 WARNING algea.api [1808] req_end request_id=f632f2ce-f35 method=GET path=/healthz status=503 duration_ms=1.9
+2026-03-01T19:48:28-0500 INFO algea.api [1808] req_start request_id=cbd3a5a4-45e method=GET path=/healthz
+2026-03-01T19:48:28-0500 WARNING algea.api [1808] req_end request_id=cbd3a5a4-45e method=GET path=/healthz status=503 duration_ms=1.7
+2026-03-01T19:48:29-0500 INFO algea.api [1808] req_start request_id=271e6f59-fab method=GET path=/healthz
+2026-03-01T19:48:29-0500 WARNING algea.api [1808] req_end request_id=271e6f59-fab method=GET path=/healthz status=503 duration_ms=2.0
+2026-03-01T19:48:29-0500 WARNING ntp [30716] ntplib not installed — NTP check skipped
+2026-03-01T19:48:30-0500 INFO algea.api [1808] req_start request_id=6d005ea0-e41 method=GET path=/healthz
+2026-03-01T19:48:30-0500 WARNING algea.api [1808] req_end request_id=6d005ea0-e41 method=GET path=/healthz status=503 duration_ms=1.9
+2026-03-01T19:48:31-0500 INFO algea.api [1808] req_start request_id=f6686ed8-b1c method=GET path=/healthz
+2026-03-01T19:48:31-0500 WARNING algea.api [1808] req_end request_id=f6686ed8-b1c method=GET path=/healthz status=503 duration_ms=1.8
+2026-03-01T19:48:32-0500 INFO algea.api [1808] req_start request_id=cfeb2474-850 method=GET path=/healthz
+2026-03-01T19:48:32-0500 WARNING algea.api [1808] req_end request_id=cfeb2474-850 method=GET path=/healthz status=503 duration_ms=1.7
+2026-03-01T19:48:33-0500 INFO algea.api [1808] req_start request_id=aace9255-8d4 method=GET path=/healthz
+2026-03-01T19:48:33-0500 WARNING algea.api [1808] req_end request_id=aace9255-8d4 method=GET path=/healthz status=503 duration_ms=2.1
+2026-03-01T19:48:34-0500 INFO algea.api [1808] req_start request_id=ac80c75b-8fa method=GET path=/healthz
+2026-03-01T19:48:34-0500 WARNING algea.api [1808] req_end request_id=ac80c75b-8fa method=GET path=/healthz status=503 duration_ms=1.8
+2026-03-01T19:48:35-0500 INFO algea.api [1808] req_start request_id=48f56ae5-872 method=GET path=/healthz
+2026-03-01T19:48:35-0500 WARNING algea.api [1808] req_end request_id=48f56ae5-872 method=GET path=/healthz status=503 duration_ms=1.7
+2026-03-01T19:48:36-0500 INFO algea.api [1808] req_start request_id=3b945cb3-3d1 method=GET path=/healthz
+2026-03-01T19:48:36-0500 WARNING algea.api [1808] req_end request_id=3b945cb3-3d1 method=GET path=/healthz status=503 duration_ms=2.0
+2026-03-01T19:48:37-0500 INFO algea.api [1808] req_start request_id=30d1212d-161 method=GET path=/healthz
+2026-03-01T19:48:37-0500 WARNING algea.api [1808] req_end request_id=30d1212d-161 method=GET path=/healthz status=503 duration_ms=2.0
+2026-03-01T19:48:38-0500 INFO algea.api [1808] req_start request_id=1b95f898-048 method=GET path=/healthz
+2026-03-01T19:48:38-0500 WARNING algea.api [1808] req_end request_id=1b95f898-048 method=GET path=/healthz status=503 duration_ms=1.8
+2026-03-01T19:48:39-0500 INFO algea.api [1808] req_start request_id=4595436b-286 method=GET path=/healthz
+2026-03-01T19:48:39-0500 WARNING algea.api [1808] req_end request_id=4595436b-286 method=GET path=/healthz status=503 duration_ms=1.6
+2026-03-01T19:48:40-0500 INFO algea.api [1808] req_start request_id=ff3258cf-03a method=GET path=/healthz
+2026-03-01T19:48:40-0500 WARNING algea.api [1808] req_end request_id=ff3258cf-03a method=GET path=/healthz status=503 duration_ms=1.6
+2026-03-01T19:48:41-0500 INFO algea.api [1808] req_start request_id=a8a13f46-d64 method=GET path=/healthz
+2026-03-01T19:48:41-0500 WARNING algea.api [1808] req_end request_id=a8a13f46-d64 method=GET path=/healthz status=503 duration_ms=1.7
+2026-03-01T19:48:42-0500 INFO algea.api [1808] req_start request_id=3ba67cb0-0b7 method=GET path=/healthz
+2026-03-01T19:48:42-0500 WARNING algea.api [1808] req_end request_id=3ba67cb0-0b7 method=GET path=/healthz status=503 duration_ms=1.9
+2026-03-01T19:48:46-0500 INFO algea.api [1808] req_start request_id=e4c84cc2-ead method=POST path=/api/control/broker/connect
+2026-03-01T19:48:46-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:48:46-0500 INFO algea.api [1808] req_end request_id=e4c84cc2-ead method=POST path=/api/control/broker/connect status=200 duration_ms=2.2
+2026-03-01T19:49:04-0500 INFO algea.api [1808] req_start request_id=6c2d9602-1c0 method=POST path=/api/control/broker/connect
+2026-03-01T19:49:04-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:49:04-0500 INFO algea.api [1808] req_end request_id=6c2d9602-1c0 method=POST path=/api/control/broker/connect status=200 duration_ms=1.7
+2026-03-01T19:49:22-0500 INFO algea.api [1808] req_start request_id=657a7dd4-ea5 method=POST path=/api/control/broker/connect
+2026-03-01T19:49:22-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:49:22-0500 INFO algea.api [1808] req_end request_id=657a7dd4-ea5 method=POST path=/api/control/broker/connect status=200 duration_ms=1.8
+2026-03-01T19:49:40-0500 INFO algea.api [1808] req_start request_id=5482434d-022 method=POST path=/api/control/broker/connect
+2026-03-01T19:49:40-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:49:40-0500 INFO algea.api [1808] req_end request_id=5482434d-022 method=POST path=/api/control/broker/connect status=200 duration_ms=1.5
+2026-03-01T19:49:58-0500 INFO algea.api [1808] req_start request_id=c5b0fcd2-8fa method=POST path=/api/control/broker/connect
+2026-03-01T19:49:58-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:49:58-0500 INFO algea.api [1808] req_end request_id=c5b0fcd2-8fa method=POST path=/api/control/broker/connect status=200 duration_ms=1.8
+2026-03-01T19:55:01-0500 INFO algea.api [1808] req_start request_id=ed7e0b3b-a11 method=POST path=/api/control/broker/connect
+2026-03-01T19:55:01-0500 ERROR algea.api.control [1808] IBKR broker connect failed: No module named 'tenacity'
+2026-03-01T19:55:01-0500 INFO algea.api [1808] req_end request_id=ed7e0b3b-a11 method=POST path=/api/control/broker/connect status=200 duration_ms=1.8
+2026-03-01T19:56:47-0500 WARNING ntp [27184] ntplib not installed — NTP check skipped
+2026-03-01T19:56:47-0500 INFO algea.zmq_streamer [27184] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-01T19:56:47-0500 INFO algea.kill_switch [27184] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-01T19:56:50-0500 INFO algea.api [27184] req_start request_id=d6e7829b-c6d method=POST path=/api/control/broker/connect
+2026-03-01T19:56:50-0500 ERROR algea.api.control [27184] IBKR broker connect failed: There is no current event loop in thread 'AnyIO worker thread'.
+2026-03-01T19:56:50-0500 INFO algea.api [27184] req_end request_id=d6e7829b-c6d method=POST path=/api/control/broker/connect status=200 duration_ms=14.3
+2026-03-01T20:00:13-0500 WARNING ntp [4456] ntplib not installed — NTP check skipped
+2026-03-01T20:00:13-0500 INFO algea.zmq_streamer [4456] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-01T20:00:13-0500 INFO algea.kill_switch [4456] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-01T20:00:17-0500 INFO algea.api [4456] req_start request_id=b9ffa0b5-ab8 method=POST path=/api/control/broker/connect
+2026-03-01T20:00:17-0500 ERROR algea.api.control [4456] IBKR broker connect failed: There is no current event loop in thread 'AnyIO worker thread'.
+2026-03-01T20:00:17-0500 INFO algea.api [4456] req_end request_id=b9ffa0b5-ab8 method=POST path=/api/control/broker/connect status=200 duration_ms=12.7
+2026-03-01T20:01:29-0500 WARNING ntp [13984] ntplib not installed — NTP check skipped
+2026-03-01T20:01:29-0500 INFO algea.zmq_streamer [13984] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-01T20:01:29-0500 INFO algea.kill_switch [13984] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-01T20:01:32-0500 INFO algea.api [13984] req_start request_id=1a4eb9e7-b71 method=POST path=/api/control/broker/connect
+2026-03-01T20:01:32-0500 INFO ib_insync.client [13984] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-01T20:01:32-0500 INFO ib_insync.client [13984] Connected
+2026-03-01T20:01:32-0500 INFO ib_insync.client [13984] Logged on to server version 176
+2026-03-01T20:01:32-0500 INFO ib_insync.client [13984] API connection ready
+2026-03-01T20:01:32-0500 INFO ib_insync.wrapper [13984] Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-03-01T20:01:32-0500 INFO ib_insync.wrapper [13984] Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2026-03-01T20:01:32-0500 INFO ib_insync.wrapper [13984] Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2026-03-01T20:01:32-0500 INFO ib_insync.wrapper [13984] position: Position(account='DUP905542', contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', multiplier='50', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, avgCost=133878.91666665)
+2026-03-01T20:01:33-0500 INFO ib_insync.wrapper [13984] updatePortfolio: PortfolioItem(contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', right='0', multiplier='50', primaryExchange='CME', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, marketPrice=2618.6459961, marketValue=785593.8, averageCost=133878.91666665, unrealizedPNL=-17679.7, realizedPNL=0.0, account='DUP905542')
+2026-03-01T20:01:33-0500 INFO ib_insync.ib [13984] Synchronization complete
+2026-03-01T20:01:33-0500 INFO algea.trading.ibkr_client [13984] IBKR connected (serverVersion=176)
+2026-03-01T20:01:33-0500 ERROR algea.api.control [13984] IBKR broker connect failed: Paper guard: account '' is not a paper account
+2026-03-01T20:01:33-0500 INFO algea.api [13984] req_end request_id=1a4eb9e7-b71 method=POST path=/api/control/broker/connect status=200 duration_ms=607.6
+2026-03-01T20:02:18-0500 WARNING ntp [14444] ntplib not installed — NTP check skipped
+2026-03-01T20:02:18-0500 INFO algea.zmq_streamer [14444] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-01T20:02:18-0500 INFO algea.kill_switch [14444] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-01T20:02:22-0500 INFO algea.api [14444] req_start request_id=f2e71854-24e method=POST path=/api/control/broker/connect
+2026-03-01T20:02:22-0500 INFO algea.trading.broker_ibkr [14444] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-01T20:02:22-0500 INFO ib_insync.client [14444] Connecting to 127.0.0.1:4002 with clientId 17...
+2026-03-01T20:02:24-0500 INFO ib_insync.client [14444] Disconnecting
+2026-03-01T20:02:24-0500 ERROR ib_insync.client [14444] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-01T20:02:24-0500 ERROR ib_insync.client [14444] Make sure API port on TWS/IBG is open
+2026-03-01T20:02:24-0500 WARNING algea.trading.ibkr_client [14444] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-01T20:02:24-0500 INFO ib_insync.client [14444] Connecting to 127.0.0.1:4002 with clientId 17...
+2026-03-01T20:02:26-0500 INFO ib_insync.client [14444] Disconnecting
+2026-03-01T20:02:26-0500 ERROR ib_insync.client [14444] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-01T20:02:26-0500 ERROR ib_insync.client [14444] Make sure API port on TWS/IBG is open
+2026-03-01T20:02:26-0500 WARNING algea.trading.ibkr_client [14444] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-01T20:02:26-0500 INFO ib_insync.client [14444] Connecting to 127.0.0.1:4002 with clientId 17...
+2026-03-01T20:02:28-0500 INFO ib_insync.client [14444] Disconnecting
+2026-03-01T20:02:28-0500 ERROR ib_insync.client [14444] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-01T20:02:28-0500 ERROR ib_insync.client [14444] Make sure API port on TWS/IBG is open
+2026-03-01T20:02:28-0500 WARNING algea.trading.ibkr_client [14444] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-01T20:02:28-0500 ERROR algea.api.control [14444] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:4002 after 3 attempts
+2026-03-01T20:02:28-0500 INFO algea.api [14444] req_end request_id=f2e71854-24e method=POST path=/api/control/broker/connect status=200 duration_ms=6213.8
+2026-03-01T20:03:25-0500 WARNING ntp [29644] ntplib not installed — NTP check skipped
+2026-03-01T20:03:25-0500 INFO algea.zmq_streamer [29644] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-01T20:03:25-0500 INFO algea.kill_switch [29644] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-01T20:03:28-0500 INFO algea.api [29644] req_start request_id=2dfd1f30-da3 method=POST path=/api/control/broker/connect
+2026-03-01T20:03:28-0500 INFO algea.trading.broker_ibkr [29644] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-01T20:03:28-0500 INFO ib_insync.client [29644] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-01T20:03:28-0500 INFO ib_insync.client [29644] Connected
+2026-03-01T20:03:28-0500 INFO ib_insync.client [29644] Logged on to server version 176
+2026-03-01T20:03:28-0500 INFO ib_insync.client [29644] API connection ready
+2026-03-01T20:03:28-0500 INFO ib_insync.wrapper [29644] Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-03-01T20:03:28-0500 INFO ib_insync.wrapper [29644] Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2026-03-01T20:03:28-0500 INFO ib_insync.wrapper [29644] Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2026-03-01T20:03:28-0500 INFO ib_insync.wrapper [29644] position: Position(account='DUP905542', contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', multiplier='50', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, avgCost=133878.91666665)
+2026-03-01T20:03:29-0500 INFO ib_insync.wrapper [29644] updatePortfolio: PortfolioItem(contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', right='0', multiplier='50', primaryExchange='CME', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, marketPrice=2620.77246095, marketValue=786231.74, averageCost=133878.91666665, unrealizedPNL=-17041.76, realizedPNL=0.0, account='DUP905542')
+2026-03-01T20:03:29-0500 INFO ib_insync.ib [29644] Synchronization complete
+2026-03-01T20:03:29-0500 INFO algea.trading.ibkr_client [29644] IBKR connected (serverVersion=176)
+2026-03-01T20:03:29-0500 INFO backend.app.orchestrator.broker_ibkr_adapter [29644] Paper guard passed for account DUP9****
+2026-03-01T20:03:29-0500 WARNING backend.app.orchestrator.broker_ibkr_adapter [29644] IBKR connection check failed — forcing reconnect
+2026-03-01T20:03:29-0500 INFO ib_insync.ib [29644] Disconnecting from 127.0.0.1:7497, 120 B sent in 8 messages, 19.5 kB received in 397 messages, session time 407 ms.
+2026-03-01T20:03:29-0500 INFO ib_insync.client [29644] Disconnecting
+2026-03-01T20:03:29-0500 INFO algea.trading.ibkr_client [29644] IBKR disconnected
+2026-03-01T20:03:29-0500 INFO ib_insync.client [29644] Disconnected.
+2026-03-01T20:03:29-0500 INFO ib_insync.client [29644] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-01T20:03:29-0500 INFO ib_insync.client [29644] Connected
+2026-03-01T20:03:29-0500 INFO ib_insync.client [29644] Logged on to server version 176
+2026-03-01T20:03:29-0500 INFO ib_insync.wrapper [29644] Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-03-01T20:03:29-0500 INFO ib_insync.client [29644] API connection ready
+2026-03-01T20:03:29-0500 INFO ib_insync.wrapper [29644] Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2026-03-01T20:03:29-0500 INFO ib_insync.wrapper [29644] Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2026-03-01T20:03:29-0500 INFO ib_insync.wrapper [29644] position: Position(account='DUP905542', contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', multiplier='50', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, avgCost=133878.91666665)
+2026-03-01T20:03:29-0500 INFO ib_insync.wrapper [29644] updatePortfolio: PortfolioItem(contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', right='0', multiplier='50', primaryExchange='CME', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, marketPrice=2620.77246095, marketValue=786231.74, averageCost=133878.91666665, unrealizedPNL=-17041.76, realizedPNL=0.0, account='DUP905542')
+2026-03-01T20:03:29-0500 INFO ib_insync.ib [29644] Synchronization complete
+2026-03-01T20:03:29-0500 INFO algea.trading.ibkr_client [29644] IBKR connected (serverVersion=176)
+2026-03-01T20:03:29-0500 INFO algea.api.control [29644] IBKR broker connected: {'connected': True, 'status': 'connected', 'account': 'DUP9****', 'mode': 'PAPER', 'positions': 1}
+2026-03-01T20:03:29-0500 INFO algea.api [29644] req_end request_id=2dfd1f30-da3 method=POST path=/api/control/broker/connect status=200 duration_ms=876.8
+2026-03-01T20:03:56-0500 INFO algea.api [29644] req_start request_id=94496a0a-ec3 method=POST path=/api/control/broker/connect
+2026-03-01T20:03:56-0500 WARNING backend.app.orchestrator.broker_ibkr_adapter [29644] IBKR connection check failed — forcing reconnect
+2026-03-01T20:03:56-0500 INFO ib_insync.ib [29644] Disconnecting from 127.0.0.1:7497, 120 B sent in 8 messages, 19.5 kB received in 397 messages, session time 27.6 s.
+2026-03-01T20:03:56-0500 INFO ib_insync.client [29644] Disconnecting
+2026-03-01T20:03:56-0500 INFO algea.trading.ibkr_client [29644] IBKR disconnected
+2026-03-01T20:03:56-0500 INFO ib_insync.client [29644] Disconnected.
+2026-03-01T20:03:56-0500 INFO ib_insync.client [29644] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-01T20:03:56-0500 INFO ib_insync.client [29644] Connected
+2026-03-01T20:03:56-0500 INFO ib_insync.client [29644] Logged on to server version 176
+2026-03-01T20:03:56-0500 INFO ib_insync.wrapper [29644] Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-03-01T20:03:56-0500 INFO ib_insync.wrapper [29644] Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2026-03-01T20:03:56-0500 INFO ib_insync.wrapper [29644] Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2026-03-01T20:03:56-0500 INFO ib_insync.client [29644] API connection ready
+2026-03-01T20:03:56-0500 INFO ib_insync.wrapper [29644] position: Position(account='DUP905542', contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', multiplier='50', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, avgCost=133878.91666665)
+2026-03-01T20:03:57-0500 INFO ib_insync.wrapper [29644] updatePortfolio: PortfolioItem(contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', right='0', multiplier='50', primaryExchange='CME', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, marketPrice=2620.77246095, marketValue=786231.74, averageCost=133878.91666665, unrealizedPNL=-17041.76, realizedPNL=0.0, account='DUP905542')
+2026-03-01T20:03:57-0500 INFO ib_insync.ib [29644] Synchronization complete
+2026-03-01T20:03:57-0500 INFO algea.trading.ibkr_client [29644] IBKR connected (serverVersion=176)
+2026-03-01T20:03:57-0500 WARNING backend.app.orchestrator.broker_ibkr_adapter [29644] IBKR connection check failed — forcing reconnect
+2026-03-01T20:03:57-0500 INFO ib_insync.ib [29644] Disconnecting from 127.0.0.1:7497, 120 B sent in 8 messages, 19.5 kB received in 397 messages, session time 305 ms.
+2026-03-01T20:03:57-0500 INFO ib_insync.client [29644] Disconnecting
+2026-03-01T20:03:57-0500 INFO algea.trading.ibkr_client [29644] IBKR disconnected
+2026-03-01T20:03:57-0500 INFO ib_insync.client [29644] Disconnected.
+2026-03-01T20:03:57-0500 INFO ib_insync.client [29644] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-01T20:03:57-0500 INFO ib_insync.client [29644] Connected
+2026-03-01T20:03:57-0500 INFO ib_insync.client [29644] Logged on to server version 176
+2026-03-01T20:03:57-0500 INFO ib_insync.wrapper [29644] Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2026-03-01T20:03:57-0500 INFO ib_insync.wrapper [29644] Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2026-03-01T20:03:57-0500 INFO ib_insync.wrapper [29644] Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2026-03-01T20:03:57-0500 INFO ib_insync.client [29644] API connection ready
+2026-03-01T20:03:57-0500 INFO ib_insync.wrapper [29644] position: Position(account='DUP905542', contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', multiplier='50', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, avgCost=133878.91666665)
+2026-03-01T20:03:57-0500 INFO ib_insync.wrapper [29644] updatePortfolio: PortfolioItem(contract=Future(conId=770561234, symbol='RTY', lastTradeDateOrContractMonth='20260618', right='0', multiplier='50', primaryExchange='CME', currency='USD', localSymbol='RTYM6', tradingClass='RTY'), position=6.0, marketPrice=2620.77246095, marketValue=786231.74, averageCost=133878.91666665, unrealizedPNL=-17041.76, realizedPNL=0.0, account='DUP905542')
+2026-03-01T20:03:57-0500 INFO ib_insync.ib [29644] Synchronization complete
+2026-03-01T20:03:57-0500 INFO algea.trading.ibkr_client [29644] IBKR connected (serverVersion=176)
+2026-03-01T20:03:57-0500 INFO algea.api [29644] req_end request_id=94496a0a-ec3 method=POST path=/api/control/broker/connect status=200 duration_ms=418.8
+2026-03-02T01:37:28-0500 WARNING ntp [21500] ntplib not installed — NTP check skipped
+2026-03-02T01:37:28-0500 INFO algea.zmq_streamer [21500] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-02T01:37:28-0500 INFO algea.kill_switch [21500] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-02T02:12:57-0500 INFO algea.api [21500] req_start request_id=c1d42ba6-53f method=POST path=/api/control/broker/connect
+2026-03-02T02:12:57-0500 INFO algea.trading.broker_ibkr [21500] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:12:57-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:12:59-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:12:59-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:12:59-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:12:59-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:12:59-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:01-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:01-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:01-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:01-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:01-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:03-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:03-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:03-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:03-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:03-0500 ERROR algea.api.control [21500] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:13:03-0500 INFO algea.api [21500] req_end request_id=c1d42ba6-53f method=POST path=/api/control/broker/connect status=200 duration_ms=6437.0
+2026-03-02T02:13:21-0500 INFO algea.api [21500] req_start request_id=b7d8fb70-d9f method=POST path=/api/control/broker/connect
+2026-03-02T02:13:21-0500 INFO algea.trading.broker_ibkr [21500] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:13:21-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:23-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:23-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:23-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:23-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:23-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:25-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:25-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:25-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:25-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:25-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:28-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:28-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:28-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:28-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:28-0500 ERROR algea.api.control [21500] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:13:28-0500 INFO algea.api [21500] req_end request_id=b7d8fb70-d9f method=POST path=/api/control/broker/connect status=200 duration_ms=6156.0
+2026-03-02T02:13:46-0500 INFO algea.api [21500] req_start request_id=1ddac5b9-9b3 method=POST path=/api/control/broker/connect
+2026-03-02T02:13:46-0500 INFO algea.trading.broker_ibkr [21500] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:13:46-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:48-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:48-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:48-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:48-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:48-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:50-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:50-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:50-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:50-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:50-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:13:52-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:13:52-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:13:52-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:13:52-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:13:52-0500 ERROR algea.api.control [21500] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:13:52-0500 INFO algea.api [21500] req_end request_id=1ddac5b9-9b3 method=POST path=/api/control/broker/connect status=200 duration_ms=6094.0
+2026-03-02T02:14:10-0500 INFO algea.api [21500] req_start request_id=ba6bd2be-7a6 method=POST path=/api/control/broker/connect
+2026-03-02T02:14:10-0500 INFO algea.trading.broker_ibkr [21500] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:14:10-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:14:12-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:14:12-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:14:12-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:14:12-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:14:12-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:14:14-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:14:14-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:14:14-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:14:14-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:14:14-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:14:16-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:14:16-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:14:16-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:14:16-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:14:16-0500 ERROR algea.api.control [21500] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:14:16-0500 INFO algea.api [21500] req_end request_id=ba6bd2be-7a6 method=POST path=/api/control/broker/connect status=200 duration_ms=6078.0
+2026-03-02T02:14:34-0500 INFO algea.api [21500] req_start request_id=142644bf-449 method=POST path=/api/control/broker/connect
+2026-03-02T02:14:34-0500 INFO algea.trading.broker_ibkr [21500] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:14:34-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:14:36-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:14:36-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:14:36-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:14:36-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:14:36-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:14:38-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:14:38-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:14:38-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:14:38-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:14:38-0500 INFO ib_insync.client [21500] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:14:40-0500 INFO ib_insync.client [21500] Disconnecting
+2026-03-02T02:14:40-0500 ERROR ib_insync.client [21500] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:14:40-0500 ERROR ib_insync.client [21500] Make sure API port on TWS/IBG is open
+2026-03-02T02:14:40-0500 WARNING algea.trading.ibkr_client [21500] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:14:40-0500 ERROR algea.api.control [21500] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:14:40-0500 INFO algea.api [21500] req_end request_id=142644bf-449 method=POST path=/api/control/broker/connect status=200 duration_ms=6109.0
+2026-03-02T02:15:56-0500 INFO algea.api [21500] req_start request_id=ab682ba8-6f5 method=GET path=/
+2026-03-02T02:15:56-0500 WARNING algea.api [21500] req_end request_id=ab682ba8-6f5 method=GET path=/ status=404 duration_ms=16.0
+2026-03-02T02:15:56-0500 INFO algea.api [21500] req_start request_id=b3fad4c8-17d method=GET path=/favicon.ico
+2026-03-02T02:15:56-0500 WARNING algea.api [21500] req_end request_id=b3fad4c8-17d method=GET path=/favicon.ico status=404 duration_ms=0.0
+2026-03-02T02:17:54-0500 WARNING ntp [1744] ntplib not installed — NTP check skipped
+2026-03-02T02:17:54-0500 INFO algea.zmq_streamer [1744] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-02T02:17:54-0500 INFO algea.kill_switch [1744] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-02T02:17:55-0500 INFO algea.api [1744] req_start request_id=f09611a1-c2c method=GET path=/healthz
+2026-03-02T02:17:55-0500 WARNING algea.api [1744] req_end request_id=f09611a1-c2c method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:17:56-0500 INFO algea.api [1744] req_start request_id=8269ecbe-a6f method=GET path=/healthz
+2026-03-02T02:17:56-0500 WARNING algea.api [1744] req_end request_id=8269ecbe-a6f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:17:57-0500 INFO algea.api [1744] req_start request_id=78410d18-dbc method=GET path=/healthz
+2026-03-02T02:17:57-0500 WARNING algea.api [1744] req_end request_id=78410d18-dbc method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:17:58-0500 INFO algea.api [1744] req_start request_id=c1785655-28f method=GET path=/healthz
+2026-03-02T02:17:58-0500 WARNING algea.api [1744] req_end request_id=c1785655-28f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:17:59-0500 INFO algea.api [1744] req_start request_id=e5547659-f33 method=GET path=/healthz
+2026-03-02T02:17:59-0500 WARNING algea.api [1744] req_end request_id=e5547659-f33 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:00-0500 INFO algea.api [1744] req_start request_id=cf7d4ce3-5a2 method=GET path=/healthz
+2026-03-02T02:18:00-0500 WARNING algea.api [1744] req_end request_id=cf7d4ce3-5a2 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:01-0500 INFO algea.api [1744] req_start request_id=614d8003-78e method=GET path=/healthz
+2026-03-02T02:18:01-0500 WARNING algea.api [1744] req_end request_id=614d8003-78e method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:02-0500 INFO algea.api [1744] req_start request_id=4e4e3d71-c88 method=GET path=/healthz
+2026-03-02T02:18:02-0500 WARNING algea.api [1744] req_end request_id=4e4e3d71-c88 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:03-0500 INFO algea.api [1744] req_start request_id=f7e34b6b-6bb method=GET path=/healthz
+2026-03-02T02:18:03-0500 WARNING algea.api [1744] req_end request_id=f7e34b6b-6bb method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:04-0500 INFO algea.api [1744] req_start request_id=d110fa1a-bb7 method=GET path=/healthz
+2026-03-02T02:18:04-0500 WARNING algea.api [1744] req_end request_id=d110fa1a-bb7 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:05-0500 INFO algea.api [1744] req_start request_id=e05edff1-1f8 method=GET path=/healthz
+2026-03-02T02:18:05-0500 WARNING algea.api [1744] req_end request_id=e05edff1-1f8 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:06-0500 INFO algea.api [1744] req_start request_id=cc8b70c2-891 method=GET path=/healthz
+2026-03-02T02:18:06-0500 WARNING algea.api [1744] req_end request_id=cc8b70c2-891 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:07-0500 INFO algea.api [1744] req_start request_id=d74ee19b-9df method=GET path=/healthz
+2026-03-02T02:18:07-0500 WARNING algea.api [1744] req_end request_id=d74ee19b-9df method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:08-0500 INFO algea.api [1744] req_start request_id=cae091ba-c5c method=GET path=/healthz
+2026-03-02T02:18:08-0500 WARNING algea.api [1744] req_end request_id=cae091ba-c5c method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:09-0500 INFO algea.api [1744] req_start request_id=969c43ed-933 method=GET path=/healthz
+2026-03-02T02:18:09-0500 WARNING algea.api [1744] req_end request_id=969c43ed-933 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:10-0500 INFO algea.api [1744] req_start request_id=41661cc8-e60 method=GET path=/healthz
+2026-03-02T02:18:10-0500 WARNING algea.api [1744] req_end request_id=41661cc8-e60 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:11-0500 INFO algea.api [1744] req_start request_id=84df4031-3bc method=GET path=/healthz
+2026-03-02T02:18:11-0500 WARNING algea.api [1744] req_end request_id=84df4031-3bc method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:12-0500 INFO algea.api [1744] req_start request_id=29ec96b1-62c method=GET path=/healthz
+2026-03-02T02:18:12-0500 WARNING algea.api [1744] req_end request_id=29ec96b1-62c method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:13-0500 INFO algea.api [1744] req_start request_id=5ff7801b-8db method=GET path=/healthz
+2026-03-02T02:18:13-0500 WARNING algea.api [1744] req_end request_id=5ff7801b-8db method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:14-0500 INFO algea.api [1744] req_start request_id=35eb0e4a-c50 method=GET path=/healthz
+2026-03-02T02:18:14-0500 WARNING algea.api [1744] req_end request_id=35eb0e4a-c50 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:15-0500 INFO algea.api [1744] req_start request_id=7bc50bb5-e7d method=GET path=/healthz
+2026-03-02T02:18:15-0500 WARNING algea.api [1744] req_end request_id=7bc50bb5-e7d method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:16-0500 INFO algea.api [1744] req_start request_id=06128535-d54 method=GET path=/healthz
+2026-03-02T02:18:16-0500 WARNING algea.api [1744] req_end request_id=06128535-d54 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:17-0500 INFO algea.api [1744] req_start request_id=c9c165e8-e8e method=GET path=/healthz
+2026-03-02T02:18:17-0500 WARNING algea.api [1744] req_end request_id=c9c165e8-e8e method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:18-0500 INFO algea.api [1744] req_start request_id=8a5424d1-619 method=GET path=/healthz
+2026-03-02T02:18:18-0500 WARNING algea.api [1744] req_end request_id=8a5424d1-619 method=GET path=/healthz status=503 duration_ms=16.0
+2026-03-02T02:18:19-0500 INFO algea.api [1744] req_start request_id=2cc0cdf2-687 method=GET path=/healthz
+2026-03-02T02:18:19-0500 WARNING algea.api [1744] req_end request_id=2cc0cdf2-687 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:20-0500 INFO algea.api [1744] req_start request_id=e90aa05b-b84 method=GET path=/healthz
+2026-03-02T02:18:20-0500 WARNING algea.api [1744] req_end request_id=e90aa05b-b84 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:21-0500 INFO algea.api [1744] req_start request_id=a0747148-080 method=GET path=/healthz
+2026-03-02T02:18:21-0500 WARNING algea.api [1744] req_end request_id=a0747148-080 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:18:21-0500 INFO algea.api [1744] req_start request_id=63ada5f1-f91 method=POST path=/api/control/broker/connect
+2026-03-02T02:18:21-0500 INFO algea.trading.broker_ibkr [1744] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:18:21-0500 INFO ib_insync.client [1744] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:18:23-0500 INFO ib_insync.client [1744] Disconnecting
+2026-03-02T02:18:23-0500 ERROR ib_insync.client [1744] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:18:23-0500 ERROR ib_insync.client [1744] Make sure API port on TWS/IBG is open
+2026-03-02T02:18:23-0500 WARNING algea.trading.ibkr_client [1744] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:18:23-0500 INFO ib_insync.client [1744] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:18:25-0500 INFO ib_insync.client [1744] Disconnecting
+2026-03-02T02:18:25-0500 ERROR ib_insync.client [1744] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:18:25-0500 ERROR ib_insync.client [1744] Make sure API port on TWS/IBG is open
+2026-03-02T02:18:25-0500 WARNING algea.trading.ibkr_client [1744] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:18:25-0500 INFO ib_insync.client [1744] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:18:27-0500 INFO ib_insync.client [1744] Disconnecting
+2026-03-02T02:18:27-0500 ERROR ib_insync.client [1744] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:18:27-0500 ERROR ib_insync.client [1744] Make sure API port on TWS/IBG is open
+2026-03-02T02:18:27-0500 WARNING algea.trading.ibkr_client [1744] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:18:27-0500 ERROR algea.api.control [1744] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:18:27-0500 INFO algea.api [1744] req_end request_id=63ada5f1-f91 method=POST path=/api/control/broker/connect status=200 duration_ms=6187.0
+2026-03-02T02:18:32-0500 INFO algea.api [1744] req_start request_id=831df5e3-784 method=POST path=/api/control/broker/connect
+2026-03-02T02:18:32-0500 INFO algea.trading.broker_ibkr [1744] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:18:32-0500 INFO ib_insync.client [1744] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:18:34-0500 INFO ib_insync.client [1744] Disconnecting
+2026-03-02T02:18:34-0500 ERROR ib_insync.client [1744] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:18:34-0500 ERROR ib_insync.client [1744] Make sure API port on TWS/IBG is open
+2026-03-02T02:18:34-0500 WARNING algea.trading.ibkr_client [1744] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:18:34-0500 INFO ib_insync.client [1744] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:18:36-0500 INFO ib_insync.client [1744] Disconnecting
+2026-03-02T02:18:36-0500 ERROR ib_insync.client [1744] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:18:36-0500 ERROR ib_insync.client [1744] Make sure API port on TWS/IBG is open
+2026-03-02T02:18:36-0500 WARNING algea.trading.ibkr_client [1744] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:18:36-0500 INFO ib_insync.client [1744] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:18:38-0500 INFO ib_insync.client [1744] Disconnecting
+2026-03-02T02:18:38-0500 ERROR ib_insync.client [1744] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:18:38-0500 ERROR ib_insync.client [1744] Make sure API port on TWS/IBG is open
+2026-03-02T02:18:38-0500 WARNING algea.trading.ibkr_client [1744] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:18:38-0500 ERROR algea.api.control [1744] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:18:38-0500 INFO algea.api [1744] req_end request_id=831df5e3-784 method=POST path=/api/control/broker/connect status=200 duration_ms=6157.0
+2026-03-02T02:22:27-0500 WARNING ntp [25484] ntplib not installed — NTP check skipped
+2026-03-02T02:22:27-0500 INFO algea.zmq_streamer [25484] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-02T02:22:27-0500 INFO algea.kill_switch [25484] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-02T02:22:27-0500 INFO algea.api [25484] req_start request_id=2a090b17-d5c method=GET path=/healthz
+2026-03-02T02:22:27-0500 WARNING algea.api [25484] req_end request_id=2a090b17-d5c method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:28-0500 INFO algea.api [25484] req_start request_id=bc29464f-fd6 method=GET path=/healthz
+2026-03-02T02:22:28-0500 WARNING algea.api [25484] req_end request_id=bc29464f-fd6 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:29-0500 INFO algea.api [25484] req_start request_id=225146e8-40f method=GET path=/healthz
+2026-03-02T02:22:29-0500 WARNING algea.api [25484] req_end request_id=225146e8-40f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:30-0500 INFO algea.api [25484] req_start request_id=fff956ee-df8 method=GET path=/healthz
+2026-03-02T02:22:30-0500 WARNING algea.api [25484] req_end request_id=fff956ee-df8 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:31-0500 INFO algea.api [25484] req_start request_id=e8f22d76-ffd method=GET path=/healthz
+2026-03-02T02:22:31-0500 WARNING algea.api [25484] req_end request_id=e8f22d76-ffd method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:32-0500 INFO algea.api [25484] req_start request_id=07027cd7-c1a method=GET path=/healthz
+2026-03-02T02:22:32-0500 WARNING algea.api [25484] req_end request_id=07027cd7-c1a method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:33-0500 INFO algea.api [25484] req_start request_id=d158a966-b4a method=GET path=/healthz
+2026-03-02T02:22:33-0500 WARNING algea.api [25484] req_end request_id=d158a966-b4a method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:34-0500 INFO algea.api [25484] req_start request_id=3aabea3c-7cc method=GET path=/healthz
+2026-03-02T02:22:34-0500 WARNING algea.api [25484] req_end request_id=3aabea3c-7cc method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:35-0500 INFO algea.api [25484] req_start request_id=a339b9da-df8 method=GET path=/healthz
+2026-03-02T02:22:35-0500 WARNING algea.api [25484] req_end request_id=a339b9da-df8 method=GET path=/healthz status=503 duration_ms=15.0
+2026-03-02T02:22:36-0500 INFO algea.api [25484] req_start request_id=03d2793c-129 method=GET path=/healthz
+2026-03-02T02:22:36-0500 WARNING algea.api [25484] req_end request_id=03d2793c-129 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:37-0500 INFO algea.api [25484] req_start request_id=f062954f-a09 method=GET path=/healthz
+2026-03-02T02:22:37-0500 WARNING algea.api [25484] req_end request_id=f062954f-a09 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:38-0500 INFO algea.api [25484] req_start request_id=463e29c1-690 method=GET path=/healthz
+2026-03-02T02:22:38-0500 WARNING algea.api [25484] req_end request_id=463e29c1-690 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:39-0500 INFO algea.api [25484] req_start request_id=98105e26-ddb method=GET path=/healthz
+2026-03-02T02:22:39-0500 WARNING algea.api [25484] req_end request_id=98105e26-ddb method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:40-0500 INFO algea.api [25484] req_start request_id=7e9c1f4c-f24 method=GET path=/healthz
+2026-03-02T02:22:40-0500 WARNING algea.api [25484] req_end request_id=7e9c1f4c-f24 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:41-0500 INFO algea.api [25484] req_start request_id=b4e8d141-795 method=GET path=/healthz
+2026-03-02T02:22:41-0500 WARNING algea.api [25484] req_end request_id=b4e8d141-795 method=GET path=/healthz status=503 duration_ms=16.0
+2026-03-02T02:22:42-0500 INFO algea.api [25484] req_start request_id=b365b40a-c86 method=GET path=/healthz
+2026-03-02T02:22:42-0500 WARNING algea.api [25484] req_end request_id=b365b40a-c86 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:43-0500 INFO algea.api [25484] req_start request_id=b84959ab-f9e method=GET path=/healthz
+2026-03-02T02:22:43-0500 WARNING algea.api [25484] req_end request_id=b84959ab-f9e method=GET path=/healthz status=503 duration_ms=15.0
+2026-03-02T02:22:44-0500 INFO algea.api [25484] req_start request_id=4ecf2e48-dbc method=GET path=/healthz
+2026-03-02T02:22:44-0500 WARNING algea.api [25484] req_end request_id=4ecf2e48-dbc method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:45-0500 INFO algea.api [25484] req_start request_id=5a34f5a5-7c0 method=GET path=/healthz
+2026-03-02T02:22:45-0500 WARNING algea.api [25484] req_end request_id=5a34f5a5-7c0 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:46-0500 INFO algea.api [25484] req_start request_id=a9ff68fc-0e8 method=GET path=/healthz
+2026-03-02T02:22:46-0500 WARNING algea.api [25484] req_end request_id=a9ff68fc-0e8 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:47-0500 INFO algea.api [25484] req_start request_id=1566367f-bb8 method=GET path=/healthz
+2026-03-02T02:22:47-0500 WARNING algea.api [25484] req_end request_id=1566367f-bb8 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:48-0500 INFO algea.api [25484] req_start request_id=1a665285-e11 method=GET path=/healthz
+2026-03-02T02:22:48-0500 WARNING algea.api [25484] req_end request_id=1a665285-e11 method=GET path=/healthz status=503 duration_ms=16.0
+2026-03-02T02:22:49-0500 INFO algea.api [25484] req_start request_id=9c1f61d3-2ee method=GET path=/healthz
+2026-03-02T02:22:49-0500 WARNING algea.api [25484] req_end request_id=9c1f61d3-2ee method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:50-0500 INFO algea.api [25484] req_start request_id=888980dd-ca1 method=GET path=/healthz
+2026-03-02T02:22:50-0500 WARNING algea.api [25484] req_end request_id=888980dd-ca1 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:51-0500 INFO algea.api [25484] req_start request_id=a2e42d31-7e0 method=GET path=/healthz
+2026-03-02T02:22:51-0500 WARNING algea.api [25484] req_end request_id=a2e42d31-7e0 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:52-0500 INFO algea.api [25484] req_start request_id=dfe79db3-b22 method=GET path=/healthz
+2026-03-02T02:22:52-0500 WARNING algea.api [25484] req_end request_id=dfe79db3-b22 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:53-0500 INFO algea.api [25484] req_start request_id=65619e6c-40f method=GET path=/healthz
+2026-03-02T02:22:53-0500 WARNING algea.api [25484] req_end request_id=65619e6c-40f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:54-0500 INFO algea.api [25484] req_start request_id=93a71b9f-75e method=GET path=/healthz
+2026-03-02T02:22:54-0500 WARNING algea.api [25484] req_end request_id=93a71b9f-75e method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:55-0500 INFO algea.api [25484] req_start request_id=535745c8-173 method=GET path=/healthz
+2026-03-02T02:22:55-0500 WARNING algea.api [25484] req_end request_id=535745c8-173 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:56-0500 INFO algea.api [25484] req_start request_id=f0d2fc8d-129 method=GET path=/healthz
+2026-03-02T02:22:56-0500 WARNING algea.api [25484] req_end request_id=f0d2fc8d-129 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:22:56-0500 INFO algea.api [25484] req_start request_id=4e0f6a4c-8f7 method=POST path=/api/control/broker/connect
+2026-03-02T02:22:56-0500 INFO algea.trading.broker_ibkr [25484] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:22:56-0500 INFO ib_insync.client [25484] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:22:58-0500 INFO ib_insync.client [25484] Disconnecting
+2026-03-02T02:22:58-0500 ERROR ib_insync.client [25484] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:22:58-0500 ERROR ib_insync.client [25484] Make sure API port on TWS/IBG is open
+2026-03-02T02:22:58-0500 WARNING algea.trading.ibkr_client [25484] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:22:58-0500 INFO ib_insync.client [25484] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:23:00-0500 INFO ib_insync.client [25484] Disconnecting
+2026-03-02T02:23:00-0500 ERROR ib_insync.client [25484] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:23:00-0500 ERROR ib_insync.client [25484] Make sure API port on TWS/IBG is open
+2026-03-02T02:23:00-0500 WARNING algea.trading.ibkr_client [25484] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:23:00-0500 INFO ib_insync.client [25484] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:23:02-0500 INFO ib_insync.client [25484] Disconnecting
+2026-03-02T02:23:02-0500 ERROR ib_insync.client [25484] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:23:02-0500 ERROR ib_insync.client [25484] Make sure API port on TWS/IBG is open
+2026-03-02T02:23:02-0500 WARNING algea.trading.ibkr_client [25484] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:23:02-0500 ERROR algea.api.control [25484] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:23:02-0500 INFO algea.api [25484] req_end request_id=4e0f6a4c-8f7 method=POST path=/api/control/broker/connect status=200 duration_ms=6172.0
+2026-03-02T02:23:06-0500 INFO algea.api [25484] req_start request_id=fe23181a-fc1 method=POST path=/api/control/broker/connect
+2026-03-02T02:23:06-0500 INFO algea.trading.broker_ibkr [25484] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:23:06-0500 INFO ib_insync.client [25484] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:23:08-0500 INFO ib_insync.client [25484] Disconnecting
+2026-03-02T02:23:08-0500 ERROR ib_insync.client [25484] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:23:08-0500 ERROR ib_insync.client [25484] Make sure API port on TWS/IBG is open
+2026-03-02T02:23:08-0500 WARNING algea.trading.ibkr_client [25484] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:23:08-0500 INFO ib_insync.client [25484] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:23:10-0500 INFO ib_insync.client [25484] Disconnecting
+2026-03-02T02:23:10-0500 ERROR ib_insync.client [25484] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:23:10-0500 ERROR ib_insync.client [25484] Make sure API port on TWS/IBG is open
+2026-03-02T02:23:10-0500 WARNING algea.trading.ibkr_client [25484] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:23:10-0500 INFO ib_insync.client [25484] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:23:12-0500 INFO ib_insync.client [25484] Disconnecting
+2026-03-02T02:23:12-0500 ERROR ib_insync.client [25484] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:23:12-0500 ERROR ib_insync.client [25484] Make sure API port on TWS/IBG is open
+2026-03-02T02:23:12-0500 WARNING algea.trading.ibkr_client [25484] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:23:12-0500 ERROR algea.api.control [25484] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:23:12-0500 INFO algea.api [25484] req_end request_id=fe23181a-fc1 method=POST path=/api/control/broker/connect status=200 duration_ms=6125.0
+2026-03-02T02:24:10-0500 WARNING ntp [29188] ntplib not installed — NTP check skipped
+2026-03-02T02:24:10-0500 INFO algea.zmq_streamer [29188] ZMQ publisher started — event=tcp://*:5556  grid=tcp://*:5557
+2026-03-02T02:24:10-0500 INFO algea.kill_switch [29188] Kill switch listener started — shm=AlgaieControlPlane
+2026-03-02T02:25:55-0500 INFO algea.api [29188] req_start request_id=04f9566a-24a method=GET path=/healthz
+2026-03-02T02:25:55-0500 WARNING algea.api [29188] req_end request_id=04f9566a-24a method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:25:56-0500 INFO algea.api [29188] req_start request_id=8daf926e-b2f method=GET path=/healthz
+2026-03-02T02:25:56-0500 WARNING algea.api [29188] req_end request_id=8daf926e-b2f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:25:57-0500 INFO algea.api [29188] req_start request_id=0b3ddef3-3ae method=GET path=/healthz
+2026-03-02T02:25:57-0500 WARNING algea.api [29188] req_end request_id=0b3ddef3-3ae method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:25:58-0500 WARNING ntp [7752] ntplib not installed — NTP check skipped
+2026-03-02T02:25:58-0500 INFO algea.api [29188] req_start request_id=a5b1aca7-60b method=GET path=/healthz
+2026-03-02T02:25:58-0500 WARNING algea.api [29188] req_end request_id=a5b1aca7-60b method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:25:59-0500 INFO algea.api [29188] req_start request_id=d5387056-16f method=GET path=/healthz
+2026-03-02T02:25:59-0500 WARNING algea.api [29188] req_end request_id=d5387056-16f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:00-0500 INFO algea.api [29188] req_start request_id=761a2c18-043 method=GET path=/healthz
+2026-03-02T02:26:00-0500 WARNING algea.api [29188] req_end request_id=761a2c18-043 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:01-0500 INFO algea.api [29188] req_start request_id=59fb2539-6d3 method=GET path=/healthz
+2026-03-02T02:26:01-0500 WARNING algea.api [29188] req_end request_id=59fb2539-6d3 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:02-0500 INFO algea.api [29188] req_start request_id=6cd2af0f-1df method=GET path=/healthz
+2026-03-02T02:26:02-0500 WARNING algea.api [29188] req_end request_id=6cd2af0f-1df method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:03-0500 INFO algea.api [29188] req_start request_id=73e37b9a-ed8 method=GET path=/healthz
+2026-03-02T02:26:03-0500 WARNING algea.api [29188] req_end request_id=73e37b9a-ed8 method=GET path=/healthz status=503 duration_ms=15.0
+2026-03-02T02:26:04-0500 INFO algea.api [29188] req_start request_id=62c1c0e0-364 method=GET path=/healthz
+2026-03-02T02:26:04-0500 WARNING algea.api [29188] req_end request_id=62c1c0e0-364 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:05-0500 INFO algea.api [29188] req_start request_id=ef448333-dd5 method=GET path=/healthz
+2026-03-02T02:26:05-0500 WARNING algea.api [29188] req_end request_id=ef448333-dd5 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:06-0500 INFO algea.api [29188] req_start request_id=3344fae1-0e0 method=GET path=/healthz
+2026-03-02T02:26:06-0500 WARNING algea.api [29188] req_end request_id=3344fae1-0e0 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:07-0500 INFO algea.api [29188] req_start request_id=7548f31e-e53 method=GET path=/healthz
+2026-03-02T02:26:07-0500 WARNING algea.api [29188] req_end request_id=7548f31e-e53 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:08-0500 INFO algea.api [29188] req_start request_id=bd03a714-d59 method=GET path=/healthz
+2026-03-02T02:26:08-0500 WARNING algea.api [29188] req_end request_id=bd03a714-d59 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:09-0500 INFO algea.api [29188] req_start request_id=fe5891b8-cf4 method=GET path=/healthz
+2026-03-02T02:26:09-0500 WARNING algea.api [29188] req_end request_id=fe5891b8-cf4 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:10-0500 INFO algea.api [29188] req_start request_id=fde2bf3f-0fe method=GET path=/healthz
+2026-03-02T02:26:10-0500 WARNING algea.api [29188] req_end request_id=fde2bf3f-0fe method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:11-0500 INFO algea.api [29188] req_start request_id=2a3e9d21-29f method=GET path=/healthz
+2026-03-02T02:26:11-0500 WARNING algea.api [29188] req_end request_id=2a3e9d21-29f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:12-0500 INFO algea.api [29188] req_start request_id=7aa3891c-15a method=GET path=/healthz
+2026-03-02T02:26:12-0500 WARNING algea.api [29188] req_end request_id=7aa3891c-15a method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:13-0500 INFO algea.api [29188] req_start request_id=b9b17532-978 method=GET path=/healthz
+2026-03-02T02:26:13-0500 WARNING algea.api [29188] req_end request_id=b9b17532-978 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:14-0500 INFO algea.api [29188] req_start request_id=9ebd8ae5-625 method=GET path=/healthz
+2026-03-02T02:26:14-0500 WARNING algea.api [29188] req_end request_id=9ebd8ae5-625 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:15-0500 INFO algea.api [29188] req_start request_id=b8420f81-9d2 method=GET path=/healthz
+2026-03-02T02:26:15-0500 WARNING algea.api [29188] req_end request_id=b8420f81-9d2 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:16-0500 INFO algea.api [29188] req_start request_id=452fa2ea-25d method=GET path=/healthz
+2026-03-02T02:26:16-0500 WARNING algea.api [29188] req_end request_id=452fa2ea-25d method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:17-0500 INFO algea.api [29188] req_start request_id=b70316aa-156 method=GET path=/healthz
+2026-03-02T02:26:17-0500 WARNING algea.api [29188] req_end request_id=b70316aa-156 method=GET path=/healthz status=503 duration_ms=16.0
+2026-03-02T02:26:18-0500 INFO algea.api [29188] req_start request_id=50ad579a-c9e method=GET path=/healthz
+2026-03-02T02:26:18-0500 WARNING algea.api [29188] req_end request_id=50ad579a-c9e method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:19-0500 INFO algea.api [29188] req_start request_id=2454dc28-496 method=GET path=/healthz
+2026-03-02T02:26:19-0500 WARNING algea.api [29188] req_end request_id=2454dc28-496 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:21-0500 INFO algea.api [29188] req_start request_id=20fb1cb7-4ee method=GET path=/healthz
+2026-03-02T02:26:21-0500 WARNING algea.api [29188] req_end request_id=20fb1cb7-4ee method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:22-0500 INFO algea.api [29188] req_start request_id=3c718118-7ae method=GET path=/healthz
+2026-03-02T02:26:22-0500 WARNING algea.api [29188] req_end request_id=3c718118-7ae method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:23-0500 INFO algea.api [29188] req_start request_id=592a17e5-c8a method=GET path=/healthz
+2026-03-02T02:26:23-0500 WARNING algea.api [29188] req_end request_id=592a17e5-c8a method=GET path=/healthz status=503 duration_ms=16.0
+2026-03-02T02:26:24-0500 INFO algea.api [29188] req_start request_id=53653bb2-6f7 method=GET path=/healthz
+2026-03-02T02:26:24-0500 WARNING algea.api [29188] req_end request_id=53653bb2-6f7 method=GET path=/healthz status=503 duration_ms=15.0
+2026-03-02T02:26:25-0500 INFO algea.api [29188] req_start request_id=61b1261a-667 method=GET path=/healthz
+2026-03-02T02:26:25-0500 WARNING algea.api [29188] req_end request_id=61b1261a-667 method=GET path=/healthz status=503 duration_ms=16.0
+2026-03-02T02:26:26-0500 INFO algea.api [29188] req_start request_id=30146b88-005 method=GET path=/healthz
+2026-03-02T02:26:26-0500 WARNING algea.api [29188] req_end request_id=30146b88-005 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:26:26-0500 INFO algea.api [29188] req_start request_id=9dcb76bb-94f method=POST path=/api/control/broker/connect
+2026-03-02T02:26:26-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:26:26-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:26:28-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:26:28-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:26:28-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:26:28-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:26:28-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:26:30-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:26:30-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:26:30-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:26:30-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:26:30-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:26:32-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:26:32-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:26:32-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:26:32-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:26:32-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:26:32-0500 INFO algea.api [29188] req_end request_id=9dcb76bb-94f method=POST path=/api/control/broker/connect status=200 duration_ms=6125.0
+2026-03-02T02:26:36-0500 INFO algea.api [29188] req_start request_id=ddc61814-b86 method=POST path=/api/control/broker/connect
+2026-03-02T02:26:36-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:26:36-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:26:38-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:26:38-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:26:38-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:26:38-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:26:38-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:26:40-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:26:40-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:26:40-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:26:40-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:26:40-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:26:42-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:26:42-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:26:42-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:26:42-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:26:42-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:26:42-0500 INFO algea.api [29188] req_end request_id=ddc61814-b86 method=POST path=/api/control/broker/connect status=200 duration_ms=6141.0
+2026-03-02T02:27:00-0500 INFO algea.api [29188] req_start request_id=eb5e1131-909 method=POST path=/api/control/broker/connect
+2026-03-02T02:27:00-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:27:00-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:02-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:02-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:02-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:02-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:02-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:04-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:04-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:04-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:04-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:04-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:06-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:06-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:06-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:06-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:06-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:27:06-0500 INFO algea.api [29188] req_end request_id=eb5e1131-909 method=POST path=/api/control/broker/connect status=200 duration_ms=6109.0
+2026-03-02T02:27:24-0500 INFO algea.api [29188] req_start request_id=a4b9d6de-954 method=POST path=/api/control/broker/connect
+2026-03-02T02:27:24-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:27:24-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:26-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:26-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:26-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:26-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:26-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:28-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:28-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:28-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:28-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:28-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:30-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:30-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:30-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:30-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:30-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:27:30-0500 INFO algea.api [29188] req_end request_id=a4b9d6de-954 method=POST path=/api/control/broker/connect status=200 duration_ms=6093.0
+2026-03-02T02:27:48-0500 INFO algea.api [29188] req_start request_id=e488d5b3-8f7 method=POST path=/api/control/broker/connect
+2026-03-02T02:27:48-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:27:48-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:50-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:50-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:50-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:50-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:50-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:52-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:52-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:52-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:52-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:52-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:27:54-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:27:54-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:27:54-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:27:54-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:27:54-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:27:54-0500 INFO algea.api [29188] req_end request_id=e488d5b3-8f7 method=POST path=/api/control/broker/connect status=200 duration_ms=6094.0
+2026-03-02T02:28:12-0500 INFO algea.api [29188] req_start request_id=2450d2a8-0b9 method=POST path=/api/control/broker/connect
+2026-03-02T02:28:12-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:28:12-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:28:14-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:28:14-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:28:14-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:28:14-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:28:14-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:28:16-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:28:16-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:28:16-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:28:16-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:28:16-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:28:18-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:28:18-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:28:18-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:28:18-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:28:18-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:28:18-0500 INFO algea.api [29188] req_end request_id=2450d2a8-0b9 method=POST path=/api/control/broker/connect status=200 duration_ms=6078.0
+2026-03-02T02:28:19-0500 WARNING ntp [5304] ntplib not installed — NTP check skipped
+2026-03-02T02:28:36-0500 INFO algea.api [29188] req_start request_id=d0c67a87-a52 method=GET path=/healthz
+2026-03-02T02:28:36-0500 WARNING algea.api [29188] req_end request_id=d0c67a87-a52 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:29:37-0500 INFO algea.api [29188] req_start request_id=c22805e4-62f method=GET path=/healthz
+2026-03-02T02:29:37-0500 WARNING algea.api [29188] req_end request_id=c22805e4-62f method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:29:37-0500 INFO algea.api [29188] req_start request_id=9f6df5f9-675 method=POST path=/api/control/broker/connect
+2026-03-02T02:29:37-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:29:37-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:29:39-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:29:39-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:29:39-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:29:39-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:29:39-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:29:41-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:29:41-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:29:41-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:29:41-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:29:41-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:29:43-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:29:43-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:29:43-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:29:43-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:29:43-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:29:43-0500 INFO algea.api [29188] req_end request_id=9f6df5f9-675 method=POST path=/api/control/broker/connect status=200 duration_ms=6063.0
+2026-03-02T02:31:05-0500 INFO algea.api [29188] req_start request_id=b398d590-2bc method=GET path=/healthz
+2026-03-02T02:31:05-0500 WARNING algea.api [29188] req_end request_id=b398d590-2bc method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:31:05-0500 INFO algea.api [29188] req_start request_id=81858bf5-02e method=POST path=/api/control/broker/connect
+2026-03-02T02:31:05-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:31:05-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:31:07-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:31:07-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:31:07-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:31:07-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:31:07-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:31:09-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:31:09-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:31:09-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:31:09-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:31:09-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:31:11-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:31:11-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:31:11-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:31:11-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:31:11-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:31:11-0500 INFO algea.api [29188] req_end request_id=81858bf5-02e method=POST path=/api/control/broker/connect status=200 duration_ms=6063.0
+2026-03-02T02:32:06-0500 INFO algea.api [29188] req_start request_id=e42257f4-303 method=GET path=/healthz
+2026-03-02T02:32:06-0500 WARNING algea.api [29188] req_end request_id=e42257f4-303 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:32:06-0500 INFO algea.api [29188] req_start request_id=8bfc47eb-c67 method=POST path=/api/control/broker/connect
+2026-03-02T02:32:06-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:32:06-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:08-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:08-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:08-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:08-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:08-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:10-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:10-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:10-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:10-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:10-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:12-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:12-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:12-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:12-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:12-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:32:12-0500 INFO algea.api [29188] req_end request_id=8bfc47eb-c67 method=POST path=/api/control/broker/connect status=200 duration_ms=6078.0
+2026-03-02T02:32:16-0500 INFO algea.api [29188] req_start request_id=2f19b698-d14 method=POST path=/api/control/broker/connect
+2026-03-02T02:32:16-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:32:16-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:18-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:18-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:18-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:18-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:18-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:20-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:20-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:20-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:20-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:20-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:22-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:22-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:22-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:22-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:22-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:32:22-0500 INFO algea.api [29188] req_end request_id=2f19b698-d14 method=POST path=/api/control/broker/connect status=200 duration_ms=6141.0
+2026-03-02T02:32:36-0500 INFO algea.api [29188] req_start request_id=731fe4cb-40a method=GET path=/healthz
+2026-03-02T02:32:36-0500 WARNING algea.api [29188] req_end request_id=731fe4cb-40a method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:32:36-0500 INFO algea.api [29188] req_start request_id=20495c25-686 method=POST path=/api/control/broker/connect
+2026-03-02T02:32:36-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:32:36-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:38-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:38-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:38-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:38-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:38-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:40-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:40-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:40-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:40-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:40-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:42-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:42-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:42-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:42-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:42-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:32:42-0500 INFO algea.api [29188] req_end request_id=20495c25-686 method=POST path=/api/control/broker/connect status=200 duration_ms=6078.0
+2026-03-02T02:32:46-0500 INFO algea.api [29188] req_start request_id=1aa8c198-3fc method=POST path=/api/control/broker/connect
+2026-03-02T02:32:46-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:32:46-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:48-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:48-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:48-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:48-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:48-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:50-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:50-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:50-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:50-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:50-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:32:52-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:32:52-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:32:52-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:32:52-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:32:52-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:32:52-0500 INFO algea.api [29188] req_end request_id=1aa8c198-3fc method=POST path=/api/control/broker/connect status=200 duration_ms=6156.0
+2026-03-02T02:33:10-0500 INFO algea.api [29188] req_start request_id=3834066f-c44 method=POST path=/api/control/broker/connect
+2026-03-02T02:33:10-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:33:10-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:33:12-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:33:12-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:33:12-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:33:12-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:33:12-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:33:14-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:33:14-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:33:14-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:33:14-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:33:14-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:33:17-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:33:17-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:33:17-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:33:17-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:33:17-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:33:17-0500 INFO algea.api [29188] req_end request_id=3834066f-c44 method=POST path=/api/control/broker/connect status=200 duration_ms=6140.0
+2026-03-02T02:34:51-0500 INFO algea.api [29188] req_start request_id=c1173ba4-8b6 method=GET path=/healthz
+2026-03-02T02:34:51-0500 WARNING algea.api [29188] req_end request_id=c1173ba4-8b6 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T02:34:51-0500 INFO algea.api [29188] req_start request_id=116d844b-7b7 method=POST path=/api/control/broker/connect
+2026-03-02T02:34:51-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:34:51-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:34:54-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:34:54-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:34:54-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:34:54-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:34:54-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:34:56-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:34:56-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:34:56-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:34:56-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:34:56-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:34:58-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:34:58-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:34:58-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:34:58-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:34:58-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:34:58-0500 INFO algea.api [29188] req_end request_id=116d844b-7b7 method=POST path=/api/control/broker/connect status=200 duration_ms=6078.0
+2026-03-02T02:35:01-0500 INFO algea.api [29188] req_start request_id=d7fc05a1-f91 method=POST path=/api/control/broker/connect
+2026-03-02T02:35:01-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T02:35:01-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:35:03-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:35:03-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:35:03-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:35:03-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:35:03-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:35:05-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:35:05-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:35:05-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:35:05-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:35:05-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T02:35:07-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T02:35:07-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T02:35:07-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T02:35:07-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T02:35:07-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T02:35:07-0500 INFO algea.api [29188] req_end request_id=d7fc05a1-f91 method=POST path=/api/control/broker/connect status=200 duration_ms=6125.0
+2026-03-02T18:47:07-0500 INFO algea.api [29188] req_start request_id=110ed3ab-be3 method=GET path=/healthz
+2026-03-02T18:47:07-0500 WARNING algea.api [29188] req_end request_id=110ed3ab-be3 method=GET path=/healthz status=503 duration_ms=0.0
+2026-03-02T18:47:07-0500 INFO algea.api [29188] req_start request_id=b6c35bcc-ef6 method=POST path=/api/control/broker/connect
+2026-03-02T18:47:07-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T18:47:07-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:09-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:09-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:09-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:09-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:09-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:11-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:11-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:11-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:11-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:11-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:13-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:13-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:13-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:13-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:13-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T18:47:13-0500 INFO algea.api [29188] req_end request_id=b6c35bcc-ef6 method=POST path=/api/control/broker/connect status=200 duration_ms=6078.0
+2026-03-02T18:47:18-0500 INFO algea.api [29188] req_start request_id=bceceb15-2f2 method=POST path=/api/control/broker/connect
+2026-03-02T18:47:18-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T18:47:18-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:20-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:20-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:20-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:20-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:20-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:22-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:22-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:22-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:22-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:22-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:24-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:24-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:24-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:24-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:24-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T18:47:24-0500 INFO algea.api [29188] req_end request_id=bceceb15-2f2 method=POST path=/api/control/broker/connect status=200 duration_ms=6157.0
+2026-03-02T18:47:42-0500 INFO algea.api [29188] req_start request_id=a0280601-010 method=POST path=/api/control/broker/connect
+2026-03-02T18:47:42-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T18:47:42-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:44-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:44-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:44-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:44-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:44-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:46-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:46-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:46-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:46-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:46-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:47:48-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:47:48-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:47:48-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:47:48-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:47:48-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T18:47:48-0500 INFO algea.api [29188] req_end request_id=a0280601-010 method=POST path=/api/control/broker/connect status=200 duration_ms=6110.0
+2026-03-02T18:48:06-0500 INFO algea.api [29188] req_start request_id=6550d141-049 method=POST path=/api/control/broker/connect
+2026-03-02T18:48:06-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T18:48:06-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:08-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:08-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:08-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:08-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:08-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:11-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:11-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:11-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:11-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:11-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:13-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:13-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:13-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:13-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:13-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T18:48:13-0500 INFO algea.api [29188] req_end request_id=6550d141-049 method=POST path=/api/control/broker/connect status=200 duration_ms=6110.0
+2026-03-02T18:48:31-0500 INFO algea.api [29188] req_start request_id=a043a8e1-26e method=POST path=/api/control/broker/connect
+2026-03-02T18:48:31-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T18:48:31-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:33-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:33-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:33-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:33-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:33-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:35-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:35-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:35-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:35-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:35-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:37-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:37-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:37-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:37-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:37-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T18:48:37-0500 INFO algea.api [29188] req_end request_id=a043a8e1-26e method=POST path=/api/control/broker/connect status=200 duration_ms=6156.0
+2026-03-02T18:48:55-0500 INFO algea.api [29188] req_start request_id=2305a233-24d method=POST path=/api/control/broker/connect
+2026-03-02T18:48:55-0500 INFO algea.trading.broker_ibkr [29188] IBKRLiveBroker initialized: account=DUP****42, paper=True, readonly=False
+2026-03-02T18:48:55-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:57-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:57-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:57-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:57-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 1 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:57-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:48:59-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:48:59-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:48:59-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:48:59-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 2 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:48:59-0500 INFO ib_insync.client [29188] Connecting to 127.0.0.1:7497 with clientId 17...
+2026-03-02T18:49:01-0500 INFO ib_insync.client [29188] Disconnecting
+2026-03-02T18:49:01-0500 ERROR ib_insync.client [29188] API connection failed: ConnectionRefusedError(22, 'The remote computer refused the network connection', None, 1225, None)
+2026-03-02T18:49:01-0500 ERROR ib_insync.client [29188] Make sure API port on TWS/IBG is open
+2026-03-02T18:49:01-0500 WARNING algea.trading.ibkr_client [29188] IBKR connect attempt 3 failed: [WinError 1225] The remote computer refused the network connection
+2026-03-02T18:49:01-0500 ERROR algea.api.control [29188] IBKR broker connect failed: Failed to connect to IBKR at 127.0.0.1:7497 after 3 attempts
+2026-03-02T18:49:01-0500 INFO algea.api [29188] req_end request_id=2305a233-24d method=POST path=/api/control/broker/connect status=200 duration_ms=6094.0

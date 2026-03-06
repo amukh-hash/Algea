@@ -1,0 +1,9 @@
+{
+  "num_variates": 10,
+  "lookback_len": 60,
+  "pred_len": 1,
+  "d_model": 128,
+  "n_heads": 4,
+  "e_layers": 2,
+  "dropout": 0.3148658600276169
+}

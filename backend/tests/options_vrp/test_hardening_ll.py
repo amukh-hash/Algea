@@ -4,9 +4,9 @@ Tests for forecast hardening — clamp, monotonicity, baseline blend, health gat
 import numpy as np
 import pytest
 
-from algea.models.tsfm.lag_llama.config import LagLlamaConfig
-from algea.models.tsfm.lag_llama.hardening import BaselineBlender, ForecastSanitizer
-from algea.models.tsfm.lag_llama.inference import ForecastResult
+from algae.models.tsfm.lag_llama.config import LagLlamaConfig
+from algae.models.tsfm.lag_llama.hardening import BaselineBlender, ForecastSanitizer
+from algae.models.tsfm.lag_llama.inference import ForecastResult
 
 
 def _make_forecast(

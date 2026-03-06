@@ -61,7 +61,7 @@ def load_teacher(run_dir: Path, device: torch.device):
     from chronos import Chronos2Pipeline
     from peft import LoraConfig, inject_adapter_in_model
 
-    from algea.models.foundation.chronos2_teacher import Chronos2NativeWrapper
+    from algae.models.foundation.chronos2_teacher import Chronos2NativeWrapper
 
     config = json.loads((run_dir / "config.json").read_text())
     model_id = config["model_id"]
@@ -196,7 +196,7 @@ def build_cache_for_date(
 
     Uses the canonical ``compute_teacher_priors`` function.
     """
-    from algea.data.priors.chronos_priors_compute import (
+    from algae.data.priors.chronos_priors_compute import (
         compute_teacher_priors,
         priors_to_row,
     )
@@ -297,7 +297,7 @@ def main():
     parser.add_argument("--cache-root", default=None, help="Override cache output dir")
     args = parser.parse_args()
 
-    from algea.core.device import get_device
+    from algae.core.device import get_device
     device = get_device()
 
     runs_dir = ROOT / "backend" / "data" / "runs"

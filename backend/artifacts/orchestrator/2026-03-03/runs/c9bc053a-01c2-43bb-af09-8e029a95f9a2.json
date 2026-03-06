@@ -1,0 +1,14 @@
+{
+  "run_id": "c9bc053a-01c2-43bb-af09-8e029a95f9a2",
+  "asof_date": "2026-03-03",
+  "session": "preclose",
+  "ran_jobs": [],
+  "skipped_jobs": [
+    "ece_calibration_check"
+  ],
+  "failed_jobs": [
+    "risk_checks_global"
+  ],
+  "app": "Algae",
+  "version": "4.0.0"
+}

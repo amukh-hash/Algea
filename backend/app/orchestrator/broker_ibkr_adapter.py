@@ -1,7 +1,12 @@
 """Bridge between the existing IBKRLiveBroker and the orchestrator BrokerAdapter protocol.
 
 This adapter lets the orchestrator talk to a *real* IBKR paper/live account
-through the already-proven ``algea.trading.broker_ibkr.IBKRLiveBroker``.
+through the already-proven ``algae.trading.broker_ibkr.IBKRLiveBroker``.
+
+Day-2 Mitigation — Broker Gateway Forced Disconnects:
+    IBKR resets its API gateway daily (~23:45 EST).  All network-bound methods
+    are wrapped with tenacity exponential backoff (4s→60s, 10 attempts, ~10 min
+    window) to survive the reset without crashing the orchestrator.
 """
 from __future__ import annotations
 
@@ -10,8 +15,16 @@ import os
 from datetime import date, datetime
 from typing import Any
 
-from algea.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig
-from algea.trading.orders import OrderIntent
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
+
+from algae.trading.broker_ibkr import IBKRLiveBroker, IbkrConfig
+from algae.trading.orders import OrderIntent
 from backend.app.schemas.fill_position import (
     FILLS_SCHEMA_VERSION,
     POSITIONS_SCHEMA_VERSION,
@@ -21,12 +34,48 @@ from backend.app.schemas.fill_position import (
 
 logger = logging.getLogger(__name__)
 
+# ── Retry policy for IBKR gateway disconnects ──────────────────────────
+# Catches socket drops and TCP resets without swallowing logic errors.
+# Total retry window: ~10 minutes (covers IBKR's daily gateway reboot).
+_IBKR_RETRY = retry(
+    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    stop=stop_after_attempt(10),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
+
 
 class IBKRBrokerAdapter:
-    """Wraps :class:`IBKRLiveBroker` to satisfy :class:`BrokerAdapter` protocol."""
+    """Wraps :class:`IBKRLiveBroker` to satisfy :class:`BrokerAdapter` protocol.
+
+    All network-bound methods include exponential backoff retry logic
+    to survive IBKR's daily gateway reset (~23:45 EST).
+    """
 
     def __init__(self, broker: IBKRLiveBroker) -> None:
         self._broker = broker
+
+    # -- Reconnection helper -----------------------------------------------------
+
+    def _reconnect_if_needed(self) -> None:
+        """Re-establish the IBKR connection if the session is stale.
+
+        Called before each retried network operation to ensure the
+        TCP socket is alive after a gateway reset.
+        """
+        try:
+            if not self._broker._client.isConnected():
+                logger.warning("IBKR session stale — reconnecting")
+                self._broker._ensure_connected()
+        except Exception:
+            # Force full reconnect on any introspection failure
+            logger.warning("IBKR connection check failed — forcing reconnect")
+            try:
+                self._broker._disconnect()
+            except Exception:
+                pass
+            self._broker._ensure_connected()
 
     # -- BrokerAdapter protocol --------------------------------------------------
 
@@ -38,8 +87,11 @@ class IBKRBrokerAdapter:
             raise RuntimeError(f"Paper guard: account '{account_id}' is not a paper account")
         logger.info("Paper guard passed for account %s", account_id[:4] + "****")
 
+    @_IBKR_RETRY
     def place_orders(self, orders: dict) -> dict:
         """Convert orchestrator order dict → OrderIntent list → submit via IBKRLiveBroker."""
+        self._reconnect_if_needed()
+
         order_list = orders.get("orders", [])
         if not order_list:
             return {"status": "accepted", "order_count": 0, "routed": []}
@@ -77,8 +129,10 @@ class IBKRBrokerAdapter:
             "routed": routed,
         }
 
+    @_IBKR_RETRY
     def get_positions(self) -> dict:
         """Return positions as a dict matching orchestrator expectations."""
+        self._reconnect_if_needed()
         positions = self._broker.get_positions()
         return {
             "positions": [
@@ -92,8 +146,11 @@ class IBKRBrokerAdapter:
             "schema_version": POSITIONS_SCHEMA_VERSION,
         }
 
+    @_IBKR_RETRY
     def get_fills(self, since_ts: str | None) -> dict:
         """Return fills as a dict matching orchestrator expectations."""
+        self._reconnect_if_needed()
+
         time_min = None
         if since_ts:
             try:
@@ -116,15 +173,17 @@ class IBKRBrokerAdapter:
         ).to_dict() for f in fills]
         return {"fills": normalized, "since": since_ts, "schema_version": FILLS_SCHEMA_VERSION}
 
+    @_IBKR_RETRY
     def get_quote(self, symbol: str) -> float | None:
         """Fetch latest price for a symbol via IBKR historical data.
 
         Falls back to None if the symbol cannot be resolved.
         """
+        self._reconnect_if_needed()
+
         try:
             from ib_insync import Stock  # type: ignore[import-untyped]
 
-            self._broker._ensure_connected()
             contract = Stock(symbol, "SMART", "USD")
             qualified = self._broker._client.qualify_contracts(contract)
             if not qualified or qualified[0].conId == 0:
@@ -135,6 +194,8 @@ class IBKRBrokerAdapter:
             if bars.empty:
                 return None
             return float(bars.iloc[-1]["close"])
+        except (ConnectionError, TimeoutError, OSError):
+            raise  # Let tenacity handle these
         except Exception as exc:
             logger.warning("get_quote(%s) failed: %s", symbol, exc)
             return None

@@ -1,0 +1,32 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-05",
+  "checked_at": "2026-03-05T12:00:32.965444+00:00",
+  "halt_reasons": [],
+  "per_sleeve": {
+    "kronos": {
+      "baseline_mmd": 0.0,
+      "is_drifted": false,
+      "mmd_score": 0.0,
+      "sleeve": "kronos",
+      "threshold": 0.001
+    },
+    "mera": {
+      "baseline_mmd": 0.0,
+      "is_drifted": false,
+      "mmd_score": 0.0,
+      "sleeve": "mera",
+      "threshold": 0.001
+    },
+    "vrp": {
+      "baseline_mmd": 0.0,
+      "is_drifted": false,
+      "mmd_score": 0.0,
+      "sleeve": "vrp",
+      "threshold": 0.001
+    }
+  },
+  "session": "premarket",
+  "status": "ok",
+  "version": "4.0.0"
+}

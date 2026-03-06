@@ -1,0 +1,12 @@
+[
+  {
+    "asof_date": "2026-03-05",
+    "sleeve": "core",
+    "symbol": "ES",
+    "asset_class": "FUTURE",
+    "target_weight": 0.0,
+    "execution_phase": "auction_open",
+    "multiplier": 50.0,
+    "dte": -1
+  }
+]

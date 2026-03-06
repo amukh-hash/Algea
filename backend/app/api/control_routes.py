@@ -8,6 +8,8 @@ import asyncio
 import json
 import logging
 import os
+import socket as _socket
+import threading
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,9 +18,16 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.orchestrator.control_state import control_state
+from backend.app.api.zmq_bridge import (
+    bridge_control_snapshot,
+    bridge_control_mutation,
+    bridge_portfolio_summary,
+    bridge_broker_status,
+    bridge_calendar,
+)
 
 router = APIRouter(prefix="/api/control", tags=["control"])
-logger = logging.getLogger("algea.api.control")
+logger = logging.getLogger("algae.api.control")
 
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
@@ -73,13 +82,16 @@ class TriggerTickRequest(BaseModel):
 @router.get("/state")
 def get_state() -> dict[str, Any]:
     """Return the full control state snapshot."""
-    return control_state.snapshot()
+    snap = control_state.snapshot()
+    bridge_control_snapshot(snap)
+    return snap
 
 
 @router.put("/pause")
 def set_pause(req: PauseRequest) -> dict[str, Any]:
     _require_auth()
     control_state.set_paused(req.paused)
+    bridge_control_mutation("pause", {"paused": req.paused})
     return {"ok": True, "paused": req.paused}
 
 
@@ -143,6 +155,13 @@ def set_execution_mode(req: ExecutionModeRequest) -> dict[str, Any]:
 async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
     _require_auth()
     """Fire a single orchestrator tick."""
+    # ── DevOps Fix 1: Two Masters Paradox ──────────────────────────
+    # When ORCH_BACKGROUND_TICK=0, this endpoint is disabled so the
+    # Windows Task Scheduler is the single, undisputed master clock.
+    if os.getenv("ORCH_BACKGROUND_TICK", "1") == "0":
+        return {"ok": False, "status": "disabled",
+                "reason": "ORCH_BACKGROUND_TICK=0 — use Windows Task Scheduler"}
+
     if control_state.snapshot()["paused"]:
         raise HTTPException(409, detail="Orchestrator is paused. Resume before triggering.")
 
@@ -224,7 +243,7 @@ def get_broker_status() -> dict[str, Any]:
     """Check broker connectivity."""
     try:
         import os
-        gateway_url = os.getenv("IBKR_GATEWAY_URL", "127.0.0.1:7497")
+        gateway_url = os.getenv("IBKR_GATEWAY_URL", "127.0.0.1:4002")
         paper_only = os.getenv("IBKR_PAPER_ONLY", "1") == "1"
         account_id = os.getenv("IBKR_ACCOUNT_ID", "")
 
@@ -240,20 +259,253 @@ def get_broker_status() -> dict[str, Any]:
         finally:
             sock.close()
 
-        return {
+        result = {
             "connected": connected,
             "gateway_url": gateway_url,
             "paper_only": paper_only,
             "account_id": account_id[:4] + "****" if len(account_id) > 4 else account_id,
             "mode": "PAPER" if paper_only else "LIVE",
         }
+        bridge_broker_status(result)
+        return result
     except Exception as exc:
-        return {
+        result = {
             "connected": False,
             "error": str(exc),
             "mode": "UNKNOWN",
         }
+        bridge_broker_status(result)
+        return result
 
+
+# Module-level broker adapter singleton
+_broker_adapter: Any = None
+_broker_lock = threading.Lock()
+
+
+# ── Reusable connect logic ───────────────────────────────────────────
+
+def _is_port_open(host: str = "127.0.0.1", port: int = 4002, timeout: float = 2.0) -> bool:
+    """Check if a TCP port is reachable (non-blocking)."""
+    sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    try:
+        return sock.connect_ex((host, port)) == 0
+    finally:
+        sock.close()
+
+
+def _try_connect_broker(source: str = "endpoint") -> dict[str, Any]:
+    """Attempt to connect the broker adapter singleton.
+
+    Thread-safe.  Called by both the /broker/connect endpoint and the
+    background BrokerWatchdog.  Returns a status dict.
+    """
+    global _broker_adapter
+    with _broker_lock:
+        try:
+            # ib_insync requires an asyncio event loop; worker threads
+            # don't have one by default.
+            import asyncio as _asyncio
+            import nest_asyncio
+            try:
+                loop = _asyncio.get_event_loop()
+            except RuntimeError:
+                loop = _asyncio.new_event_loop()
+                _asyncio.set_event_loop(loop)
+            nest_asyncio.apply(loop)
+
+            # Load IBKR env vars from project .env
+            try:
+                from dotenv import load_dotenv
+                load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=True)
+            except ImportError:
+                pass
+
+            if _broker_adapter is not None:
+                # Already connected — verify session is alive
+                try:
+                    _broker_adapter._reconnect_if_needed()
+                    positions = _broker_adapter.get_positions()
+                    return {
+                        "connected": True,
+                        "status": "already_connected",
+                        "source": source,
+                        "positions": len(positions.get("positions", [])),
+                    }
+                except Exception:
+                    # Stale — disconnect and reconnect below
+                    try:
+                        _broker_adapter.disconnect()
+                    except Exception:
+                        pass
+                    _broker_adapter = None
+
+            from backend.app.orchestrator.broker_ibkr_adapter import IBKRBrokerAdapter
+            _broker_adapter = IBKRBrokerAdapter.from_env()
+            _broker_adapter.verify_paper()
+
+            positions = _broker_adapter.get_positions()
+            result = {
+                "connected": True,
+                "status": "connected",
+                "source": source,
+                "account": os.getenv("IBKR_ACCOUNT_ID", "")[:4] + "****",
+                "mode": "PAPER" if os.getenv("IBKR_PAPER_ONLY", "1") == "1" else "LIVE",
+                "positions": len(positions.get("positions", [])),
+            }
+            logger.info("IBKR broker connected (source=%s): %s", source, result)
+            return result
+        except Exception as exc:
+            _broker_adapter = None
+            result = {
+                "connected": False,
+                "status": "failed",
+                "source": source,
+                "error": str(exc),
+            }
+            logger.error("IBKR broker connect failed (source=%s): %s", source, exc)
+            return result
+
+
+# ── Broker Watchdog ──────────────────────────────────────────────────
+
+class BrokerWatchdog:
+    """Background daemon that auto-connects/disconnects the IBKR broker.
+
+    Polls port 4002 every *interval* seconds.  If the Gateway is
+    reachable and no adapter exists (or the session is stale),
+    it calls ``_try_connect_broker``.  If the Gateway disappears,
+    it cleans up the adapter singleton.
+
+    Respects a weekday 06:25-16:15 time window to avoid unnecessary
+    reconnect attempts outside trading hours.
+    """
+
+    def __init__(self, interval: float = 30.0) -> None:
+        self._interval = interval
+        self._running = False
+        self._thread: threading.Thread | None = None
+        self._was_connected = False
+
+    def start(self) -> None:
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._loop, daemon=True, name="broker-watchdog",
+        )
+        self._thread.start()
+        logger.info("Broker watchdog started (interval=%ds)", self._interval)
+
+    def stop(self) -> None:
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=5)
+        logger.info("Broker watchdog stopped")
+
+    def _in_trading_window(self) -> bool:
+        now = datetime.now()
+        weekday = now.weekday()  # 0=Mon … 4=Fri
+        if weekday > 4:
+            return False
+        hour_min = now.hour * 60 + now.minute
+        return 6 * 60 + 25 <= hour_min <= 16 * 60 + 15  # 06:25–16:15
+
+    def _loop(self) -> None:
+        import time
+        global _broker_adapter
+
+        # Wait a bit on startup to let the Gateway finish booting
+        time.sleep(10)
+
+        while self._running:
+            try:
+                self._tick()
+            except Exception:
+                logger.debug("Broker watchdog tick error", exc_info=True)
+            time.sleep(self._interval)
+
+    def _tick(self) -> None:
+        global _broker_adapter
+
+        if not self._in_trading_window():
+            return
+
+        gateway_url = os.getenv("IBKR_GATEWAY_URL", "127.0.0.1:4002")
+        host, port_str = gateway_url.split(":") if ":" in gateway_url else (gateway_url, "4002")
+        port = int(port_str)
+        port_open = _is_port_open(host, port)
+
+        if port_open and _broker_adapter is None:
+            # Gateway is up but we have no connection — auto-connect
+            logger.info("Broker watchdog: port %d reachable, auto-connecting...", port)
+            result = _try_connect_broker(source="watchdog")
+            bridge_broker_status(result)
+            if result.get("connected"):
+                self._was_connected = True
+
+        elif port_open and _broker_adapter is not None:
+            # Gateway is up and we have an adapter — verify session health
+            try:
+                if not _broker_adapter._broker._client.isConnected():
+                    logger.warning("Broker watchdog: session stale, reconnecting...")
+                    result = _try_connect_broker(source="watchdog_stale")
+                    bridge_broker_status(result)
+                elif not self._was_connected:
+                    self._was_connected = True
+            except Exception:
+                logger.warning("Broker watchdog: health check failed, reconnecting...")
+                result = _try_connect_broker(source="watchdog_error")
+                bridge_broker_status(result)
+
+        elif not port_open and _broker_adapter is not None:
+            # Gateway went away — clean up
+            logger.warning("Broker watchdog: port %d unreachable, clearing adapter", port)
+            with _broker_lock:
+                try:
+                    _broker_adapter.disconnect()
+                except Exception:
+                    pass
+                _broker_adapter = None
+            self._was_connected = False
+            bridge_broker_status({"connected": False, "status": "gateway_down", "source": "watchdog"})
+
+
+broker_watchdog = BrokerWatchdog(
+    interval=float(os.getenv("BROKER_WATCHDOG_INTERVAL", "30")),
+)
+
+
+# ── Broker endpoints ─────────────────────────────────────────────────
+
+@router.post("/broker/connect")
+def broker_connect() -> dict[str, Any]:
+    """Connect to IBKR broker via IBKRBrokerAdapter.from_env().
+
+    Reads IBKR_GATEWAY_URL, IBKR_ACCOUNT_ID, IBKR_CLIENT_ID from .env.
+    Called automatically by the native frontend on startup if broker is disconnected.
+    """
+    result = _try_connect_broker(source="endpoint")
+    bridge_broker_status(result)
+    return result
+
+
+@router.post("/broker/disconnect")
+def broker_disconnect() -> dict[str, Any]:
+    """Disconnect from IBKR broker."""
+    global _broker_adapter
+    with _broker_lock:
+        try:
+            if _broker_adapter is not None:
+                _broker_adapter.disconnect()
+                _broker_adapter = None
+            result = {"connected": False, "status": "disconnected"}
+            bridge_broker_status(result)
+            return result
+        except Exception as exc:
+            _broker_adapter = None
+            return {"connected": False, "status": "error", "error": str(exc)}
 
 @router.get("/job-graph")
 def get_job_graph() -> dict[str, Any]:
@@ -324,13 +576,15 @@ def get_calendar() -> dict[str, Any]:
     for name, window in config.session_windows.items():
         windows[name] = {"start": window.start, "end": window.end}
 
-    return {
+    result = {
         "date": date.today().isoformat(),
         "current_session": session.value,
         "is_trading_day": is_trading,
         "current_time": now.strftime("%H:%M:%S"),
         "session_windows": windows,
     }
+    bridge_calendar(result)
+    return result
 
 
 @router.get("/config")
@@ -566,7 +820,7 @@ def get_portfolio_summary() -> dict[str, Any]:
             "position_count": int(totals["count"]),
         }
 
-    return {
+    result = {
         "asof_date": today,
         "account_equity": account_equity,
         "cash": round(cash, 2),
@@ -587,6 +841,8 @@ def get_portfolio_summary() -> dict[str, Any]:
             "required_margin": round(total_margin, 2),
         },
     }
+    bridge_portfolio_summary(result)
+    return result
 
 
 # ── Portfolio History (intraday snapshots) ───────────────────────────

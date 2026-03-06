@@ -29,6 +29,8 @@ def _make_broker(tmp_state_dir, starting_equity=100_000.0):
     return PersistentPaperBroker(
         state_dir=tmp_state_dir,
         starting_equity=starting_equity,
+        slippage_ticks=0,
+        spread_bps=0.0,
     )
 
 

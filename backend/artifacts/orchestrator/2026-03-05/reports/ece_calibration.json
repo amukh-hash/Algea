@@ -1,0 +1,44 @@
+{
+  "app": "Algae",
+  "asof_date": "2026-03-05",
+  "checked_at": "2026-03-05T20:58:05.216417+00:00",
+  "halt_reasons": [],
+  "per_sleeve": {
+    "kronos": {
+      "global_ece": 0.0,
+      "high_confidence_bins": {},
+      "high_confidence_ece": 0.0,
+      "insufficient_data": true,
+      "is_breached": false,
+      "n_total": 0,
+      "sleeve": "kronos",
+      "threshold": 0.1,
+      "trigger_state": "OK"
+    },
+    "mera": {
+      "global_ece": 0.0,
+      "high_confidence_bins": {},
+      "high_confidence_ece": 0.0,
+      "insufficient_data": true,
+      "is_breached": false,
+      "n_total": 0,
+      "sleeve": "mera",
+      "threshold": 0.1,
+      "trigger_state": "OK"
+    },
+    "vrp": {
+      "global_ece": 0.0,
+      "high_confidence_bins": {},
+      "high_confidence_ece": 0.0,
+      "insufficient_data": true,
+      "is_breached": false,
+      "n_total": 0,
+      "sleeve": "vrp",
+      "threshold": 0.1,
+      "trigger_state": "OK"
+    }
+  },
+  "session": "preclose",
+  "status": "ok",
+  "version": "4.0.0"
+}

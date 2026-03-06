@@ -52,7 +52,7 @@ def run_dry_run_qualification(roots: list[str] | None = None) -> dict:
       - exchange matches EXCHANGE_MAP
     """
     from .contract_master import CONTRACT_MASTER
-    from algea.trading.ibkr_contracts import EXCHANGE_MAP
+    from algae.trading.ibkr_contracts import EXCHANGE_MAP
     from .contract_spec_checks import _normalise_exchange
 
     roots = roots or _primary_roots()
@@ -142,8 +142,8 @@ def run_ibkr_qualification(
     all_ok = True
 
     try:
-        from algea.trading.ibkr_client import IbkrClient
-        from algea.trading.ibkr_contracts import build_future_contract, parse_active_contract_symbol
+        from algae.trading.ibkr_client import IbkrClient
+        from algae.trading.ibkr_contracts import build_future_contract, parse_active_contract_symbol
 
         client = IbkrClient()
         client.connect()

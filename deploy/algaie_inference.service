@@ -1,0 +1,17 @@
+[Unit]
+Description=Algaie ML Inference Gateway (ASGI)
+After=network.target
+
+[Service]
+User=quant_admin
+WorkingDirectory=/opt/algaie/
+Environment="BROKER_ENV=PAPER"
+Environment="TZ=UTC"
+ExecStart=/opt/algaie/venv/bin/uvicorn backend.app.api.main:app --host 0.0.0.0 --port 8000 --workers 1 --limit-max-requests 10000
+Restart=always
+RestartSec=5
+MemoryHigh=28G
+MemoryMax=32G
+
+[Install]
+WantedBy=multi-user.target

@@ -8,7 +8,7 @@
 ........................................                                 [100%]
 ============================== warnings summary ===============================
 backend/tests/test_chronos_priors.py::TestPriorsMonotonicEnforcement::test_lenient_auto_sorts
-  C:\Users\Aishik\Documents\Workshop\Algea\backend\tests\test_chronos_priors.py:58: UserWarning: Quantile monotonicity violated; auto-sorted to q10=0.0100, q50=0.0500, q90=0.1000
+  C:\Users\Aishik\Documents\Workshop\Algae\backend\tests\test_chronos_priors.py:58: UserWarning: Quantile monotonicity violated; auto-sorted to q10=0.0100, q50=0.0500, q90=0.1000
     p.validate(strict=False)
 
 backend/tests/test_mlp_selector.py::test_compatibility_with_transformer
