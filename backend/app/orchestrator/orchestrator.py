@@ -16,7 +16,7 @@ from .job_defs import Job, default_jobs, filtered_jobs
 from .locks import LockManager
 from .runner import JobRunner
 from .state_store import StateStore
-from .control_state import control_state
+from .control_state_provider import get_control_state_provider
 from .tick_context import TickContext
 from .model_versions import record_model_versions
 from .intent_aggregator import collect_and_validate_intents
@@ -62,6 +62,7 @@ class Orchestrator:
 
         self.calendar = MarketCalendar(self.config)
         self.state = StateStore(self.config.db_path)
+        self.control_provider = get_control_state_provider(self.config.db_path)
         self.jobs = jobs or default_jobs()
         self.broker = broker or PaperBrokerStub()
         self.runner = runner or JobRunner()
@@ -95,10 +96,11 @@ class Orchestrator:
     def run_once(self, asof: date | datetime | None = None, forced_session: Session | None = None, dry_run: bool = False) -> TickResult:
         now = now_et()
         tick_context = TickContext()
-        control_snapshot = control_state.snapshot()
         asof_date = normalize_asof_date(asof)
         day_root = self._day_root(asof_date)
         session = forced_session or self.calendar.current_session(now)
+        run_id = str(uuid.uuid4())
+        control_snapshot = self.control_provider.snapshot(consumer="orchestrator", tick_id=run_id)
         self._write_heartbeat(day_root, now, session, "tick_start")
 
         if bool(control_snapshot.get("paused", False)):
@@ -107,7 +109,6 @@ class Orchestrator:
         if not forced_session and not self.calendar.is_trading_day(now) and session != Session.OVERNIGHT:
             return TickResult("no_trading_day", asof_date.isoformat(), session.value, [], [], [])
 
-        run_id = str(uuid.uuid4())
         self.state.create_run_record(run_id, asof_date.isoformat(), session.value, {"dry_run": dry_run})
 
         ran: list[str] = []

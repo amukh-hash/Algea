@@ -31,6 +31,7 @@ from backend.app.schemas.fill_position import (
     normalize_fill,
     normalize_position,
 )
+from backend.app.contracts.validators import normalize_broker_positions_payload
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class IBKRBrokerAdapter:
         """Return positions as a dict matching orchestrator expectations."""
         self._reconnect_if_needed()
         positions = self._broker.get_positions()
-        return {
+        payload = {
             "positions": [
                 {
                     "symbol": p.ticker,
@@ -145,6 +146,7 @@ class IBKRBrokerAdapter:
             ],
             "schema_version": POSITIONS_SCHEMA_VERSION,
         }
+        return normalize_broker_positions_payload(payload, source="ibkr_adapter", compatibility_mode=True)
 
     @_IBKR_RETRY
     def get_fills(self, since_ts: str | None) -> dict:
