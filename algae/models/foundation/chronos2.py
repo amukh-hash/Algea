@@ -16,7 +16,12 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from algae.models.foundation.base import FoundationModel, FoundationModelOutput
+from algae.models.foundation.base import (
+    FoundationModel,
+    FoundationModelOutput,
+    ModelProvider,
+    StatisticalFallbackProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +45,23 @@ class SimpleChronos2(FoundationModel):
     Uses ``chronos2_teacher.load_chronos_adapter`` when available,
     falling back to a statistical prior (naïve drift ± vol) when
     the teacher model cannot be loaded.
+
+    Parameters
+    ----------
+    config : FoundationModelConfig | None
+        Model configuration.
+    provider : ModelProvider | None
+        Injectable model provider. Pass ``StatisticalFallbackProvider()``
+        in tests to skip HuggingFace downloads entirely.
     """
 
-    def __init__(self, config: FoundationModelConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: FoundationModelConfig | None = None,
+        provider: ModelProvider | None = None,
+    ) -> None:
         self.config = config or FoundationModelConfig()
+        self._provider = provider
         self._model = None
         self._model_info: Dict[str, Any] = {}
 
@@ -51,6 +69,17 @@ class SimpleChronos2(FoundationModel):
         """Lazy-load the teacher model on first inference."""
         if self._model is not None:
             return
+
+        # If an explicit provider was injected, use it
+        if self._provider is not None:
+            self._model = self._provider.load(self.config)
+            if self._model is not None:
+                logger.info("SimpleChronos2: loaded model via injected provider")
+            else:
+                logger.info("SimpleChronos2: provider returned None, using statistical fallback")
+            return
+
+        # Default: try HuggingFace download
         try:
             from algae.models.foundation.chronos2_teacher import load_chronos_adapter
             import torch
@@ -75,35 +104,59 @@ class SimpleChronos2(FoundationModel):
         canonical_df: pd.DataFrame,
         asof: pd.Timestamp | None = None,
     ) -> FoundationModelOutput:
-        """Generate distributional priors for each ticker in the canonical daily frame."""
+        """Generate distributional priors for each ticker in the canonical daily frame.
+
+        If ``asof`` is provided, rows with ``date >= asof`` are **excluded**
+        to prevent look-ahead bias.  The output conforms to the canonical
+        priors schema:
+
+            ticker, p_mu5, p_mu10, p_sig5, p_sig10, p_pdown5, p_pdown10
+        """
         self._ensure_model()
+
+        # ── Strict temporal filter: exclude day-of and future data ──
+        if asof is not None and "date" in canonical_df.columns:
+            canonical_df = canonical_df[canonical_df["date"] < asof].copy()
 
         tickers = canonical_df["ticker"].unique() if "ticker" in canonical_df.columns else ["UNKNOWN"]
         rows: List[Dict[str, Any]] = []
 
         for ticker in tickers:
             sub = canonical_df[canonical_df["ticker"] == ticker] if "ticker" in canonical_df.columns else canonical_df
-            if len(sub) < 20:
+            if len(sub) < 2:
                 continue
 
             close = sub["close"].values
             log_ret = np.diff(np.log(close + 1e-10))
 
+            if len(log_ret) == 0:
+                continue
+
             # Statistical fallback: drift ± realized vol
-            drift = float(np.mean(log_ret[-60:]) if len(log_ret) >= 60 else np.mean(log_ret))
-            vol = float(np.std(log_ret[-60:]) if len(log_ret) >= 60 else np.std(log_ret))
+            window = min(60, len(log_ret))
+            drift = float(np.mean(log_ret[-window:]))
+            vol = float(np.std(log_ret[-window:])) or 1e-6
+
+            # prob_down = fraction of negative returns in recent window
+            recent_window = min(20, len(log_ret))
+            prob_down = float(np.mean(log_ret[-recent_window:] < 0))
 
             rows.append({
                 "ticker": ticker,
-                "drift": drift,
-                "vol_forecast": vol,
-                "tail_risk": drift - 1.28 * vol,
-                "trend_conf": 0.5 + 0.5 * np.clip(drift / max(vol, 1e-6), -1, 1),
+                # Point estimates for 5-day and 10-day horizons
+                "p_mu5": drift * 5,
+                "p_mu10": drift * 10,
+                # Volatility scaled by sqrt(horizon)
+                "p_sig5": vol * np.sqrt(5),
+                "p_sig10": vol * np.sqrt(10),
+                # Probability of negative return over horizon
+                "p_pdown5": prob_down,
+                "p_pdown10": prob_down,
+                # Additional enrichment columns
                 "q10": drift - 1.28 * vol,
                 "q50": drift,
                 "q90": drift + 1.28 * vol,
                 "dispersion": 2.56 * vol,
-                "prob_up": float(np.mean(log_ret[-20:] > 0)) if len(log_ret) >= 20 else 0.5,
                 "source": "statistical_fallback",
             })
 

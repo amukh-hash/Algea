@@ -19,7 +19,7 @@ from algae.execution.options_strategy import OptionsStrategy
 from backend.scripts._cli_utils import load_pipeline_config, prepare_run, write_artifact_log
 
 
-def run(config_path: str, input_paths: list[Path], asof: date) -> None:
+def run(config_path: str, input_paths: list[Path], asof: date, model_provider=None) -> None:
     config = load_pipeline_config(config_path)
     paths, registry, run_dir = prepare_run(config)
     canonical = pd.concat([pd.read_parquet(path) for path in input_paths], ignore_index=True)
@@ -36,13 +36,16 @@ def run(config_path: str, input_paths: list[Path], asof: date) -> None:
     features.to_parquet(features_path, index=False)
     registry.register("features", features_path, "v1")
 
-    priors = build_priors(canonical, asof)
+    priors = build_priors(canonical, asof, provider=model_provider)
     priors_path = paths.priors / f"date={asof}" / "priors.parquet"
     priors_path.parent.mkdir(parents=True, exist_ok=True)
     priors.to_parquet(priors_path, index=False)
     registry.register("priors", priors_path, "v1")
 
-    signals = build_signals(features, priors)
+    if priors.empty:
+        signals = pd.DataFrame(columns=["date", "ticker", "score", "rank"])
+    else:
+        signals = build_signals(features, priors)
     signals_path = paths.signals / f"date={asof}" / "signals.parquet"
     signals_path.parent.mkdir(parents=True, exist_ok=True)
     signals.to_parquet(signals_path, index=False)
