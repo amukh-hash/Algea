@@ -143,7 +143,7 @@ class InferenceGatewayServer:
         """Lazy-load ContinuousPatchTST onto DEVICE_FAST with num_workers=0."""
         if self._patchtst_model is not None:
             return self._patchtst_model
-        from algaie.models.tsfm.patchtst import ContinuousPatchTST
+        from algae.models.tsfm.patchtst import ContinuousPatchTST
         from pathlib import Path
         model_path = Path("backend/artifacts/models/kronos/patchtst_kronos_best.pt")
         if model_path.exists():
@@ -169,7 +169,7 @@ class InferenceGatewayServer:
         """Lazy-load SpatialTemporalTransformer onto DEVICE_FAST with num_workers=0."""
         if self._st_transformer_model is not None:
             return self._st_transformer_model
-        from algaie.models.st_transformer import SpatialTemporalTransformer
+        from algae.models.st_transformer import SpatialTemporalTransformer
         from pathlib import Path
         model_path = Path("backend/artifacts/models/vrp/st_transformer_best.pt")
         if model_path.exists():

@@ -9,7 +9,7 @@ def _w(path, payload):
 
 
 def test_risk_report_includes_smoe_fields(tmp_path):
-    for sleeve in ["core", "vrp", "selector"]:
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         ml = {"router_entropy_mean": 0.2, "expert_utilization": {"0": 10}, "load_balance_score": 0.1}
         _w(tmp_path / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": [], "ml_risk": ml})
     handle_risk_checks_global({"asof_date": "2026-01-01", "session": "OPEN", "artifact_root": str(tmp_path), "config": {}})

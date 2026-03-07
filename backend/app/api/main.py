@@ -62,10 +62,18 @@ def _on_sleeve_halt(sleeve_id: int, reason: str) -> None:
 async def _assert_ntp_sync() -> None:
     """Verify system clock is within 500ms of UTC via NTP.
 
-    F11: On drift exceeding tolerance, degrades to paper mode
-    instead of crashing the server.
+    Fail-closed: On drift exceeding tolerance, raises SystemExit
+    to prevent the server from starting in an unsafe state.
+    Override with --force-ignore-ntp if operators have verified time manually.
     """
+    import os
     NTP_MAX_DRIFT_S = 0.5
+
+    if os.getenv("ALGAE_FORCE_IGNORE_NTP", "0") == "1":
+        logging.getLogger("ntp").warning(
+            "NTP check SKIPPED — ALGAE_FORCE_IGNORE_NTP=1 override active"
+        )
+        return
 
     try:
         import ntplib
@@ -73,27 +81,16 @@ async def _assert_ntp_sync() -> None:
         response = client.request("time.nist.gov", version=3)
         drift = abs(response.offset)
         if drift > NTP_MAX_DRIFT_S:
-            logging.getLogger("ntp").critical(
-                "CRITICAL: System clock drifted by %.3fs (limit: %.1fs). "
-                "Forcing paper mode. Run 'w32tm /resync' or 'ntpdate' to fix.",
-                drift, NTP_MAX_DRIFT_S,
+            raise SystemExit(
+                f"NTP drift detected: {drift:.3f}s (limit: {NTP_MAX_DRIFT_S}s). "
+                f"Refusing to start. Run 'w32tm /resync' or 'ntpdate' to fix, "
+                f"or set ALGAE_FORCE_IGNORE_NTP=1 to override."
             )
-            try:
-                import sqlite3
-                _state_db = Path("backend/artifacts/orchestrator_state/state.sqlite3")
-                if _state_db.exists():
-                    conn = sqlite3.connect(_state_db, timeout=5)
-                    conn.execute(
-                        "UPDATE app_control_state SET execution_mode='paper' WHERE id=1"
-                    )
-                    conn.commit()
-                    conn.close()
-            except Exception as e:
-                logging.getLogger("ntp").error("Could not force paper mode: %s", e)
-            return
         logging.getLogger("ntp").info("NTP OK — drift=%.3fs (< %.1fs)", drift, NTP_MAX_DRIFT_S)
     except ImportError:
         logging.getLogger("ntp").warning("ntplib not installed — NTP check skipped")
+    except SystemExit:
+        raise  # Re-raise SystemExit (don't swallow it)
     except OSError as e:
         logging.getLogger("ntp").warning("NTP server unreachable — %s (non-fatal)", e)
 

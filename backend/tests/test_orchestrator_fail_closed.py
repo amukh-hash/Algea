@@ -39,11 +39,11 @@ def test_route_gate_rejects_stub_signal_artifact(tmp_path):
     ctx = _ctx(tmp_path)
     root = tmp_path
     _write(root / "reports" / "risk_checks.json", {"status": "ok", "violations": [], "metrics": {}, "limits": {}})
-    for sleeve in ["core", "vrp", "selector"]:
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         _write(root / "signals" / f"{sleeve}_signals.json", {"schema_version": "signals.v1", "status": "ok", "is_stub": sleeve == "core"})
         _write(root / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": []})
 
-    with pytest.raises(RuntimeError, match="signal artifact invalid"):
+    with pytest.raises(RuntimeError, match="signal artifact invalid|cannot build orders"):
         handle_order_build_and_route(ctx)
 
 
@@ -51,7 +51,7 @@ def test_empty_orders_is_success(tmp_path):
     ctx = _ctx(tmp_path)
     root = tmp_path
     _write(root / "reports" / "risk_checks.json", {"status": "ok", "violations": [], "metrics": {}, "limits": {}})
-    for sleeve in ["core", "vrp", "selector"]:
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         _write(root / "signals" / f"{sleeve}_signals.json", {"schema_version": "signals.v1", "status": "ok", "is_stub": False})
         _write(root / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": []})
 

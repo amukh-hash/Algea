@@ -12,7 +12,7 @@ def _write(path, payload):
 
 def test_risk_report_ml_fields_present(tmp_path):
     root = tmp_path
-    for sleeve in ["core", "vrp", "selector"]:
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         _write(root / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": [], "ml_risk": {"model_version": "na"}})
     out = handle_risk_checks_global({"asof_date": "2026-01-01", "session": "OPEN", "artifact_root": str(root), "config": {}})
     report = json.loads((root / "reports" / "risk_checks.json").read_text(encoding="utf-8"))

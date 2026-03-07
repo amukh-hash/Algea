@@ -75,7 +75,8 @@ class VolSurfaceGridForecaster:
             self.is_loaded = True
             logger.info("VRP ST-Transformer loaded from %s", path.name)
         except Exception as e:
-            logger.error("Failed to load VRP weights: %s", e)
+            logger.exception("Failed to load VRP weights from %s — model will use random initialization", path)
+            self._weights_loaded = False
 
     def get_state_embedding(self, grid_history: list[dict]) -> torch.Tensor:
         """Convert grid history dicts → 256-dim embedding for TD3.
@@ -112,7 +113,7 @@ class VolSurfaceGridForecaster:
                 return self.model(x)
 
         except Exception as e:
-            logger.error("State embedding failed: %s", e)
+            logger.exception("State embedding failed: %s", e)
             return torch.zeros(1, 256, device=self.device)
 
     @torch.inference_mode()
@@ -145,5 +146,5 @@ class VolSurfaceGridForecaster:
             return vrp_pred, uncertainty, drift
 
         except Exception as e:
-            logger.error("VRP forecast failed: %s", e)
+            logger.exception("VRP forecast failed: %s", e)
             return 0.0, 1.0, 1.0

@@ -16,11 +16,22 @@ class TrainVolSurfaceGridForecasterJob:
     grid_history: list[dict]
 
     def run(self, out_dir: Path) -> dict:
+        import torch
         model = VolSurfaceGridForecaster()
-        pred, unc, drift = model.forecast(self.grid_history)
+        vrp_pred, unc, drift = model.forecast(self.grid_history)
+        # forecast() returns (float, float, float), not a dict
         labels = self.grid_history[-1].get("target", {}) if self.grid_history else {}
-        mae = sum(abs(pred.get(k, 0.0) - float(v)) for k, v in labels.items()) / max(len(labels), 1)
+        mae = abs(vrp_pred - float(next(iter(labels.values()), 0.0))) if labels else abs(vrp_pred)
         metrics = {"mae": mae, "pinball_loss": mae, "calibration_score": max(0.0, 1.0 - unc), "stability": max(0.0, 1.0 - drift)}
+
+        # Save real model weights before calling save_artifact
+        out_dir.mkdir(parents=True, exist_ok=True)
+        torch.save({
+            "transformer": model.model.state_dict(),
+            "head": model.regression_head.state_dict(),
+            "scale": model.scale,
+        }, out_dir / "weights.safetensors")
+
         save_vol_surface_grid_artifact(out_dir, {"scale": 0.05}, metrics, {"drift": drift})
         sha = hashlib.sha256((out_dir / "weights.safetensors").read_bytes()).hexdigest()
         return {"artifact_dir": out_dir, "metrics": metrics, "config": {"scale": 0.05}, "sha256": sha, "lineage": {"drift_baseline": {"drift": drift}}}

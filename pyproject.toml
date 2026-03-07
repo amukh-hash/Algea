@@ -3,6 +3,73 @@ name = "algae"
 version = "4.0.0"
 description = "Algae 4.0"
 requires-python = ">=3.10"
+dependencies = [
+    # Core
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "httpx",
+    "requests",
+
+    # Data
+    "pandas>=2.0.0",
+    "polars",
+    "numpy",
+    "pyarrow",
+    "yfinance",
+
+    # ML & Signal Processing
+    "torch>=2.0.0",
+    "transformers",
+    "peft",
+    "bitsandbytes",
+    "scikit-learn>=1.3.0",
+    "scipy",
+    "statsmodels",
+    "PyWavelets",
+    "filterpy",
+    "numba",
+    "xgboost",
+    "huggingface_hub",
+    "joblib",
+
+    # Portfolio & Finance
+    "riskfolio-lib",
+    "databento",
+    "exchange_calendars",
+    "pandas_market_calendars",
+
+    # Distillation & Regime
+    "hmmlearn>=0.3.0",
+
+    # Execution & Broker
+    "ib_insync",
+    "alpaca-trade-api",
+    "tenacity>=8.0.0",
+    "tqdm",
+    "python-dateutil",
+    "psutil",
+
+    # AI-Native Architecture
+    "pot>=0.9.0",
+    "signatory>=1.2.0",
+
+    # Experiment Tracking (optional)
+    "mlflow",
+
+    # Native Frontend IPC
+    "pyzmq>=25.0.0",
+    "protobuf>=4.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+    "ruff",
+    "black",
+    "httpx",
+]
 
 [tool.black]
 line-length = 100
@@ -13,4 +80,4 @@ select = ["E", "F", "I", "N", "UP"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]
-testpaths = ["backend/tests"]
+testpaths = ["backend/tests", "algae"]

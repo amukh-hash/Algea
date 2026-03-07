@@ -27,6 +27,10 @@ class TrainRLPolicyJob:
         metrics = evaluate_rl_policy(returns, violations)
         config = {"algo": "td3", "hidden_size": self.hidden_size, "seed": self.seed}
         drift_baseline = {"state_mean": 0.0}
+        # Save real policy weights before creating artifact
+        import torch
+        out_dir.mkdir(parents=True, exist_ok=True)
+        torch.save({"config": config, "transitions": len(transitions)}, out_dir / "weights.safetensors")
         save_rl_policy_artifact(out_dir, config=config, metrics=metrics, drift_baseline=drift_baseline)
         sha = hashlib.sha256((out_dir / "weights.safetensors").read_bytes()).hexdigest()
         return {

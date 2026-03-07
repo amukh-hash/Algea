@@ -8,7 +8,10 @@ from .model import SMoEConfig
 
 def save_smoe_artifact(path: Path, config: SMoEConfig, metrics: dict, drift_baseline: dict) -> None:
     path.mkdir(parents=True, exist_ok=True)
-    (path / "weights.safetensors").write_bytes(b"smoe-weights")
+    # NOTE: weights.safetensors must be provided by the training pipeline
+    if not (path / "weights.safetensors").exists():
+        from backend.app.core.runtime_mode import ArtifactValidationError
+        raise ArtifactValidationError("weights.safetensors not found — training pipeline must provide real weights")
     (path / "model_config.json").write_text(json.dumps({"n_experts": config.n_experts, "top_k": config.top_k}, indent=2), encoding="utf-8")
     (path / "feature_schema.json").write_text(json.dumps({"name": "CrossSectionalSchema"}, indent=2), encoding="utf-8")
     (path / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")

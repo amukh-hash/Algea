@@ -12,4 +12,10 @@ def save_vol_surface_grid_artifact(out_dir: Path, config: dict, metrics: dict, d
     (out_dir / "feature_schema.json").write_text(json.dumps({"name": "VolSurfaceGridSchema"}, sort_keys=True, indent=2), encoding="utf-8")
     (out_dir / "calibration.json").write_text(json.dumps({"calibration_score": metrics.get("calibration_score", 0.0)}, sort_keys=True, indent=2), encoding="utf-8")
     (out_dir / "README_model_card.md").write_text("# vol_surface_grid\n", encoding="utf-8")
-    (out_dir / "weights.safetensors").write_text("grid-stub", encoding="utf-8")
+    # NOTE: weights.safetensors must be provided by the training pipeline.
+    # Do NOT generate stub/placeholder weights — they will be rejected at publish time.
+    if not (out_dir / "weights.safetensors").exists():
+        from backend.app.core.runtime_mode import ArtifactValidationError
+        raise ArtifactValidationError(
+            "weights.safetensors not found — training pipeline must provide real grid weights"
+        )

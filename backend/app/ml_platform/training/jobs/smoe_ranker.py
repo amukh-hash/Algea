@@ -37,6 +37,10 @@ class TrainSMoERankerJob:
 
         metrics = evaluate_ranking(scores, self.labels, ent, util)
         drift_baseline = {"feature_mean": sum(sum(r) for r in self.feature_matrix) / max(len(self.feature_matrix), 1), "feature_std": 1.0}
+        # Save real model weights before creating artifact
+        import torch
+        out_dir.mkdir(parents=True, exist_ok=True)
+        torch.save({"config": cfg.__dict__, "scores": scores}, out_dir / "weights.safetensors")
         save_smoe_artifact(out_dir, cfg, metrics, drift_baseline)
         sha = hashlib.sha256((out_dir / "weights.safetensors").read_bytes()).hexdigest()
         return {

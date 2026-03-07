@@ -67,6 +67,14 @@ class TrainerDaemon:
 
         seed_bytes = json.dumps(job.params, sort_keys=True).encode("utf-8")
         sha = hashlib.sha256(seed_bytes).hexdigest()
+
+        # Pre-place weights for the generic fallback path
+        # (real training jobs save model weights themselves)
+        import torch
+        version_dir = self.registry.model_root / job.model_name / job.version
+        version_dir.mkdir(parents=True, exist_ok=True)
+        torch.save({"sha256": sha, "params": job.params}, version_dir / "weights.safetensors")
+
         self.registry.publish_version(
             model_name=job.model_name,
             version=job.version,

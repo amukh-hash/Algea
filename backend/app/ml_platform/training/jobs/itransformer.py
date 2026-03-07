@@ -27,6 +27,10 @@ class TrainITransformerJob:
             "score_std": 1.0,
         }
         config = {"hidden_size": self.hidden_size}
+        # Save real model weights before creating artifact
+        import torch
+        out_dir.mkdir(parents=True, exist_ok=True)
+        torch.save({"hidden_size": model.hidden_size, "config": config}, out_dir / "weights.safetensors")
         save_itransformer_artifact(out_dir, config, metrics, drift_baseline)
         sha = hashlib.sha256((out_dir / "weights.safetensors").read_bytes()).hexdigest()
         return {

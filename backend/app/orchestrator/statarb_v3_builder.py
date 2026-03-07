@@ -122,7 +122,7 @@ def build_live_statarb_v3_state(
         return t
 
     except Exception as e:
-        logger.error("Failed to build StatArb V3 state: %s", e)
+        logger.exception("Failed to build StatArb V3 state: %s. Using zero tensor fallback.", e)
         return _zero_tensor(device)
 
 

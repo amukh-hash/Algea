@@ -97,7 +97,7 @@ def build_live_rl_state(
         return _tensor(latest, device)
 
     except Exception as e:
-        logger.error("Failed to build RL state: %s. Using crash state.", e)
+        logger.exception("Failed to build RL state: %s. Using crash state fallback.", e)
         return _tensor(_NUCLEAR_CRASH_STATE, device)
 
 

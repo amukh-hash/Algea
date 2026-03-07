@@ -85,11 +85,31 @@ def _itransformer_model_alias(ctx: dict[str, Any]) -> str:
 
 
 def _allow_stub_signals(ctx: dict[str, Any]) -> bool:
-    import os
+    """Check whether stub signal generation is permitted.
 
-    if os.getenv("ORCH_ALLOW_STUB_SIGNALS", "0") != "1":
+    Returns True only in NOOP mode with ORCH_ALLOW_STUB_SIGNALS=1.
+    Raises OrchestratorSafetyError if someone tries to enable stubs
+    in LIVE or PAPER modes — this is an absolute hard stop.
+    """
+    import os
+    from backend.app.core.runtime_mode import RuntimeMode, OrchestratorSafetyError
+
+    env_flag = os.getenv("ORCH_ALLOW_STUB_SIGNALS", "0") == "1"
+    mode = _mode(ctx)
+
+    # Hard assertion: stubs are NEVER allowed in live or paper
+    if mode in (RuntimeMode.LIVE.value, RuntimeMode.PAPER.value):
+        if env_flag:
+            raise OrchestratorSafetyError(
+                f"FATAL: ORCH_ALLOW_STUB_SIGNALS=1 is strictly forbidden in "
+                f"mode='{mode}'. Stub signals would poison real portfolio targets."
+            )
         return False
-    return _mode(ctx) == "noop" or bool(ctx.get("dry_run", False))
+
+    # NOOP/STUB: only if explicitly opted in AND (noop or dry_run)
+    if not env_flag:
+        return False
+    return mode == RuntimeMode.NOOP.value or bool(ctx.get("dry_run", False))
 
 
 def _ml_platform_cfg(ctx: dict[str, Any]):
@@ -518,6 +538,7 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
         try:
             broker = IBKRLiveBroker.from_env()
         except Exception:
+            logger.warning("IBKR broker construction failed — VRP will skip broker-dependent checks", exc_info=True)
             broker = None
 
         if broker is not None:
@@ -810,7 +831,7 @@ def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
         features = build_live_statarb_v3_state(device=None)
         current_z = features[0, -1, :].float().numpy()
     except Exception as exc:
-        logger.warning("StatArb V3 builder failed (%s), emitting flat", exc)
+        logger.exception("StatArb V3 builder failed (%s), emitting flat signals", exc)
         _write_json(sig_path, {
             "schema_version": "signals.v1", "status": "ok",
             "asof_date": _asof(ctx), "session": _session(ctx),
@@ -840,8 +861,8 @@ def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
     confirmed_pairs = []
 
     for i, (sym_a, sym_b) in enumerate(PAIRS_V3):
-        z = float(current_z[i])
-        pred = float(pair_deltas[i])
+        z = float(np.asarray(current_z[i]).item())
+        pred = float(np.asarray(pair_deltas[i]).item())
         conviction = 0.0
 
         if z < -1.0 and pred > 0:
@@ -875,7 +896,7 @@ def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
         try:
             final_weights = beta_neutralize(raw_weights, ETF_BETAS)
         except Exception as e:
-            logger.error("Beta neutralizer failed: %s. Emitting raw alphas.", e)
+            logger.exception("Beta neutralizer failed: %s. Emitting raw alphas as fallback.", e)
             total = sum(abs(v) for v in raw_weights.values()) or 1.0
             final_weights = {s: v / total for s, v in raw_weights.items()}
     else:
@@ -1472,7 +1493,11 @@ def handle_concept_drift_check(ctx: dict[str, Any]) -> dict[str, Any]:
             fsm = DAGStateMachine(run_id)
             fsm.halt(DAGState.HALTED_DRIFT, "; ".join(halt_reasons))
         except Exception as e:
-            logger.warning("DAG FSM halt failed: %s", e)
+            from backend.app.core.runtime_mode import OrchestratorSafetyError
+            logger.critical("DAG FSM halt FAILED after drift detection: %s", e, exc_info=True)
+            raise OrchestratorSafetyError(
+                f"Cannot halt DAG after drift breach — system may trade with stale signals: {e}"
+            ) from e
 
         # Emit flatten intents — zero all target weights
         flatten_path = p["targets"] / "flatten_intents.json"
@@ -1547,7 +1572,11 @@ def handle_ece_calibration_check(ctx: dict[str, Any]) -> dict[str, Any]:
             fsm = DAGStateMachine(run_id)
             fsm.halt(DAGState.HALTED_ECE_BREACH, "; ".join(halt_reasons))
         except Exception as e:
-            logger.warning("DAG FSM halt failed: %s", e)
+            from backend.app.core.runtime_mode import OrchestratorSafetyError
+            logger.critical("DAG FSM halt FAILED after ECE breach: %s", e, exc_info=True)
+            raise OrchestratorSafetyError(
+                f"Cannot halt DAG after ECE breach — system may trade with dangerous signals: {e}"
+            ) from e
 
         # Emit flatten intents
         flatten_path = p["targets"] / "flatten_intents.json"

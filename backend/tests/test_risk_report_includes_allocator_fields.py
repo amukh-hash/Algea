@@ -14,6 +14,8 @@ def test_risk_report_includes_allocator_fields(tmp_path):
     _w(tmp_path / "targets" / "core_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": [{"symbol": "SPY", "target_weight": 0.04}], "ml_risk": {"expected_return_proxy": 0.1, "uncertainty": 0.01}})
     _w(tmp_path / "targets" / "vrp_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": [{"symbol": "SPY", "target_weight": 0.03}], "ml_risk": {"edge_mean": 0.2, "drift_score": 0.01}})
     _w(tmp_path / "targets" / "selector_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": [{"symbol": "AAPL", "target_weight": 0.04}], "ml_risk": {"top_bottom_spread": 0.05, "router_entropy_mean": 0.02}})
+    _w(tmp_path / "targets" / "futures_overnight_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": []})
+    _w(tmp_path / "targets" / "statarb_targets.json", {"schema_version": "targets.v1", "status": "ok", "targets": []})
 
     ctx = {
         "asof_date": "2026-01-01",

@@ -1,30 +1,56 @@
+# ── Environment & IDE ──────────────────────────────────────────
 .env
-LocalDatabase/
-__pycache__/
-.claude/
 .venv/
-.pytest_cache/
-backend/models/codec/
-backend/data/options/gate_datasets/
-legacy/
+venv_gpu/
+__pycache__/
 *.pyc
-**/.ipynb_checkpoints/
-backend/data/
-backend/reports/
-backend/models/teacher_e/
-backend/models/options_gate/
-backend/data_canonical/
-backend/features/featureframe_vv1.parquet
+*.pdb
+.pytest_cache/
+.claude/
+.gemini/
 node_modules/
-*.log
 .next/
 dist/
 coverage/
+**/.ipynb_checkpoints/
+
+# ── Build artifacts ────────────────────────────────────────────
 native_frontend/build/
-venv_gpu/
-.gemini/
-*.pdb
+
+# ── Mutable state & generated artifacts (must never be tracked) ─
+runs/
+logs/
+backend/logs/
+backend/artifacts/
+info_docs_temp/
+*.sqlite3
+*.safetensors
+*.bak
+*.log
+scaler.joblib
+*.npy
+
+# ── Data (too large for git) ──────────────────────────────────
 data_lake/
+data_cache/
 DataBento Kronos/
 *.dbn
-*.npy
+LocalDatabase/
+backend/data/
+backend/data_canonical/
+backend/reports/
+backend/models/codec/
+backend/models/teacher_e/
+backend/models/options_gate/
+backend/data/options/gate_datasets/
+backend/features/featureframe_vv1.parquet
+
+# ── Debug scratch files ───────────────────────────────────────
+debug*.txt
+*_out.txt
+phase*_result.json
+
+# ── Legacy (archived) ─────────────────────────────────────────
+legacy/
+deprecated/
+algaie_legacy/

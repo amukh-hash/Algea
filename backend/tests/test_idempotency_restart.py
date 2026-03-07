@@ -14,7 +14,7 @@ def _write(path, payload):
 def test_deterministic_client_order_ids_same_tick(tmp_path):
     root = tmp_path / "artifacts" / "2026-02-17"
     _write(root / "reports" / "risk_checks.json", {"status": "ok", "violations": [], "metrics": {}, "limits": {}})
-    for sleeve in ["core", "vrp", "selector"]:
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         _write(root / "signals" / f"{sleeve}_signals.json", {"schema_version": "signals.v1", "status": "ok", "is_stub": False})
         _write(root / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": [{"symbol": "SPY", "target_weight": 0.01}]})
 

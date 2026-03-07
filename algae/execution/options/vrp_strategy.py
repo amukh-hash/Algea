@@ -441,8 +441,8 @@ class VRPStrategy:
     # ------------------------------------------------------------------
 
     def train(self, **kwargs: Any) -> None:
-        """No-op for rules-based v1. Placeholder for future ML extensions."""
-        pass
+        """ML-based VRP training not yet implemented (rules-based v1)."""
+        raise NotImplementedError("ML-based VRP training not yet implemented")
 
     # ------------------------------------------------------------------
     # State management

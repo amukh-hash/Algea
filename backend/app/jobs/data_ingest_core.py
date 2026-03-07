@@ -83,6 +83,15 @@ def execute(context: dict, model_cache: dict) -> None:
     # 2. Query pandas_market_calendars for OpEx/Macro flags
     # 3. Build TFTInferenceContext
     # 4. Serialize to context["artifact_dir"]/tft_features.json
+
+    # QUARANTINE: This job produces zeroed-out stub data.
+    # Block it from running in the production DAG unless explicitly opted in.
+    if os.getenv("ALGAE_ALLOW_STUB_INGEST", "0") != "1":
+        raise RuntimeError(
+            "data_ingest_core is a stub producing zeroed-out features. "
+            "Set ALGAE_ALLOW_STUB_INGEST=1 to allow, or implement the real pipeline."
+        )
+
     artifact_dir = context.get("artifact_dir", ".")
     os.makedirs(artifact_dir, exist_ok=True)
 

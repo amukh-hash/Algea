@@ -215,7 +215,14 @@ class KillSwitchListener:
                         try:
                             self.on_halt(sleeve_id, reason)
                         except Exception:
-                            logger.exception("Kill switch callback error for sleeve %d", sleeve_id)
+                            logger.critical(
+                                "FATAL: Kill switch callback FAILED for sleeve %d! "
+                                "System may still be trading while operator believes it is halted. "
+                                "Forcing process termination.",
+                                sleeve_id,
+                                exc_info=True,
+                            )
+                            os._exit(1)  # Force exit — process manager will reap
 
             # Detect newly unhalted sleeves
             newly_unhalted = old_mask & ~mask

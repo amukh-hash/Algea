@@ -1,1 +1,0 @@
-class SpreadExecutor: pass

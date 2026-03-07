@@ -214,7 +214,9 @@ class Orchestrator:
                     agg_result["n_collected"], agg_result["n_validated"],
                 )
         except Exception as exc:
-            logger.error("Intent aggregation barrier failed: %s", exc)
+            logger.exception("Intent aggregation barrier failed — this may cause orders to be stale or missing")
+            failed.append("intent_aggregation")
+            failed_set.add("intent_aggregation")
 
         status = "failed" if failed else "success"
         tick = TickResult(run_id, asof_date.isoformat(), session.value, ran, skipped, failed)
