@@ -17,7 +17,6 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.app.orchestrator.control_state import control_state
 from backend.app.api.zmq_bridge import (
     bridge_control_snapshot,
     bridge_control_mutation,
@@ -25,6 +24,7 @@ from backend.app.api.zmq_bridge import (
     bridge_broker_status,
     bridge_calendar,
 )
+from backend.app.orchestrator.control_state_provider import get_control_state_provider
 
 router = APIRouter(prefix="/api/control", tags=["control"])
 logger = logging.getLogger("algae.api.control")
@@ -32,6 +32,17 @@ logger = logging.getLogger("algae.api.control")
 _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
 _TIMEOUT_S = 5.0
+
+
+def _provider():
+    return get_control_state_provider(_DB_PATH)
+
+
+def _raise_write_failure(exc: RuntimeError) -> None:
+    raise HTTPException(
+        status_code=500,
+        detail={"error": "control_state_write_through_failed", "detail": str(exc)},
+    )
 
 
 def _require_auth() -> None:
@@ -82,7 +93,7 @@ class TriggerTickRequest(BaseModel):
 @router.get("/state")
 def get_state() -> dict[str, Any]:
     """Return the full control state snapshot."""
-    snap = control_state.snapshot()
+    snap = _provider().snapshot(consumer="control_api")
     bridge_control_snapshot(snap)
     return snap
 
@@ -90,7 +101,10 @@ def get_state() -> dict[str, Any]:
 @router.put("/pause")
 def set_pause(req: PauseRequest) -> dict[str, Any]:
     _require_auth()
-    control_state.set_paused(req.paused)
+    try:
+        _provider().set_paused(req.paused)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
     bridge_control_mutation("pause", {"paused": req.paused})
     return {"ok": True, "paused": req.paused}
 
@@ -98,7 +112,10 @@ def set_pause(req: PauseRequest) -> dict[str, Any]:
 @router.put("/resume")
 def resume() -> dict[str, Any]:
     _require_auth()
-    control_state.set_paused(False)
+    try:
+        _provider().set_paused(False)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
     return {"ok": True, "paused": False}
 
 
@@ -108,15 +125,21 @@ def set_vol_regime(req: VolRegimeRequest) -> dict[str, Any]:
     if req.regime and req.regime not in ("CRASH_RISK", "CAUTION", "NORMAL"):
         raise HTTPException(400, detail="regime must be CRASH_RISK, CAUTION, NORMAL, or null")
     val = req.regime if req.regime != "NORMAL" else None
-    control_state.set_vol_regime(val)
+    try:
+        _provider().set_vol_regime(val)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
     return {"ok": True, "vol_regime_override": val}
 
 
 @router.put("/blocked-symbols")
 def set_blocked_symbols(req: BlockedSymbolsRequest) -> dict[str, Any]:
     _require_auth()
-    control_state.set_blocked_symbols(req.symbols)
-    return {"ok": True, "blocked_symbols": sorted(control_state.snapshot()["blocked_symbols"])}
+    try:
+        snap = _provider().set_blocked_symbols(req.symbols)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
+    return {"ok": True, "blocked_symbols": sorted(snap["blocked_symbols"])}
 
 
 @router.put("/frozen-sleeves")
@@ -126,8 +149,11 @@ def set_frozen_sleeves(req: FrozenSleevesRequest) -> dict[str, Any]:
     invalid = set(req.sleeves) - valid
     if invalid:
         raise HTTPException(400, detail=f"Unknown sleeves: {invalid}. Valid: {valid}")
-    control_state.set_frozen_sleeves(req.sleeves)
-    return {"ok": True, "frozen_sleeves": sorted(control_state.snapshot()["frozen_sleeves"])}
+    try:
+        snap = _provider().set_frozen_sleeves(req.sleeves)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
+    return {"ok": True, "frozen_sleeves": sorted(snap["frozen_sleeves"])}
 
 
 @router.put("/exposure-cap")
@@ -135,7 +161,10 @@ def set_exposure_cap(req: ExposureCapRequest) -> dict[str, Any]:
     _require_auth()
     if req.cap is not None and req.cap <= 0:
         raise HTTPException(400, detail="Exposure cap must be positive or null")
-    control_state.set_exposure_cap(req.cap)
+    try:
+        _provider().set_exposure_cap(req.cap)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
     return {"ok": True, "gross_exposure_cap": req.cap}
 
 
@@ -143,7 +172,9 @@ def set_exposure_cap(req: ExposureCapRequest) -> dict[str, Any]:
 def set_execution_mode(req: ExecutionModeRequest) -> dict[str, Any]:
     _require_auth()
     try:
-        control_state.set_execution_mode(req.mode)
+        _provider().set_execution_mode(req.mode)
+    except RuntimeError as exc:
+        _raise_write_failure(exc)
     except ValueError as e:
         raise HTTPException(400, detail=str(e))
     return {"ok": True, "execution_mode": req.mode}
@@ -162,7 +193,7 @@ async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
         return {"ok": False, "status": "disabled",
                 "reason": "ORCH_BACKGROUND_TICK=0 — use Windows Task Scheduler"}
 
-    if control_state.snapshot()["paused"]:
+    if _provider().snapshot(consumer="control_api")["paused"]:
         raise HTTPException(409, detail="Orchestrator is paused. Resume before triggering.")
 
     try:
@@ -174,7 +205,7 @@ async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
         result = await asyncio.to_thread(
             orch.run_once, dry_run=req.dry_run, forced_session=forced
         )
-        control_state._audit("trigger_tick", {"dry_run": req.dry_run, "run_id": result.run_id})
+        _provider().audit("trigger_tick", {"dry_run": req.dry_run, "run_id": result.run_id})
         return {
             "ok": True,
             "run_id": result.run_id,
@@ -191,12 +222,12 @@ async def trigger_tick(req: TriggerTickRequest) -> dict[str, Any]:
 def flatten(req: FlattenRequest) -> dict[str, Any]:
     _require_auth()
     """Submit flatten order (paper-only)."""
-    state = control_state.snapshot()
+    state = _provider().snapshot(consumer="control_api")
     if state["execution_mode"] == "ibkr":
         raise HTTPException(403, detail="Flatten requires paper or noop mode for safety.")
 
     action = f"flatten_{'all' if req.sleeve is None else req.sleeve}"
-    control_state._audit(action, {"sleeve": req.sleeve})
+    _provider().audit(action, {"sleeve": req.sleeve})
     logger.warning("FLATTEN %s requested via control API", "ALL" if req.sleeve is None else req.sleeve)
 
     return {
@@ -210,7 +241,7 @@ def flatten(req: FlattenRequest) -> dict[str, Any]:
 @router.post("/manual-order")
 def manual_order(req: ManualOrderRequest) -> dict[str, Any]:
     """Submit a single manual order (paper-only)."""
-    state = control_state.snapshot()
+    state = _provider().snapshot(consumer="control_api")
     if state["execution_mode"] == "ibkr":
         raise HTTPException(403, detail="Manual orders require paper or noop mode for safety.")
 
@@ -225,7 +256,7 @@ def manual_order(req: ManualOrderRequest) -> dict[str, Any]:
         "limit_price": req.limit_price,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
     }
-    control_state._audit("manual_order", order)
+    _provider().audit("manual_order", order)
     logger.warning("MANUAL ORDER submitted via control API: %s", order)
 
     return {"ok": True, "order": order}
@@ -235,7 +266,7 @@ def manual_order(req: ManualOrderRequest) -> dict[str, Any]:
 
 @router.get("/audit")
 def get_audit(limit: int = 50) -> dict[str, Any]:
-    return {"items": control_state.get_audit(limit)}
+    return {"items": _provider().get_audit(limit)}
 
 
 @router.get("/broker-status")

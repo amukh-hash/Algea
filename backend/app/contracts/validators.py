@@ -150,8 +150,11 @@ def normalize_broker_positions_payload(payload: dict[str, Any], *, source: str, 
 
         quantity = row.get("quantity")
         if quantity is None and "qty" in row:
-            quantity = row.get("qty")
-            _compat_hit("broker_position", "qty_alias_used", source=source, symbol=row.get("symbol"))
+            if compatibility_mode:
+                quantity = row.get("qty")
+                _compat_hit("broker_position", "qty_alias_used", source=source, symbol=row.get("symbol"))
+            else:
+                raise ValueError("position row missing quantity")
 
         if quantity is None:
             if compatibility_mode:

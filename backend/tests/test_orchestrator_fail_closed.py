@@ -38,7 +38,7 @@ def test_stub_signal_blocked_outside_noop(tmp_path, monkeypatch):
 def test_route_gate_rejects_stub_signal_artifact(tmp_path):
     ctx = _ctx(tmp_path)
     root = tmp_path
-    _write(root / "reports" / "risk_checks.json", {"status": "ok", "violations": [], "metrics": {}, "limits": {}})
+    _write(root / "reports" / "risk_checks.json", {"schema_version": "risk_decision.v1", "decision_id": "d1", "status": "ok", "checked_at": "2026-02-17T10:00:00+00:00", "asof_date": "2026-02-17", "session": "open", "policy_version": "risk_decision_policy.v1", "input_contract_family": "targets_legacy", "source_sleeves": [], "input_artifact_refs": {}, "generated_by": "test", "reason": None, "missing_sleeves": [], "inputs": {}, "violations": [], "metrics": {"nan_or_inf": False, "gross_exposure": 0.0, "net_exposure": 0.0, "num_symbols": 0, "per_sleeve": {}}, "limits": {"max_gross": 1.5, "max_net_abs": 0.5, "max_symbol_abs_weight": 0.5, "max_symbols": 200}})
     for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         _write(root / "signals" / f"{sleeve}_signals.json", {"schema_version": "signals.v1", "status": "ok", "is_stub": sleeve == "core"})
         _write(root / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": []})
@@ -50,7 +50,7 @@ def test_route_gate_rejects_stub_signal_artifact(tmp_path):
 def test_empty_orders_is_success(tmp_path):
     ctx = _ctx(tmp_path)
     root = tmp_path
-    _write(root / "reports" / "risk_checks.json", {"status": "ok", "violations": [], "metrics": {}, "limits": {}})
+    _write(root / "reports" / "risk_checks.json", {"schema_version": "risk_decision.v1", "decision_id": "d1", "status": "ok", "checked_at": "2026-02-17T10:00:00+00:00", "asof_date": "2026-02-17", "session": "open", "policy_version": "risk_decision_policy.v1", "input_contract_family": "targets_legacy", "source_sleeves": [], "input_artifact_refs": {}, "generated_by": "test", "reason": None, "missing_sleeves": [], "inputs": {}, "violations": [], "metrics": {"nan_or_inf": False, "gross_exposure": 0.0, "net_exposure": 0.0, "num_symbols": 0, "per_sleeve": {}}, "limits": {"max_gross": 1.5, "max_net_abs": 0.5, "max_symbol_abs_weight": 0.5, "max_symbols": 200}})
     for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
         _write(root / "signals" / f"{sleeve}_signals.json", {"schema_version": "signals.v1", "status": "ok", "is_stub": False})
         _write(root / "targets" / f"{sleeve}_targets.json", {"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": []})

@@ -22,6 +22,7 @@ from backend.app.core.risk_gateway import (
 )
 from backend.app.core.schemas import ExecutionPhase, TargetIntent
 from backend.app.orchestrator.durable_control_state import DurableControlState
+from backend.app.orchestrator.control_state_provider import get_control_state_provider
 from backend.app.orchestrator.migrations import apply_migrations
 
 
@@ -260,6 +261,41 @@ class TestRiskGateway:
         """Pydantic Field(ge=-2.0, le=2.0) must reject out-of-range weights."""
         with pytest.raises(Exception):
             _intent(weight=3.0)  # Exceeds 2.0
+
+
+class TestControlProviderParity:
+    def test_orchestrator_and_risk_gateway_share_effective_state(self, db: Path):
+        provider = get_control_state_provider(db)
+        provider.set_execution_mode("noop")
+        provider.set_exposure_cap(2.25)
+
+        orch_snap = provider.snapshot(consumer="orchestrator", tick_id="tick-parity")
+        result = validate_and_store_intents(
+            db,
+            [_intent(symbol="SPY", weight=0.10, phase=ExecutionPhase.INTRADAY)],
+            tick_id="tick-parity",
+        )
+
+        assert orch_snap["execution_mode"] == "noop"
+        assert orch_snap["gross_exposure_cap"] == 2.25
+        assert result["control_snapshot_id"] == orch_snap["snapshot_id"]
+        assert abs(result["exposure"]["cap"] - 2.25) < 1e-9
+
+    def test_same_tick_snapshot_metadata_is_observable(self, db: Path):
+        provider = get_control_state_provider(db)
+        orch_snap = provider.snapshot(consumer="orchestrator", tick_id="tick-42")
+
+        result = validate_and_store_intents(
+            db,
+            [_intent(symbol="QQQ", weight=0.05, phase=ExecutionPhase.INTRADAY)],
+            tick_id="tick-42",
+        )
+        risk_snap = provider.snapshot(consumer="risk_gateway", tick_id="tick-42")
+
+        assert result["control_tick_id"] == "tick-42"
+        assert result["control_snapshot_id"] == orch_snap["snapshot_id"]
+        assert risk_snap["snapshot_id"] == orch_snap["snapshot_id"]
+
 
 
 # ── Phase-Aware Routing (F4: delta_qty UUID) ─────────────────────────
