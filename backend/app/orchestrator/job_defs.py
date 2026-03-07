@@ -11,11 +11,13 @@ from typing import Any, Callable
 from .calendar import Session
 import numpy as np
 from backend.app.contracts.validators import (
+    normalize_broker_positions_payload,
     validate_execution_result,
     validate_position_delta_plan,
     validate_risk_decision_report,
 )
 from backend.app.core.runtime_mode import normalize_mode_alias
+from backend.app.core.schemas import TargetIntent
 from .intent_translation import translate_targets_to_intents
 try:
     from scipy.stats import wasserstein_distance
@@ -236,6 +238,15 @@ def _load_config(ctx: dict[str, Any]) -> dict[str, Any]:
         "max_order_notional": getattr(cfg, "max_order_notional", None),
         "max_total_order_notional": getattr(cfg, "max_total_order_notional", None),
         "max_orders": getattr(cfg, "max_orders", None),
+        "FF_INTENT_CANONICAL_TRANSLATOR": getattr(cfg, "FF_INTENT_CANONICAL_TRANSLATOR", None),
+        "FF_INTENT_CANONICAL_PLANNER": getattr(cfg, "FF_INTENT_CANONICAL_PLANNER", None),
+        "FF_RISK_REPORT_V1_ONLY": getattr(cfg, "FF_RISK_REPORT_V1_ONLY", None),
+        "enable_statarb_sleeve": getattr(cfg, "enable_statarb_sleeve", None),
+        "enable_chronos2_sleeve": getattr(cfg, "enable_chronos2_sleeve", None),
+        "max_gross": getattr(cfg, "max_gross", None),
+        "max_net_abs": getattr(cfg, "max_net_abs", None),
+        "max_symbol_abs_weight": getattr(cfg, "max_symbol_abs_weight", None),
+        "max_symbols": getattr(cfg, "max_symbols", None),
     }
 
 
@@ -253,10 +264,10 @@ def _targets_for(symbols: list[str], gross: float) -> list[dict[str, Any]]:
 def _risk_limits(ctx: dict[str, Any]) -> dict[str, float | int]:
     cfg = _load_config(ctx)
     return {
-        "max_gross": float(cfg.get("max_gross", 1.5)),
-        "max_net_abs": float(cfg.get("max_net_abs", 0.5)),
-        "max_symbol_abs_weight": float(cfg.get("max_symbol_abs_weight", 0.10)),
-        "max_symbols": int(cfg.get("max_symbols", 200)),
+        "max_gross": _cfg_float(cfg, "max_gross", 1.5),
+        "max_net_abs": _cfg_float(cfg, "max_net_abs", 0.5),
+        "max_symbol_abs_weight": _cfg_float(cfg, "max_symbol_abs_weight", 0.10),
+        "max_symbols": _cfg_int(cfg, "max_symbols", 200),
     }
 
 
@@ -282,10 +293,10 @@ def _parse_legacy_risk_report(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _canonical_or_legacy_risk(data: dict[str, Any]) -> dict[str, Any]:
+def _canonical_or_legacy_risk(data: dict[str, Any], *, compatibility_mode: bool) -> dict[str, Any]:
     if "violations" in data and "metrics" in data and "limits" in data:
-        return validate_risk_decision_report(data, compatibility_mode=True)
-    return validate_risk_decision_report(_parse_legacy_risk_report(data), compatibility_mode=True)
+        return validate_risk_decision_report(data, compatibility_mode=compatibility_mode)
+    return validate_risk_decision_report(_parse_legacy_risk_report(data), compatibility_mode=compatibility_mode)
 
 
 def _cfg_float(cfg: dict[str, Any], key: str, default: float) -> float:
@@ -300,6 +311,46 @@ def _cfg_int(cfg: dict[str, Any], key: str, default: int) -> int:
     if value is None:
         return int(default)
     return int(value)
+
+
+def _cfg_bool(cfg: dict[str, Any], key: str, default: bool = False) -> bool:
+    value = cfg.get(key, default)
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return bool(default)
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _flag_enabled(ctx: dict[str, Any], flag_name: str, default: bool = False) -> bool:
+    cfg = _load_config(ctx)
+    if flag_name in cfg:
+        return _cfg_bool(cfg, flag_name, default)
+    import os
+    raw = os.getenv(flag_name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _canonical_flags(ctx: dict[str, Any]) -> dict[str, bool]:
+    translator = _flag_enabled(ctx, "FF_INTENT_CANONICAL_TRANSLATOR", False)
+    planner = _flag_enabled(ctx, "FF_INTENT_CANONICAL_PLANNER", False)
+    risk_v1_only = _flag_enabled(ctx, "FF_RISK_REPORT_V1_ONLY", True)
+    return {
+        "FF_INTENT_CANONICAL_TRANSLATOR": translator,
+        "FF_INTENT_CANONICAL_PLANNER": planner,
+        "FF_RISK_REPORT_V1_ONLY": risk_v1_only,
+        "canonical_cutover_active": bool(translator and planner),
+    }
+
+
+def _load_translated_rows(translated_path: Path) -> list[dict[str, Any]]:
+    raw = _read_json(translated_path)
+    if isinstance(raw, dict):
+        rows = raw.get("intents", [])
+        return rows if isinstance(rows, list) else []
+    return []
 
 
 def handle_data_refresh_intraday(ctx: dict[str, Any]) -> dict[str, Any]:
@@ -987,6 +1038,8 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
     limits = _risk_limits(ctx)
     cfg = _load_config(ctx)
     checked_at = datetime.now(timezone.utc).isoformat()
+    flags = _canonical_flags(ctx)
+    canonical_cutover = bool(flags["canonical_cutover_active"])
 
     violations: list[dict[str, Any]] = []
     combined: dict[str, float] = {}
@@ -1002,75 +1055,23 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-    for sleeve, tpath in target_paths.items():
-        targets = _read_json(tpath).get("targets", []) if tpath.exists() else []
-        sleeve_gross = 0.0
-        sleeve_net = 0.0
-        sleeve_symbols = 0
-        for row in targets:
-            symbol = str(row.get("symbol", "")).strip()
-            w = float(row.get("target_weight", 0.0))
-            if w != w or w in (float("inf"), float("-inf")):
-                nan_or_inf = True
-            if symbol and abs(w) > 0:
-                sleeve_symbols += 1
-            sleeve_gross += abs(w)
-            sleeve_net += w
-            if symbol:
-                combined[symbol] = combined.get(symbol, 0.0) + w
-        ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
-        per_sleeve[sleeve] = {
-            "gross": round(sleeve_gross, 8),
-            "net": round(sleeve_net, 8),
-            "num_symbols": sleeve_symbols,
-            "ml": ml_risk,
-        }
-
-    gross = sum(abs(w) for w in combined.values())
-    net = sum(combined.values())
-    num_symbols = sum(1 for w in combined.values() if abs(w) > 0)
-
-    if nan_or_inf:
-        violations.append({"code": "NAN_INF", "message": "NaN or Inf found in target weights", "details": {}})
-    if gross > float(limits["max_gross"]):
-        violations.append({"code": "GROSS_LIMIT", "message": "Gross exposure exceeds limit", "details": {"gross": gross}})
-    if abs(net) > float(limits["max_net_abs"]):
-        violations.append({"code": "NET_LIMIT", "message": "Net exposure exceeds limit", "details": {"net": net}})
-    violating_symbols = {s: w for s, w in combined.items() if abs(w) > float(limits["max_symbol_abs_weight"])}
-    if violating_symbols:
-        violations.append(
-            {
-                "code": "SYMBOL_LIMIT",
-                "message": "One or more symbols exceed absolute weight limit",
-                "details": {"symbols": violating_symbols},
-            }
-        )
-    if num_symbols > int(limits["max_symbols"]):
-        violations.append(
-            {
-                "code": "TOO_MANY_SYMBOLS",
-                "message": "Number of symbols exceeds limit",
-                "details": {"num_symbols": num_symbols},
-            }
-        )
-
     allocator_payload: dict[str, Any]
     if _allocator_enabled(ctx, cfg):
         from backend.app.allocator.sleeve_allocator import allocate_sleeve_gross
 
         sleeve_metrics: dict[str, dict[str, float]] = {}
-        for sleeve, stat in sorted(per_sleeve.items()):
-            ml = stat.get("ml", {}) if isinstance(stat.get("ml", {}), dict) else {}
+        for sleeve, tpath in target_paths.items():
+            ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
             expected_return_proxy = float(
-                ml.get(
+                ml_risk.get(
                     "expected_return_proxy",
-                    ml.get("edge_mean", ml.get("top_bottom_spread", stat.get("net", 0.0))),
+                    ml_risk.get("edge_mean", ml_risk.get("top_bottom_spread", 0.0)),
                 )
             )
-            uncertainty = float(ml.get("uncertainty", ml.get("router_entropy_mean", 0.0)))
-            drift = float(ml.get("drift_score", 0.0))
-            drawdown = float(ml.get("drawdown", 0.0))
-            recent_pnl = float(ml.get("recent_pnl", 0.0))
+            uncertainty = float(ml_risk.get("uncertainty", ml_risk.get("router_entropy_mean", 0.0)))
+            drift = float(ml_risk.get("drift_score", 0.0))
+            drawdown = float(ml_risk.get("drawdown", 0.0))
+            recent_pnl = float(ml_risk.get("recent_pnl", 0.0))
             sleeve_metrics[sleeve] = {
                 "expected_return_proxy": expected_return_proxy,
                 "uncertainty": uncertainty,
@@ -1104,9 +1105,161 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
             "reasons": [],
         }
 
+    allocator_scales = {str(k): float(v) for k, v in (allocator_payload.get("outputs", {}) or {}).items()}
+
+    input_family = "targets_legacy"
+    input_refs: dict[str, Any] = {
+        "target_paths": {k: str(v) for k, v in target_paths.items()},
+        "source_target_counts": {k: len((_read_json(v).get("targets", []) if v.exists() else [])) for k, v in target_paths.items()},
+    }
+    translation_failures: list[dict[str, Any]] = []
+
+    if canonical_cutover:
+        try:
+            translation = translate_targets_to_intents(
+                artifact_root=p["root"],
+                asof_date=_asof(ctx),
+                target_paths=target_paths,
+                allocator_scales=allocator_scales,
+            )
+            translated_rows = _load_translated_rows(Path(translation.translated_intents_path))
+            parity = _read_json(Path(translation.parity_report_path))
+            native_present = parity.get("native_intents_present", {}) if isinstance(parity, dict) else {}
+            if any(bool(v) for v in native_present.values()):
+                if all(bool(v) for v in native_present.values()):
+                    input_family = "native_intents"
+                else:
+                    input_family = "mixed_intents"
+            else:
+                input_family = "translated_intents"
+
+            for row in translated_rows:
+                intent = row.get("intent", {}) if isinstance(row, dict) else {}
+                sleeve = str(intent.get("sleeve", "unknown"))
+                symbol = str(intent.get("symbol", "")).strip()
+                w = float(intent.get("target_weight", 0.0))
+                if w != w or w in (float("inf"), float("-inf")):
+                    nan_or_inf = True
+                if sleeve not in per_sleeve:
+                    per_sleeve[sleeve] = {"gross": 0.0, "net": 0.0, "num_symbols": 0, "ml": {}}
+                per_sleeve[sleeve]["gross"] = float(per_sleeve[sleeve]["gross"]) + abs(w)
+                per_sleeve[sleeve]["net"] = float(per_sleeve[sleeve]["net"]) + w
+                if symbol and abs(w) > 0:
+                    per_sleeve[sleeve]["num_symbols"] = int(per_sleeve[sleeve]["num_symbols"]) + 1
+                if symbol:
+                    combined[symbol] = combined.get(symbol, 0.0) + w
+
+            translation_failures = parity.get("translation_failures", []) if isinstance(parity, dict) else []
+            input_refs = {
+                **input_refs,
+                "translated_intents_path": translation.translated_intents_path,
+                "translation_parity_path": translation.parity_report_path,
+                "n_translated_intents": int(translation.n_translated),
+                "native_intents_present": native_present,
+            }
+            if translation_failures:
+                violations.append({
+                    "code": "TRANSLATION_FAILURES",
+                    "message": "one or more translation failures detected",
+                    "details": {"count": len(translation_failures)},
+                })
+        except Exception as exc:
+            fail_report = {
+                "schema_version": "risk_decision.v1",
+                "decision_id": hashlib.sha1(f"{_asof(ctx)}|{_session(ctx)}|translation_failed".encode("utf-8")).hexdigest()[:16],
+                "status": "failed",
+                "checked_at": checked_at,
+                "asof_date": _asof(ctx),
+                "session": _session(ctx),
+                "policy_version": "risk_decision_policy.v1",
+                "input_contract_family": "mixed_intents",
+                "source_sleeves": sorted(target_paths.keys()),
+                "input_artifact_refs": input_refs,
+                "generated_by": "handle_risk_checks_global",
+                "reason": f"TRANSLATION_FAILED: {exc}",
+                "missing_sleeves": missing,
+                "inputs": {"target_paths": {k: str(v) for k, v in target_paths.items()}},
+                "metrics": {
+                    "nan_or_inf": False,
+                    "gross_exposure": 0.0,
+                    "net_exposure": 0.0,
+                    "num_symbols": 0,
+                    "per_sleeve": {},
+                    "translation_failure_count": 1,
+                },
+                "limits": {
+                    "max_gross": float(limits["max_gross"]),
+                    "max_net_abs": float(limits["max_net_abs"]),
+                    "max_symbol_abs_weight": float(limits["max_symbol_abs_weight"]),
+                    "max_symbols": int(limits["max_symbols"]),
+                },
+                "allocator": allocator_payload,
+                "violations": [{"code": "TRANSLATION_FAILED", "message": str(exc), "details": {}}],
+                "flags": flags,
+            }
+            _write_json(report_path, fail_report)
+            raise RuntimeError(f"risk checks failed: TRANSLATION_FAILED: {exc}")
+    else:
+        for sleeve, tpath in target_paths.items():
+            targets = _read_json(tpath).get("targets", []) if tpath.exists() else []
+            sleeve_gross = 0.0
+            sleeve_net = 0.0
+            sleeve_symbols = 0
+            for row in targets:
+                symbol = str(row.get("symbol", "")).strip()
+                w = float(row.get("target_weight", 0.0))
+                if w != w or w in (float("inf"), float("-inf")):
+                    nan_or_inf = True
+                if symbol and abs(w) > 0:
+                    sleeve_symbols += 1
+                sleeve_gross += abs(w)
+                sleeve_net += w
+                if symbol:
+                    combined[symbol] = combined.get(symbol, 0.0) + w
+            ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
+            per_sleeve[sleeve] = {
+                "gross": round(sleeve_gross, 8),
+                "net": round(sleeve_net, 8),
+                "num_symbols": sleeve_symbols,
+                "ml": ml_risk,
+            }
+
+    for sleeve, stat in per_sleeve.items():
+        stat["gross"] = round(float(stat.get("gross", 0.0)), 8)
+        stat["net"] = round(float(stat.get("net", 0.0)), 8)
+        stat["num_symbols"] = int(stat.get("num_symbols", 0))
+
+    gross = sum(abs(w) for w in combined.values())
+    net = sum(combined.values())
+    num_symbols = sum(1 for w in combined.values() if abs(w) > 0)
+
+    if nan_or_inf:
+        violations.append({"code": "NAN_INF", "message": "NaN or Inf found in target weights", "details": {}})
+    if gross > float(limits["max_gross"]):
+        violations.append({"code": "GROSS_LIMIT", "message": "Gross exposure exceeds limit", "details": {"gross": gross}})
+    if abs(net) > float(limits["max_net_abs"]):
+        violations.append({"code": "NET_LIMIT", "message": "Net exposure exceeds limit", "details": {"net": net}})
+    violating_symbols = {s: w for s, w in combined.items() if abs(w) > float(limits["max_symbol_abs_weight"])}
+    if violating_symbols:
+        violations.append(
+            {
+                "code": "SYMBOL_LIMIT",
+                "message": "One or more symbols exceed absolute weight limit",
+                "details": {"symbols": violating_symbols},
+            }
+        )
+    if num_symbols > int(limits["max_symbols"]):
+        violations.append(
+            {
+                "code": "TOO_MANY_SYMBOLS",
+                "message": "Number of symbols exceeds limit",
+                "details": {"num_symbols": num_symbols},
+            }
+        )
+
     status = "ok" if not violations else "failed"
     reason = None if status == "ok" else "; ".join(v["code"] for v in violations)
-    source_sleeves = sorted(target_paths.keys())
+    source_sleeves = sorted(per_sleeve.keys()) if per_sleeve else sorted(target_paths.keys())
     decision_id = hashlib.sha1(
         f"{_asof(ctx)}|{_session(ctx)}|{status}|{reason or ''}|{'|'.join(source_sleeves)}|{len(violations)}".encode("utf-8")
     ).hexdigest()[:16]
@@ -1118,12 +1271,9 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
         "asof_date": _asof(ctx),
         "session": _session(ctx),
         "policy_version": "risk_decision_policy.v1",
-        "input_contract_family": "targets_legacy",
+        "input_contract_family": input_family,
         "source_sleeves": source_sleeves,
-        "input_artifact_refs": {
-            "target_paths": {k: str(v) for k, v in target_paths.items()},
-            "source_target_counts": {k: len((_read_json(v).get("targets", []) if v.exists() else [])) for k, v in target_paths.items()},
-        },
+        "input_artifact_refs": input_refs,
         "generated_by": "handle_risk_checks_global",
         "reason": reason,
         "missing_sleeves": missing,
@@ -1134,6 +1284,7 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
             "net_exposure": round(net, 8),
             "num_symbols": num_symbols,
             "per_sleeve": per_sleeve,
+            "translation_failure_count": len(translation_failures),
         },
         "limits": {
             "max_gross": float(limits["max_gross"]),
@@ -1143,12 +1294,11 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
         },
         "allocator": allocator_payload,
         "violations": violations,
+        "flags": flags,
     }
-    # Producer-side boundary validation: this report is canonical on the
-    # default path, so fail closed on structural mismatches.
-    validate_risk_decision_report(report, compatibility_mode=False)
+    validate_risk_decision_report(report, compatibility_mode=not bool(flags["FF_RISK_REPORT_V1_ONLY"]))
     _write_json(report_path, report)
-    logger.info("risk checks completed status=%s violations=%d", status, len(violations))
+    logger.info("risk checks completed status=%s violations=%d canonical_cutover=%s", status, len(violations), canonical_cutover)
     if status != "ok":
         raise RuntimeError(f"risk checks failed: {reason}")
     return {"status": "ok", "artifacts": {"risk_report": str(report_path)}, "metrics": report["metrics"]}
@@ -1158,6 +1308,8 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     _require_ctx(ctx, "mode", "dry_run", "broker")
     p = _paths(ctx)
     control = ctx.get("control_snapshot") if isinstance(ctx.get("control_snapshot"), dict) else {}
+    flags = _canonical_flags(ctx)
+    canonical_cutover = bool(flags["canonical_cutover_active"])
     if bool(control.get("paused", False)):
         raise RuntimeError("cannot route orders: control pause enabled")
     if control.get("execution_mode") == "noop":
@@ -1169,8 +1321,9 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if not report_path.exists():
         raise RuntimeError("cannot route orders: risk report missing")
 
-    risk_raw = validate_risk_decision_report(_read_json(report_path), compatibility_mode=True)
-    risk = _canonical_or_legacy_risk(risk_raw)
+    risk_read_compat = not bool(flags["FF_RISK_REPORT_V1_ONLY"])
+    risk_raw = validate_risk_decision_report(_read_json(report_path), compatibility_mode=risk_read_compat)
+    risk = _canonical_or_legacy_risk(risk_raw, compatibility_mode=risk_read_compat)
     if str(risk.get("status", "failed")) != "ok":
         raise RuntimeError(f"cannot route orders: risk report failed ({risk.get('reason')})")
     if isinstance(risk.get("violations"), list) and len(risk.get("violations", [])) > 0:
@@ -1180,8 +1333,6 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if missing:
         raise RuntimeError(f"cannot build orders: missing targets for {missing}")
 
-    # Fail-closed route gate: every upstream signal/target artifact must be
-    # explicitly non-stub and status=ok.
     allow_stub_for_dry_run = bool(ctx.get("dry_run", False))
     sleeves_for_route = ["core", "vrp", "selector"]
     if _chronos2_enabled(ctx):
@@ -1219,44 +1370,94 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         for k, v in (allocator.get("outputs", {}) or {}).items()
     }
 
-    # PR-3 compatibility artifact: deterministic target->intent translation.
-    # Allocator scaling is applied exactly once in translation before canonical
-    # TargetIntent validation/persistence. Execution ownership remains target-led.
-    translation = translate_targets_to_intents(
-        artifact_root=p["root"],
-        asof_date=_asof(ctx),
-        target_paths=target_paths,
-        allocator_scales=allocator_scales,
-    )
-
+    translation = None
+    planning_input_family = "targets_legacy"
+    translation_failure_count = 0
+    sleeve_blocks: list[dict[str, Any]] = []
     combined: dict[str, float] = {}
-    for sleeve, tpath in target_paths.items():
-        sleeve_scale = float(allocator_scales.get(sleeve, 1.0))
-        targets = _load_artifact(tpath, "targets.v1").get("targets", [])
-        for row in targets:
-            sym = str(row.get("symbol", "")).strip()
-            if not sym:
-                continue
-            combined[sym] = combined.get(sym, 0.0) + float(row.get("target_weight", 0.0)) * sleeve_scale
+    symbol_trace_refs: dict[str, list[dict[str, Any]]] = {}
+
+    if canonical_cutover:
+        if _statarb_enabled(ctx):
+            raise RuntimeError("canonical planner fail-closed: statarb not yet symbol-intent canonical")
+        if not bool(flags["FF_INTENT_CANONICAL_TRANSLATOR"]):
+            raise RuntimeError("canonical planner requires FF_INTENT_CANONICAL_TRANSLATOR=1")
+        try:
+            translation = translate_targets_to_intents(
+                artifact_root=p["root"],
+                asof_date=_asof(ctx),
+                target_paths=target_paths,
+                allocator_scales=allocator_scales,
+            )
+            translated_rows = _load_translated_rows(Path(translation.translated_intents_path))
+            parity = _read_json(Path(translation.parity_report_path))
+            native_present = parity.get("native_intents_present", {}) if isinstance(parity, dict) else {}
+            translation_failure_count = len(parity.get("translation_failures", [])) if isinstance(parity, dict) else 0
+            if any(bool(v) for v in native_present.values()):
+                planning_input_family = "native_intents" if all(bool(v) for v in native_present.values()) else "mixed_intents"
+            else:
+                planning_input_family = "translated_intents"
+
+            for i, row in enumerate(translated_rows):
+                payload = row.get("intent", {}) if isinstance(row, dict) else {}
+                ti = TargetIntent(**payload)
+                sym = str(ti.symbol).strip()
+                if not sym:
+                    continue
+                combined[sym] = combined.get(sym, 0.0) + float(ti.target_weight)
+                trace = row.get("trace", {}) if isinstance(row, dict) else {}
+                symbol_trace_refs.setdefault(sym, []).append(
+                    {
+                        "canonical_intent_ref": f"{Path(translation.translated_intents_path).name}#{i}",
+                        "source_sleeve": trace.get("source_sleeve", ti.sleeve),
+                        "source_artifact_path": trace.get("source_artifact_path"),
+                        "source_row_index": trace.get("source_row_index"),
+                        "derivation_policy_version": trace.get("policy_version"),
+                        "allocator_scale_applied": trace.get("allocator_scale_applied", 1.0),
+                    }
+                )
+        except Exception as exc:
+            failure_path = p["reports"] / "canonical_planner_status.json"
+            _write_json(
+                failure_path,
+                {
+                    "status": "failed",
+                    "reason": f"TRANSLATION_FAILED: {exc}",
+                    "translation_failure_count": 1,
+                    "sleeve_blocks": sleeve_blocks,
+                    "planning_input_family": "mixed_intents",
+                    "canonical_planner_active": True,
+                    "flags": flags,
+                },
+            )
+            raise RuntimeError(f"canonical planner translation failed: {exc}")
+    else:
+        planning_input_family = "targets_legacy"
+        for sleeve, tpath in target_paths.items():
+            sleeve_scale = float(allocator_scales.get(sleeve, 1.0))
+            targets = _load_artifact(tpath, "targets.v1").get("targets", [])
+            for row in targets:
+                sym = str(row.get("symbol", "")).strip()
+                if not sym:
+                    continue
+                combined[sym] = combined.get(sym, 0.0) + float(row.get("target_weight", 0.0)) * sleeve_scale
 
     positions_resp = ctx["broker"].get_positions() if hasattr(ctx["broker"], "get_positions") else {"positions": []}
-    positions = positions_resp.get("positions", []) if isinstance(positions_resp, dict) else []
+    positions_norm = normalize_broker_positions_payload(
+        positions_resp if isinstance(positions_resp, dict) else {"positions": []},
+        source="order_build_and_route",
+        compatibility_mode=False,
+    )
+    positions = positions_norm.get("positions", []) if isinstance(positions_norm, dict) else []
     position_alias_hits = 0
     current_qty: dict[str, float] = {}
     for pos in positions:
         sym = str(pos.get("symbol", "")).strip()
         if not sym:
             continue
-        if "quantity" in pos:
-            qty_val = pos.get("quantity", 0.0)
-        else:
-            qty_val = pos.get("qty", 0.0)
-            if "qty" in pos:
-                position_alias_hits += 1
+        qty_val = pos.get("quantity", 0.0)
         current_qty[sym] = float(qty_val)
 
-    # --- Structured price resolution ---
-    # Priority: 1) broker.get_quote  2) ctx["prices"] (daily close cache)  3) synthetic (dry-run only)
     daily_close_cache: dict[str, float] = {}
     if isinstance(ctx.get("prices"), dict):
         daily_close_cache = {str(k): float(v) for k, v in ctx["prices"].items()}
@@ -1264,19 +1465,15 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     broker = ctx["broker"]
     has_get_quote = hasattr(broker, "get_quote")
 
-    resolved_prices: dict[str, tuple[float, str]] = {}  # sym -> (price, source)
+    resolved_prices: dict[str, tuple[float, str]] = {}
     missing_prices: list[str] = []
     used_fallback = False
 
     for sym in sorted(combined.keys()):
-        # FLATTEN BYPASS: zero-weight intents do NOT need a price.
-        # Crashing because you lack a price for a flatten intent would
-        # trap positions during a data outage.
         if combined[sym] == 0.0:
             resolved_prices[sym] = (0.0, "flatten_bypass")
             continue
 
-        # Step 1: broker quote
         price: float | None = None
         source = "unknown"
         if has_get_quote:
@@ -1287,14 +1484,12 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
             if price is not None:
                 source = "broker"
 
-        # Step 2: daily close cache
         if price is None and sym in daily_close_cache:
             price = daily_close_cache[sym]
             source = "daily_close"
             used_fallback = True
             logger.warning("price fallback to daily_close for %s: %.4f", sym, price)
 
-        # Step 3: synthetic (dry-run only) OR graceful degradation
         if price is None:
             if is_dry_run:
                 price = fallback_price
@@ -1305,8 +1500,6 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
 
         resolved_prices[sym] = (price, source)
 
-    # GRACEFUL DEGRADATION: log missing prices but continue routing
-    # the healthy portfolio instead of crashing the entire DAG.
     if missing_prices and not is_dry_run:
         rejected_path = p["orders"] / "rejected.json"
         _write_json(
@@ -1342,21 +1535,22 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         if qty < 1:
             qty = 1
         est_notional = float(qty) * price
-        orders.append(
-            {
-                "symbol": sym,
-                "qty": qty,
-                "side": "BUY" if delta_notional > 0 else "SELL",
-                "client_order_id": hashlib.sha1(
-                    f"{_asof(ctx)}|{ctx.get('tick_id','') or ''}|{sym}|{'BUY' if delta_notional > 0 else 'SELL'}|{qty}".encode("utf-8")
-                ).hexdigest()[:20],
-                "type": "MKT",
-                "tif": "DAY",
-                "est_price": round(price, 8),
-                "price_source": price_source,
-                "est_notional": round(est_notional, 8),
-            }
-        )
+        order = {
+            "symbol": sym,
+            "qty": qty,
+            "side": "BUY" if delta_notional > 0 else "SELL",
+            "client_order_id": hashlib.sha1(
+                f"{_asof(ctx)}|{ctx.get('tick_id','') or ''}|{sym}|{'BUY' if delta_notional > 0 else 'SELL'}|{qty}".encode("utf-8")
+            ).hexdigest()[:20],
+            "type": "MKT",
+            "tif": "DAY",
+            "est_price": round(price, 8),
+            "price_source": price_source,
+            "est_notional": round(est_notional, 8),
+        }
+        if canonical_cutover:
+            order["intent_trace_refs"] = symbol_trace_refs.get(sym, [])
+        orders.append(order)
 
     total_abs_notional = sum(abs(float(o["est_notional"])) for o in orders)
     max_single = max([abs(float(o["est_notional"])) for o in orders], default=0.0)
@@ -1370,14 +1564,17 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         "dry_run": is_dry_run,
         "risk_report_path": str(report_path),
         "source_targets": {k: str(v) for k, v in target_paths.items()},
+        "planning_input_family": planning_input_family,
+        "canonical_planner_active": canonical_cutover,
+        "flags": flags,
         "inputs": {
             "account_equity": account_equity,
             "price_fallback": fallback_price,
             "allocator": allocator,
             "translation_artifacts": {
-                "translated_intents": translation.translated_intents_path,
-                "parity_report": translation.parity_report_path,
-                "n_translated_intents": translation.n_translated,
+                "translated_intents": translation.translated_intents_path if translation is not None else None,
+                "parity_report": translation.parity_report_path if translation is not None else None,
+                "n_translated_intents": translation.n_translated if translation is not None else 0,
             },
             "limits": {
                 "max_order_notional": max_order_notional,
@@ -1394,6 +1591,10 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
             "used_fallback_price": used_fallback,
             "position_alias_hits": int(position_alias_hits),
             "mode_alias_applied": bool(ctx.get("mode_alias_applied", False)),
+            "translation_failure_count": int(translation_failure_count),
+            "sleeve_block_count": len(sleeve_blocks),
+            "rollback_path_used": not canonical_cutover,
+            "native_translated_scaling_mismatch_count": int(0),
         },
     }
     validate_position_delta_plan(payload, compatibility_mode=True)
@@ -1413,7 +1614,6 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if total_abs_notional > max_total_order_notional:
         reject_reasons.append("max_total_order_notional_exceeded")
 
-    # Empty order list is a valid "no rebalance needed" outcome.
     reject_reasons = [reason for reason in reject_reasons if reason != "empty_order_list"]
     if reject_reasons:
         rejected_path = p["orders"] / "rejected.json"
@@ -1444,13 +1644,34 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         route_artifact = p["orders"] / "routed.json"
         _write_json(route_artifact, {"status": "ok", "broker_response": broker_resp})
 
-    artifacts = {"orders": str(orders_path)}
+    rollout_path = p["reports"] / "canonical_planner_status.json"
+    _write_json(
+        rollout_path,
+        {
+            "status": "ok",
+            "canonical_planner_active": canonical_cutover,
+            "planning_input_family": planning_input_family,
+            "translation_failure_count": int(translation_failure_count),
+            "sleeve_blocks": sleeve_blocks,
+            "rollback_path_used": not canonical_cutover,
+            "flags": flags,
+        },
+    )
+
+    artifacts = {"orders": str(orders_path), "canonical_planner_status": str(rollout_path)}
     if route_artifact is not None:
         artifacts["routed"] = str(route_artifact)
     return {
         "status": "ok",
         "artifacts": artifacts,
-        "summary": {"routed": routed, "order_count": len(orders), "total_abs_notional": round(total_abs_notional, 8), "used_fallback_price": used_fallback},
+        "summary": {
+            "routed": routed,
+            "order_count": len(orders),
+            "total_abs_notional": round(total_abs_notional, 8),
+            "used_fallback_price": used_fallback,
+            "canonical_planner_active": canonical_cutover,
+            "planning_input_family": planning_input_family,
+        },
     }
 
 

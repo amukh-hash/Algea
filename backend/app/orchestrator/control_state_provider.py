@@ -142,6 +142,8 @@ class ControlStateProvider:
     def snapshot(self, *, consumer: str = "unknown", tick_id: str | None = None) -> dict[str, Any]:
         with self._lock:
             snap = dict(self._cache)
+            snap["read_consumer"] = consumer
+            snap["read_tick_id"] = tick_id
             if tick_id:
                 prior = self._tick_snapshot_ids.get(tick_id)
                 if prior and prior != str(snap.get("snapshot_id")):

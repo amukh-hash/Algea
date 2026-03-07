@@ -203,13 +203,22 @@ def test_target_driven_default_execution_path_unchanged(tmp_path: Path):
     }])
 
     _write(root / "reports" / "risk_checks.json", {
+        "schema_version": "risk_decision.v1",
+        "decision_id": "d1",
         "status": "ok",
         "checked_at": "2026-02-17T13:00:00+00:00",
         "asof_date": "2026-02-17",
         "session": "open",
+        "policy_version": "risk_decision_policy.v1",
+        "input_contract_family": "targets_legacy",
+        "source_sleeves": ["core", "vrp", "selector", "futures_overnight", "statarb"],
+        "input_artifact_refs": {},
+        "generated_by": "test",
+        "reason": None,
+        "missing_sleeves": [],
         "inputs": {"target_paths": {}},
         "metrics": {"nan_or_inf": False, "gross_exposure": 0.10, "net_exposure": 0.10, "num_symbols": 1, "per_sleeve": {}},
-        "limits": {},
+        "limits": {"max_gross": 1.5, "max_net_abs": 0.5, "max_symbol_abs_weight": 0.5, "max_symbols": 200},
         "violations": [],
     })
 
@@ -225,5 +234,5 @@ def test_target_driven_default_execution_path_unchanged(tmp_path: Path):
     assert result["status"] == "ok"
     orders = json.loads((root / "orders" / "orders.json").read_text(encoding="utf-8"))
     assert orders["orders"][0]["side"] == "BUY"
-    assert (root / "intents" / "translated_from_targets_intents.json").exists()
-    assert (root / "reports" / "intent_translation_parity.json").exists()
+    assert not (root / "intents" / "translated_from_targets_intents.json").exists()
+    assert not (root / "reports" / "intent_translation_parity.json").exists()

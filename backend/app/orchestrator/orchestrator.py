@@ -217,6 +217,7 @@ class Orchestrator:
                 artifact_root=day_root,
                 db_path=self.config.db_path,
                 asof_date=asof_date.isoformat(),
+                tick_id=run_id,
             )
             if agg_result["status"] == "rejected":
                 logger.error("Risk gateway REJECTED intents: %s", agg_result.get("error"))

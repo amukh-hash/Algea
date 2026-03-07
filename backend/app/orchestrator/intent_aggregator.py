@@ -71,6 +71,7 @@ def collect_and_validate_intents(
     artifact_root: Path | str,
     db_path: Path | str,
     asof_date: str,
+    tick_id: str | None = None,
 ) -> dict[str, Any]:
     """Scan ``artifact_root/intents/`` for all ``*_intents.json`` files,
     deserialize into ``TargetIntent`` objects, and push through the risk
@@ -161,7 +162,7 @@ def collect_and_validate_intents(
         }
 
     try:
-        risk_result = validate_and_store_intents(db_path, all_intents)
+        risk_result = validate_and_store_intents(db_path, all_intents, tick_id=tick_id)
         return {
             "status": "ok",
             "n_collected": len(all_intents),
@@ -169,6 +170,8 @@ def collect_and_validate_intents(
             "files_read": files_read,
             "n_target_intent_files": target_intent_files,
             "risk_result": risk_result,
+            "control_snapshot_id": risk_result.get("control_snapshot_id"),
+            "control_tick_id": risk_result.get("control_tick_id"),
         }
     except RuntimeError as exc:
         logger.error("Risk gateway REJECTED intents: %s", exc)

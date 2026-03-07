@@ -17,6 +17,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from backend.app.core.schemas import ExecutionPhase, TargetIntent
+from backend.app.orchestrator.control_state_provider import get_control_state_provider
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ def validate_and_store_intents(
     intents: list[TargetIntent],
     *,
     now: datetime | None = None,
+    tick_id: str | None = None,
 ) -> dict[str, Any]:
     """Validate risk limits and atomically persist intents.
 
@@ -56,24 +58,25 @@ def validate_and_store_intents(
     """
     now_est = now or datetime.now(EASTERN_TZ)
 
+    provider = get_control_state_provider(Path(db_path))
+    control_snapshot = provider.snapshot(consumer="risk_gateway", tick_id=tick_id)
+    cap = control_snapshot.get("gross_exposure_cap", 1.5)
+    if cap is None:
+        cap = 1.5
+    cap = float(cap)
+    if bool(control_snapshot.get("paused", False)):
+        raise RuntimeError("System is paused. Rejecting intent ingestion.")
+
     conn = sqlite3.connect(str(db_path), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     try:
         conn.execute("BEGIN EXCLUSIVE")
 
-        # ── F2: Check durable pause state ────────────────────────────
-        row = conn.execute(
-            "SELECT gross_exposure_cap, is_paused FROM app_control_state WHERE id=1"
-        ).fetchone()
+        row = conn.execute("SELECT id FROM app_control_state WHERE id=1").fetchone()
         if row is None:
             conn.execute("ROLLBACK")
             raise RuntimeError("app_control_state not initialized — run migrations")
-
-        cap = float(row["gross_exposure_cap"])
-        if bool(row["is_paused"]):
-            conn.execute("ROLLBACK")
-            raise RuntimeError("System is paused. Rejecting intent ingestion.")
 
         # ── F1: Unified exposure (Cash + Notional) ───────────────────
         cash_exp = sum(
@@ -141,6 +144,8 @@ def validate_and_store_intents(
         return {
             "status": "ok",
             "n_stored": len(intents),
+            "control_snapshot_id": control_snapshot.get("snapshot_id"),
+            "control_tick_id": tick_id,
             "exposure": {
                 "cash": round(cash_exp, 6),
                 "notional": round(not_exp, 6),

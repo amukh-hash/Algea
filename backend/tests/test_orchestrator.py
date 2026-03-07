@@ -63,7 +63,8 @@ def _make_test_signal_handler(sleeve: str, symbols: list[str]):
     """
     def handler(ctx: dict) -> dict:
         from datetime import datetime, timezone as tz
-        root = Path(str(ctx["artifact_root"])) / ctx["asof_date"]
+        # ctx["artifact_root"] is already day-scoped (<artifact_root>/<asof_date>)
+        root = Path(str(ctx["artifact_root"]))
         (root / "signals").mkdir(parents=True, exist_ok=True)
         (root / "targets").mkdir(parents=True, exist_ok=True)
 
@@ -268,6 +269,7 @@ def test_order_routing_rejects_oversized_notional(tmp_path):
                 "dry_run": False,
                 "broker": SpyBroker(price_map={"SPY": 500.0}),
                 "config": {
+                    "FF_RISK_REPORT_V1_ONLY": False,
                     "account_equity": 10_000_000,
                     "max_order_notional": 1_000,
                     "max_total_order_notional": 2_000,
@@ -330,7 +332,7 @@ def test_planner_gates_on_canonical_failed_risk_decision(tmp_path):
                 "mode": "paper",
                 "dry_run": True,
                 "broker": SpyBroker(price_map={"SPY": 500.0}),
-                "config": {"account_equity": 100_000, "order_notional_rounding": 1},
+                "config": {"FF_RISK_REPORT_V1_ONLY": False, "account_equity": 100_000, "order_notional_rounding": 1},
             }
         )
 
@@ -445,7 +447,7 @@ def test_price_missing_hard_fail_in_live_mode(tmp_path):
             "mode": "paper",
             "dry_run": False,
             "broker": SpyBroker(),
-            "config": {"account_equity": 100_000},
+            "config": {"FF_RISK_REPORT_V1_ONLY": False, "account_equity": 100_000},
         }
     )
     assert result["status"] == "ok"
@@ -494,7 +496,7 @@ def test_price_missing_fallback_in_dry_run(tmp_path):
             "mode": "paper",
             "dry_run": True,
             "broker": SpyBroker(),
-            "config": {"account_equity": 100_000},
+            "config": {"FF_RISK_REPORT_V1_ONLY": False, "account_equity": 100_000},
         }
     )
     assert result["status"] == "ok"
@@ -627,7 +629,7 @@ def test_order_builder_reads_quantity_with_qty_alias_fallback(tmp_path):
             "mode": "paper",
             "dry_run": True,
             "broker": QuantityOnlyBroker(price_map={"SPY": 500.0}),
-            "config": {"account_equity": 100_000, "order_notional_rounding": 1},
+            "config": {"FF_RISK_REPORT_V1_ONLY": False, "account_equity": 100_000, "order_notional_rounding": 1},
         }
     )
     assert result["status"] == "ok"
@@ -638,7 +640,7 @@ def test_order_builder_reads_quantity_with_qty_alias_fallback(tmp_path):
     assert payload["orders"][0]["side"] == "BUY"
 
 
-def test_order_builder_records_qty_alias_hits(tmp_path):
+def test_order_builder_rejects_qty_alias_positions(tmp_path):
     root = tmp_path / "artifacts" / "2026-02-17"
     (root / "targets").mkdir(parents=True, exist_ok=True)
     (root / "signals").mkdir(parents=True, exist_ok=True)
@@ -662,17 +664,15 @@ def test_order_builder_records_qty_alias_hits(tmp_path):
         def get_positions(self) -> dict:
             return {"positions": [{"symbol": "SPY", "qty": 1.0, "avg_cost": 500.0}]}
 
-    result = handle_order_build_and_route(
-        {
-            "asof_date": "2026-02-17",
-            "session": "open",
-            "artifact_root": str(root),
-            "mode": "paper",
-            "dry_run": True,
-            "broker": QtyOnlyBroker(price_map={"SPY": 500.0}),
-            "config": {"account_equity": 100_000, "order_notional_rounding": 1},
-        }
-    )
-    assert result["status"] == "ok"
-    payload = json.loads((root / "orders" / "orders.json").read_text(encoding="utf-8"))
-    assert payload["summary"]["position_alias_hits"] == 1
+    with pytest.raises(ValueError, match="position row missing quantity"):
+        handle_order_build_and_route(
+            {
+                "asof_date": "2026-02-17",
+                "session": "open",
+                "artifact_root": str(root),
+                "mode": "paper",
+                "dry_run": True,
+                "broker": QtyOnlyBroker(price_map={"SPY": 500.0}),
+                "config": {"FF_RISK_REPORT_V1_ONLY": False, "account_equity": 100_000, "order_notional_rounding": 1},
+            }
+        )
