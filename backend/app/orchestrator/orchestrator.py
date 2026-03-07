@@ -16,10 +16,11 @@ from .job_defs import Job, default_jobs, filtered_jobs
 from .locks import LockManager
 from .runner import JobRunner
 from .state_store import StateStore
-from .control_state import control_state
+from .control_state_provider import get_control_state_provider
 from .tick_context import TickContext
 from .model_versions import record_model_versions
 from .intent_aggregator import collect_and_validate_intents
+from backend.app.core.runtime_mode import normalize_mode_alias
 from backend.app.version import APP_DISPLAY, with_app_metadata
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ class Orchestrator:
 
         self.calendar = MarketCalendar(self.config)
         self.state = StateStore(self.config.db_path)
+        self.control_provider = get_control_state_provider(self.config.db_path)
         self.jobs = jobs or default_jobs()
         self.broker = broker or PaperBrokerStub()
         self.runner = runner or JobRunner()
@@ -94,10 +96,11 @@ class Orchestrator:
     def run_once(self, asof: date | datetime | None = None, forced_session: Session | None = None, dry_run: bool = False) -> TickResult:
         now = now_et()
         tick_context = TickContext()
-        control_snapshot = control_state.snapshot()
         asof_date = normalize_asof_date(asof)
         day_root = self._day_root(asof_date)
         session = forced_session or self.calendar.current_session(now)
+        run_id = str(uuid.uuid4())
+        control_snapshot = self.control_provider.snapshot(consumer="orchestrator", tick_id=run_id)
         self._write_heartbeat(day_root, now, session, "tick_start")
 
         if bool(control_snapshot.get("paused", False)):
@@ -106,7 +109,6 @@ class Orchestrator:
         if not forced_session and not self.calendar.is_trading_day(now) and session != Session.OVERNIGHT:
             return TickResult("no_trading_day", asof_date.isoformat(), session.value, [], [], [])
 
-        run_id = str(uuid.uuid4())
         self.state.create_run_record(run_id, asof_date.isoformat(), session.value, {"dry_run": dry_run})
 
         ran: list[str] = []
@@ -114,10 +116,18 @@ class Orchestrator:
         failed: list[str] = []
         failed_set: set[str] = set()
 
+        effective_mode, mode_alias_applied = normalize_mode_alias(self.config.mode)
+        if mode_alias_applied:
+            logger.warning(
+                "Mode alias normalized for job filtering: raw=%s normalized=%s",
+                self.config.mode,
+                effective_mode,
+            )
+
         jobs = filtered_jobs(
             self.jobs,
             session=session,
-            mode=self.config.mode,
+            mode=effective_mode,
             enabled=self.config.enabled_jobs,
             disabled=self.config.disabled_jobs,
         )
@@ -160,7 +170,9 @@ class Orchestrator:
                         "asof_date": asof_date.isoformat(),
                         "session": session.value,
                         "artifact_root": str(day_root),
-                        "mode": self.config.mode,
+                        "mode": effective_mode,
+                        "mode_raw": self.config.mode,
+                        "mode_alias_applied": mode_alias_applied,
                         "tick_id": run_id,
                         "dry_run": dry_run,
                         "broker": self.broker,
@@ -212,6 +224,11 @@ class Orchestrator:
                 logger.info(
                     "Intent barrier: %d intents collected, %d validated",
                     agg_result["n_collected"], agg_result["n_validated"],
+                )
+            if int(agg_result.get("n_target_intent_files", 0)) > 0:
+                logger.warning(
+                    "Non-canonical intent path active: %d *_intents.json files under targets/",
+                    int(agg_result.get("n_target_intent_files", 0)),
                 )
         except Exception as exc:
             logger.exception("Intent aggregation barrier failed — this may cause orders to be stale or missing")

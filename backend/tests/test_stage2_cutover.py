@@ -8,6 +8,7 @@ Verifies:
 from __future__ import annotations
 
 import json
+import importlib
 import sqlite3
 from pathlib import Path
 
@@ -242,3 +243,63 @@ class TestIntentAggregator:
         assert result["status"] == "ok"
         assert result["n_collected"] == 2
         assert result["n_validated"] == 2
+
+    def test_reports_target_intent_file_metric(self, tmp_path: Path, db: Path):
+        from backend.app.orchestrator.intent_aggregator import (
+            collect_and_validate_intents,
+        )
+
+        targets_dir = tmp_path / "targets"
+        targets_dir.mkdir()
+        (targets_dir / "selector_intents.json").write_text(
+            json.dumps([
+                {
+                    "asof_date": "2026-02-17",
+                    "sleeve": "selector",
+                    "symbol": "AAPL",
+                    "asset_class": "EQUITY",
+                    "target_weight": 0.02,
+                    "execution_phase": "intraday",
+                }
+            ]),
+            encoding="utf-8",
+        )
+
+        result = collect_and_validate_intents(tmp_path, db, "2026-02-17")
+        assert result["status"] == "ok"
+        assert result["n_target_intent_files"] == 1
+
+    def test_shadow_filter_uses_targetintent_sleeve_field(self, tmp_path: Path, db: Path, monkeypatch):
+        monkeypatch.setenv("SHADOW_SLEEVES", "SELECTOR")
+        monkeypatch.setenv("SHADOW_LEDGER_DIR", str(tmp_path / "shadow_ledger"))
+
+        import backend.app.orchestrator.intent_aggregator as ia
+        ia = importlib.reload(ia)
+
+        intents_dir = tmp_path / "intents"
+        intents_dir.mkdir()
+        (intents_dir / "selector_intents.json").write_text(
+            json.dumps([
+                {
+                    "asof_date": "2026-02-17",
+                    "sleeve": "selector",
+                    "symbol": "AAPL",
+                    "asset_class": "EQUITY",
+                    "target_weight": 0.05,
+                    "execution_phase": "intraday",
+                }
+            ]),
+            encoding="utf-8",
+        )
+
+        result = ia.collect_and_validate_intents(tmp_path, db, "2026-02-17")
+        assert result["status"] == "ok"
+        assert result["n_validated"] == 0
+        assert result["n_shadowed"] == 1
+
+        ledger = tmp_path / "shadow_ledger" / "2026-02-17" / "shadow_intents.jsonl"
+        lines = ledger.read_text(encoding="utf-8").strip().splitlines()
+        assert len(lines) == 1
+        record = json.loads(lines[0])
+        assert record["sleeve"] == "selector"
+        assert "target_weight" in record

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .job_defs import Job
+from backend.app.contracts.validators import validate_sleeve_output
 
 
 @dataclass
@@ -39,6 +40,12 @@ class JobRunner:
 
         if not isinstance(payload, dict):
             raise TypeError(f"job handler '{job.name}' must return dict")
+
+        # PR-2 compatibility boundary: validate sleeve outputs immediately after
+        # handler completion without forcing canonical cutover yet.
+        if job.name.startswith("signals_generate_"):
+            validate_sleeve_output(payload, job_name=job.name, compatibility_mode=True)
+
         status = str(payload.get("status", "ok"))
         if status == "failed":
             raise RuntimeError(str(payload.get("summary", "handler returned failed")))

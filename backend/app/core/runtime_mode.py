@@ -30,3 +30,17 @@ class OrchestratorSafetyError(RuntimeError):
 
 class ArtifactValidationError(ValueError):
     """Raised when a model artifact fails integrity validation (size, hash, format)."""
+
+
+def normalize_mode_alias(raw_mode: str | None) -> tuple[str, bool]:
+    """Normalize historical mode aliases to canonical runtime values.
+
+    Returns
+    -------
+    (mode, alias_applied)
+        ``alias_applied`` is True when input was rewritten.
+    """
+    mode = str(raw_mode or "").strip().lower()
+    if mode == "live":
+        return RuntimeMode.LIVE.value, True
+    return mode, False

@@ -10,6 +10,13 @@ from typing import Any, Callable
 
 from .calendar import Session
 import numpy as np
+from backend.app.contracts.validators import (
+    validate_execution_result,
+    validate_position_delta_plan,
+    validate_risk_decision_report,
+)
+from backend.app.core.runtime_mode import normalize_mode_alias
+from .intent_translation import translate_targets_to_intents
 try:
     from scipy.stats import wasserstein_distance
 except ImportError:
@@ -277,8 +284,8 @@ def _parse_legacy_risk_report(data: dict[str, Any]) -> dict[str, Any]:
 
 def _canonical_or_legacy_risk(data: dict[str, Any]) -> dict[str, Any]:
     if "violations" in data and "metrics" in data and "limits" in data:
-        return data
-    return _parse_legacy_risk_report(data)
+        return validate_risk_decision_report(data, compatibility_mode=True)
+    return validate_risk_decision_report(_parse_legacy_risk_report(data), compatibility_mode=True)
 
 
 def _cfg_float(cfg: dict[str, Any], key: str, default: float) -> float:
@@ -1099,11 +1106,25 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
 
     status = "ok" if not violations else "failed"
     reason = None if status == "ok" else "; ".join(v["code"] for v in violations)
+    source_sleeves = sorted(target_paths.keys())
+    decision_id = hashlib.sha1(
+        f"{_asof(ctx)}|{_session(ctx)}|{status}|{reason or ''}|{'|'.join(source_sleeves)}|{len(violations)}".encode("utf-8")
+    ).hexdigest()[:16]
     report = {
+        "schema_version": "risk_decision.v1",
+        "decision_id": decision_id,
         "status": status,
         "checked_at": checked_at,
         "asof_date": _asof(ctx),
         "session": _session(ctx),
+        "policy_version": "risk_decision_policy.v1",
+        "input_contract_family": "targets_legacy",
+        "source_sleeves": source_sleeves,
+        "input_artifact_refs": {
+            "target_paths": {k: str(v) for k, v in target_paths.items()},
+            "source_target_counts": {k: len((_read_json(v).get("targets", []) if v.exists() else [])) for k, v in target_paths.items()},
+        },
+        "generated_by": "handle_risk_checks_global",
         "reason": reason,
         "missing_sleeves": missing,
         "inputs": {"target_paths": {k: str(v) for k, v in target_paths.items()}},
@@ -1123,6 +1144,9 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
         "allocator": allocator_payload,
         "violations": violations,
     }
+    # Producer-side boundary validation: this report is canonical on the
+    # default path, so fail closed on structural mismatches.
+    validate_risk_decision_report(report, compatibility_mode=False)
     _write_json(report_path, report)
     logger.info("risk checks completed status=%s violations=%d", status, len(violations))
     if status != "ok":
@@ -1145,7 +1169,7 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if not report_path.exists():
         raise RuntimeError("cannot route orders: risk report missing")
 
-    risk_raw = _read_json(report_path)
+    risk_raw = validate_risk_decision_report(_read_json(report_path), compatibility_mode=True)
     risk = _canonical_or_legacy_risk(risk_raw)
     if str(risk.get("status", "failed")) != "ok":
         raise RuntimeError(f"cannot route orders: risk report failed ({risk.get('reason')})")
@@ -1195,6 +1219,16 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
         for k, v in (allocator.get("outputs", {}) or {}).items()
     }
 
+    # PR-3 compatibility artifact: deterministic target->intent translation.
+    # Allocator scaling is applied exactly once in translation before canonical
+    # TargetIntent validation/persistence. Execution ownership remains target-led.
+    translation = translate_targets_to_intents(
+        artifact_root=p["root"],
+        asof_date=_asof(ctx),
+        target_paths=target_paths,
+        allocator_scales=allocator_scales,
+    )
+
     combined: dict[str, float] = {}
     for sleeve, tpath in target_paths.items():
         sleeve_scale = float(allocator_scales.get(sleeve, 1.0))
@@ -1207,7 +1241,19 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
 
     positions_resp = ctx["broker"].get_positions() if hasattr(ctx["broker"], "get_positions") else {"positions": []}
     positions = positions_resp.get("positions", []) if isinstance(positions_resp, dict) else []
-    current_qty: dict[str, float] = {str(pos.get("symbol", "")).strip(): float(pos.get("qty", 0.0)) for pos in positions}
+    position_alias_hits = 0
+    current_qty: dict[str, float] = {}
+    for pos in positions:
+        sym = str(pos.get("symbol", "")).strip()
+        if not sym:
+            continue
+        if "quantity" in pos:
+            qty_val = pos.get("quantity", 0.0)
+        else:
+            qty_val = pos.get("qty", 0.0)
+            if "qty" in pos:
+                position_alias_hits += 1
+        current_qty[sym] = float(qty_val)
 
     # --- Structured price resolution ---
     # Priority: 1) broker.get_quote  2) ctx["prices"] (daily close cache)  3) synthetic (dry-run only)
@@ -1328,6 +1374,11 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
             "account_equity": account_equity,
             "price_fallback": fallback_price,
             "allocator": allocator,
+            "translation_artifacts": {
+                "translated_intents": translation.translated_intents_path,
+                "parity_report": translation.parity_report_path,
+                "n_translated_intents": translation.n_translated,
+            },
             "limits": {
                 "max_order_notional": max_order_notional,
                 "max_total_order_notional": max_total_order_notional,
@@ -1341,8 +1392,11 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
             "total_abs_notional": round(total_abs_notional, 8),
             "max_single_abs_notional": round(max_single, 8),
             "used_fallback_price": used_fallback,
+            "position_alias_hits": int(position_alias_hits),
+            "mode_alias_applied": bool(ctx.get("mode_alias_applied", False)),
         },
     }
+    validate_position_delta_plan(payload, compatibility_mode=True)
     _write_json(orders_path, payload)
 
     reject_reasons: list[str] = []
@@ -1382,7 +1436,10 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     if not is_dry_run and ctx["mode"] not in {"noop"}:
         if ctx["mode"] == "paper":
             ctx["broker"].verify_paper()
-        broker_resp = ctx["broker"].place_orders(payload)
+        broker_resp = validate_execution_result(
+            ctx["broker"].place_orders(payload),
+            compatibility_mode=True,
+        )
         routed = True
         route_artifact = p["orders"] / "routed.json"
         _write_json(route_artifact, {"status": "ok", "broker_response": broker_resp})
@@ -1638,7 +1695,15 @@ def topo_sort(jobs: list[Job]) -> list[Job]:
 
 
 def filtered_jobs(all_jobs: list[Job], session: Session, mode: str, enabled: list[str], disabled: list[str]) -> list[Job]:
-    result = [j for j in all_jobs if session in j.sessions and mode in j.mode_allow and j.name not in disabled]
+    # Normalize at comparison time so legacy "live" and canonical "ibkr"
+    # remain equivalent while migration is in progress.
+    effective_mode, _ = normalize_mode_alias(mode)
+
+    def _mode_allowed(job: Job) -> bool:
+        canonical_allow = {normalize_mode_alias(m)[0] for m in job.mode_allow}
+        return effective_mode in canonical_allow
+
+    result = [j for j in all_jobs if session in j.sessions and _mode_allowed(j) and j.name not in disabled]
     if enabled:
         enabled_set = set(enabled)
         result = [j for j in result if j.name in enabled_set]

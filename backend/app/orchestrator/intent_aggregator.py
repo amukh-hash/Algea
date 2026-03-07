@@ -51,10 +51,10 @@ def _save_to_shadow_ledger(
 
     record = {
         "timestamp": datetime.utcnow().isoformat(),
-        "sleeve": getattr(intent, "sleeve_name", "unknown"),
+        "sleeve": getattr(intent, "sleeve", "unknown"),
         "symbol": getattr(intent, "symbol", "unknown"),
-        "action": getattr(intent, "action", "unknown"),
-        "qty": getattr(intent, "qty", 0),
+        "target_weight": getattr(intent, "target_weight", 0.0),
+        "execution_phase": getattr(getattr(intent, "execution_phase", None), "value", None),
         "intent": intent.model_dump() if hasattr(intent, "model_dump") else intent.__dict__,
     }
 
@@ -62,8 +62,8 @@ def _save_to_shadow_ledger(
         f.write(json.dumps(record, default=str) + "\n")
 
     logger.info(
-        "[SHADOW MODE] Intercepted %s %s from %s — logged to %s",
-        record["action"], record["symbol"], record["sleeve"], ledger_file,
+        "[SHADOW MODE] Intercepted intent %s from %s (w=%.4f) — logged to %s",
+        record["symbol"], record["sleeve"], float(record["target_weight"]), ledger_file,
     )
 
 
@@ -95,12 +95,15 @@ def collect_and_validate_intents(
 
     all_intents: list[TargetIntent] = []
     files_read: list[str] = []
+    target_intent_files = 0
 
     # Scan for plugin-generated intent files
     for search_dir in [intents_dir, targets_dir]:
         if not search_dir.exists():
             continue
         for p in sorted(search_dir.glob("*_intents.json")):
+            if search_dir == targets_dir:
+                target_intent_files += 1
             try:
                 raw = json.loads(p.read_text(encoding="utf-8"))
                 entries = raw if isinstance(raw, list) else raw.get("intents", [])
@@ -121,6 +124,7 @@ def collect_and_validate_intents(
             "n_collected": 0,
             "n_validated": 0,
             "files_read": files_read,
+            "n_target_intent_files": target_intent_files,
         }
 
     logger.info(
@@ -133,7 +137,7 @@ def collect_and_validate_intents(
         live_intents = []
         shadow_count = 0
         for intent in all_intents:
-            sleeve = getattr(intent, "sleeve_name", "").upper()
+            sleeve = getattr(intent, "sleeve", "").upper()
             if sleeve in SHADOW_SLEEVES:
                 _save_to_shadow_ledger(intent, asof_date)
                 shadow_count += 1
@@ -153,6 +157,7 @@ def collect_and_validate_intents(
             "n_validated": 0,
             "n_shadowed": shadow_count if SHADOW_SLEEVES else 0,
             "files_read": files_read,
+            "n_target_intent_files": target_intent_files,
         }
 
     try:
@@ -162,6 +167,7 @@ def collect_and_validate_intents(
             "n_collected": len(all_intents),
             "n_validated": risk_result.get("n_stored", len(all_intents)),
             "files_read": files_read,
+            "n_target_intent_files": target_intent_files,
             "risk_result": risk_result,
         }
     except RuntimeError as exc:
@@ -171,5 +177,6 @@ def collect_and_validate_intents(
             "n_collected": len(all_intents),
             "n_validated": 0,
             "files_read": files_read,
+            "n_target_intent_files": target_intent_files,
             "error": str(exc),
         }
