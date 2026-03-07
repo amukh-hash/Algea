@@ -24,6 +24,7 @@ from backend.app.orchestrator.job_defs import (
 from backend.app.orchestrator.migrations import apply_migrations
 from backend.app.orchestrator.orchestrator import Orchestrator
 from backend.app.orchestrator.state_store import StateStore
+from backend.app.core.runtime_mode import normalize_mode_alias
 
 
 @pytest.fixture(autouse=True)
@@ -436,3 +437,104 @@ def test_schema_migration_v2_adds_last_success_at(tmp_path):
         cols = conn.execute("PRAGMA table_info(jobs)").fetchall()
         col_names = [c[1] for c in cols]
     assert "last_success_at" in col_names
+
+
+def test_mode_alias_normalization_maps_live_to_ibkr():
+    mode, applied = normalize_mode_alias("live")
+    assert mode == "ibkr"
+    assert applied is True
+
+
+def test_order_builder_reads_quantity_with_qty_alias_fallback(tmp_path):
+    root = tmp_path / "artifacts" / "2026-02-17"
+    (root / "targets").mkdir(parents=True, exist_ok=True)
+    (root / "signals").mkdir(parents=True, exist_ok=True)
+    (root / "reports").mkdir(parents=True, exist_ok=True)
+
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
+        (root / "targets" / f"{sleeve}_targets.json").write_text(
+            json.dumps({"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": [{"symbol": "SPY", "target_weight": 0.02}]}, indent=2),
+            encoding="utf-8",
+        )
+        (root / "signals" / f"{sleeve}_signals.json").write_text(
+            json.dumps({"schema_version": "signals.v1", "status": "ok", "is_stub": False}, indent=2),
+            encoding="utf-8",
+        )
+    (root / "reports" / "risk_checks.json").write_text(
+        json.dumps(
+            {
+                "status": "ok",
+                "checked_at": "2026-02-17T13:00:00+00:00",
+                "asof_date": "2026-02-17",
+                "session": "open",
+                "inputs": {"target_paths": {}},
+                "metrics": {"nan_or_inf": False, "gross_exposure": 0.10, "net_exposure": 0.10, "num_symbols": 1, "per_sleeve": {}},
+                "limits": {},
+                "violations": [],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    class QuantityOnlyBroker(SpyBroker):
+        def get_positions(self) -> dict:
+            return {"positions": [{"symbol": "SPY", "quantity": 4.0, "avg_cost": 500.0}]}
+
+    result = handle_order_build_and_route(
+        {
+            "asof_date": "2026-02-17",
+            "session": "open",
+            "artifact_root": str(root),
+            "mode": "paper",
+            "dry_run": True,
+            "broker": QuantityOnlyBroker(price_map={"SPY": 500.0}),
+            "config": {"account_equity": 100_000, "order_notional_rounding": 1},
+        }
+    )
+    assert result["status"] == "ok"
+    payload = json.loads((root / "orders" / "orders.json").read_text(encoding="utf-8"))
+    assert payload["summary"]["position_alias_hits"] == 0
+    # target_notional=10k, current_notional=2k => BUY delta should be positive and less than full 10k rebalance
+    assert payload["orders"]
+    assert payload["orders"][0]["side"] == "BUY"
+
+
+def test_order_builder_records_qty_alias_hits(tmp_path):
+    root = tmp_path / "artifacts" / "2026-02-17"
+    (root / "targets").mkdir(parents=True, exist_ok=True)
+    (root / "signals").mkdir(parents=True, exist_ok=True)
+    (root / "reports").mkdir(parents=True, exist_ok=True)
+
+    for sleeve in ["core", "vrp", "selector", "futures_overnight", "statarb"]:
+        (root / "targets" / f"{sleeve}_targets.json").write_text(
+            json.dumps({"schema_version": "targets.v1", "status": "ok", "is_stub": False, "targets": [{"symbol": "SPY", "target_weight": 0.01}]}, indent=2),
+            encoding="utf-8",
+        )
+        (root / "signals" / f"{sleeve}_signals.json").write_text(
+            json.dumps({"schema_version": "signals.v1", "status": "ok", "is_stub": False}, indent=2),
+            encoding="utf-8",
+        )
+    (root / "reports" / "risk_checks.json").write_text(
+        json.dumps({"status": "ok", "checked_at": "2026-02-17T13:00:00+00:00", "asof_date": "2026-02-17", "session": "open", "inputs": {"target_paths": {}}, "metrics": {"nan_or_inf": False, "gross_exposure": 0.01, "net_exposure": 0.01, "num_symbols": 1, "per_sleeve": {}}, "limits": {}, "violations": []}, indent=2),
+        encoding="utf-8",
+    )
+
+    class QtyOnlyBroker(SpyBroker):
+        def get_positions(self) -> dict:
+            return {"positions": [{"symbol": "SPY", "qty": 1.0, "avg_cost": 500.0}]}
+
+    result = handle_order_build_and_route(
+        {
+            "asof_date": "2026-02-17",
+            "session": "open",
+            "artifact_root": str(root),
+            "mode": "paper",
+            "dry_run": True,
+            "broker": QtyOnlyBroker(price_map={"SPY": 500.0}),
+            "config": {"account_equity": 100_000, "order_notional_rounding": 1},
+        }
+    )
+    assert result["status"] == "ok"
+    payload = json.loads((root / "orders" / "orders.json").read_text(encoding="utf-8"))
+    assert payload["summary"]["position_alias_hits"] == 1

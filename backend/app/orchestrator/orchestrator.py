@@ -20,6 +20,7 @@ from .control_state import control_state
 from .tick_context import TickContext
 from .model_versions import record_model_versions
 from .intent_aggregator import collect_and_validate_intents
+from backend.app.core.runtime_mode import normalize_mode_alias
 from backend.app.version import APP_DISPLAY, with_app_metadata
 
 logger = logging.getLogger(__name__)
@@ -114,10 +115,18 @@ class Orchestrator:
         failed: list[str] = []
         failed_set: set[str] = set()
 
+        effective_mode, mode_alias_applied = normalize_mode_alias(self.config.mode)
+        if mode_alias_applied:
+            logger.warning(
+                "Mode alias normalized for job filtering: raw=%s normalized=%s",
+                self.config.mode,
+                effective_mode,
+            )
+
         jobs = filtered_jobs(
             self.jobs,
             session=session,
-            mode=self.config.mode,
+            mode=effective_mode,
             enabled=self.config.enabled_jobs,
             disabled=self.config.disabled_jobs,
         )
@@ -160,7 +169,9 @@ class Orchestrator:
                         "asof_date": asof_date.isoformat(),
                         "session": session.value,
                         "artifact_root": str(day_root),
-                        "mode": self.config.mode,
+                        "mode": effective_mode,
+                        "mode_raw": self.config.mode,
+                        "mode_alias_applied": mode_alias_applied,
                         "tick_id": run_id,
                         "dry_run": dry_run,
                         "broker": self.broker,
@@ -212,6 +223,11 @@ class Orchestrator:
                 logger.info(
                     "Intent barrier: %d intents collected, %d validated",
                     agg_result["n_collected"], agg_result["n_validated"],
+                )
+            if int(agg_result.get("n_target_intent_files", 0)) > 0:
+                logger.warning(
+                    "Non-canonical intent path active: %d *_intents.json files under targets/",
+                    int(agg_result.get("n_target_intent_files", 0)),
                 )
         except Exception as exc:
             logger.exception("Intent aggregation barrier failed — this may cause orders to be stale or missing")

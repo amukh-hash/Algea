@@ -1207,7 +1207,19 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
 
     positions_resp = ctx["broker"].get_positions() if hasattr(ctx["broker"], "get_positions") else {"positions": []}
     positions = positions_resp.get("positions", []) if isinstance(positions_resp, dict) else []
-    current_qty: dict[str, float] = {str(pos.get("symbol", "")).strip(): float(pos.get("qty", 0.0)) for pos in positions}
+    position_alias_hits = 0
+    current_qty: dict[str, float] = {}
+    for pos in positions:
+        sym = str(pos.get("symbol", "")).strip()
+        if not sym:
+            continue
+        if "quantity" in pos:
+            qty_val = pos.get("quantity", 0.0)
+        else:
+            qty_val = pos.get("qty", 0.0)
+            if "qty" in pos:
+                position_alias_hits += 1
+        current_qty[sym] = float(qty_val)
 
     # --- Structured price resolution ---
     # Priority: 1) broker.get_quote  2) ctx["prices"] (daily close cache)  3) synthetic (dry-run only)
@@ -1341,6 +1353,8 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
             "total_abs_notional": round(total_abs_notional, 8),
             "max_single_abs_notional": round(max_single, 8),
             "used_fallback_price": used_fallback,
+            "position_alias_hits": int(position_alias_hits),
+            "mode_alias_applied": bool(ctx.get("mode_alias_applied", False)),
         },
     }
     _write_json(orders_path, payload)
