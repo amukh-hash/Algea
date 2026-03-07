@@ -14,7 +14,7 @@ class VolSurfaceGridRequest(BaseModel):
 class VolSurfaceGridResponse(BaseModel):
     model_name: str = "vol_surface_grid"
     model_version: str
-    grid_forecast: dict[str, float]
+    grid_forecast: float | dict[str, float]
     uncertainty_proxy: float
     drift_score: float
     mask_coverage: float

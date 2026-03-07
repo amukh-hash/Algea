@@ -95,7 +95,6 @@ class TestVolSurfaceGridGuard:
 class TestStatArbHandlerGuard:
     """StatArb signal handler must reject synthetic features."""
 
-    @pytest.mark.xfail(strict=False, reason="PRE-EXISTING: pair_deltas multi-dim array from iTransformer output")
     def test_handler_processes_without_crash(self, tmp_path):
         """StatArb handler now runs the feature pipeline — verify it completes."""
         import json

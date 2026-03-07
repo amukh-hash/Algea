@@ -1,7 +1,7 @@
 {
   "app": "Algae",
   "asof_date": "2026-03-06",
-  "checked_at": "2026-03-06T15:56:41.331904+00:00",
+  "checked_at": "2026-03-06T20:58:05.792657+00:00",
   "halt_reasons": [],
   "per_sleeve": {
     "kronos": {
@@ -38,7 +38,7 @@
       "trigger_state": "OK"
     }
   },
-  "session": "intraday",
+  "session": "preclose",
   "status": "ok",
   "version": "4.0.0"
 }

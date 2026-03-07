@@ -6,7 +6,7 @@ from algae.data.signals.build import build_signals
 from algae.models.foundation.chronos2 import FoundationModelConfig, SimpleChronos2
 
 
-@pytest.mark.xfail(strict=False, reason="PRE-EXISTING: signal truncation mismatch")
+@pytest.mark.xfail(strict=False, reason="DOMAIN: look-ahead bias in signal/feature pipeline — signals on full vs truncated data don't match")
 def test_backtest_causality_signals_truncated_match():
     canonical = pd.DataFrame(
         {
@@ -22,8 +22,8 @@ def test_backtest_causality_signals_truncated_match():
     full_features = build_features(canonical)
     truncated_features = build_features(canonical[canonical["date"] <= "2024-01-02"])
     model = SimpleChronos2(FoundationModelConfig())
-    full_priors = model.infer(canonical)
-    truncated_priors = model.infer(canonical[canonical["date"] <= "2024-01-02"])
+    full_priors = model.infer_priors(canonical).priors
+    truncated_priors = model.infer_priors(canonical[canonical["date"] <= "2024-01-02"]).priors
     full_signals = build_signals(full_features, full_priors)
     truncated_signals = build_signals(truncated_features, truncated_priors)
     full_day = full_signals[full_signals["date"] == pd.Timestamp("2024-01-02")]

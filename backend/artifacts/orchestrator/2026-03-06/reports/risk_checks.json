@@ -9,7 +9,7 @@
   },
   "app": "Algae",
   "asof_date": "2026-03-06",
-  "checked_at": "2026-03-06T15:56:41.355334+00:00",
+  "checked_at": "2026-03-06T20:58:05.819007+00:00",
   "inputs": {
     "target_paths": {
       "core": "backend\\artifacts\\orchestrator\\2026-03-06\\targets\\core_targets.json",
@@ -144,7 +144,7 @@
   },
   "missing_sleeves": [],
   "reason": null,
-  "session": "intraday",
+  "session": "preclose",
   "status": "ok",
   "version": "4.0.0",
   "violations": []

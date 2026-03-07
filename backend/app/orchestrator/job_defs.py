@@ -905,8 +905,8 @@ def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
 
     # ── 5. Emit Artifacts ──
     targets = [
-        {"pair": label, "z_score": float(current_z[i]),
-         "pred_delta": float(pair_deltas[i]),
+        {"pair": label, "z_score": float(np.asarray(current_z[i]).item()),
+         "pred_delta": float(np.asarray(pair_deltas[i]).item()),
          "direction": "short" if current_z[i] > 0.5 else "long" if current_z[i] < -0.5 else "flat"}
         for i, label in enumerate(pair_labels)
     ]

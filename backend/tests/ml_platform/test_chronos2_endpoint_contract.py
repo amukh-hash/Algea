@@ -26,11 +26,11 @@ def _seed_registry(tmp_path: Path) -> MLPlatformConfig:
     return cfg
 
 
-@pytest.mark.xfail(strict=False, reason="PRE-EXISTING: sync test calling async endpoint handler")
-def test_chronos2_contract_shape(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_chronos2_contract_shape(tmp_path: Path) -> None:
     cfg = _seed_registry(tmp_path)
     server = InferenceGatewayServer(cfg)
-    data = server.chronos2_http_forecast(
+    data = await server.chronos2_http_forecast(
         TSFMRequest(
             asof="2026-01-02",
             series=[100, 101, 102, 103],

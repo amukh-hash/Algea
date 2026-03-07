@@ -7,13 +7,12 @@ class _Client:
         return type("X", (), {"model_version": "v", "predicted_rv": {7: {"0.50": 0.1}}, "uncertainty": {7: 0.01}, "drift_score": 0.0, "ood_score": 0.0, "latency_ms": 1.0})()
 
     def vol_surface_grid_forecast(self, req, critical=True):
-        return type("G", (), {"model_version": "g1", "grid_forecast": {"7:ATM": 0.3, "30:ATM": 0.1}, "uncertainty_proxy": 0.1, "mask_coverage": 0.9})()
+        return type("G", (), {"model_version": "g1", "grid_forecast": {"7:ATM": 0.3, "30:ATM": 0.1}, "uncertainty_proxy": 0.1, "mask_coverage": 0.9, "latency_ms": 1.0, "drift_score": 0.0})()
 
     def rl_policy_act(self, req, critical=True):
         return type("R", (), {"size_multiplier": 1.0, "veto": False, "model_version": "r1", "latency_ms": 1.0, "drift_score": 0.0, "ood_score": 0.0})()
 
 
-@pytest.mark.xfail(strict=False, reason="PRE-EXISTING: VRPSleeve.generate_targets G.model_version")
 def test_vrp_surface_dynamics_strategy():
     out = VRPSleeve(_Client()).generate_targets("2026-01-01", "SPY", {7: 0.2}, {7: {}}, "t", mode="surface_dynamics", grid_history=[{"iv": {"7:ATM": 0.2}}])
     assert out["status"] == "ok"

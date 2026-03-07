@@ -41,7 +41,7 @@ def _run_kronos_inference(device: torch.device) -> list[dict]:
     bounded probabilities for ECE confidence bin assignment.
     P_up = 0.5 * (1 + erf(ŷ / (σ_res * √2)))
     """
-    from algaie.models.tsfm.patchtst import ContinuousPatchTST
+    from algae.models.tsfm.patchtst import ContinuousPatchTST
     from math import sqrt, erf
 
     model_path = Path("backend/artifacts/models/kronos/patchtst_kronos_best.pt")
@@ -79,7 +79,7 @@ def _run_kronos_inference(device: torch.device) -> list[dict]:
 
     # Load validation data (log-returns)
     try:
-        from algaie.models.train_kronos import load_futures_data
+        from algae.models.train_kronos import load_futures_data
         data, targets = load_futures_data()
         # Use last 20% as validation
         split_idx = int(len(data) * 0.75)
@@ -123,8 +123,8 @@ def _run_mera_inference(device: torch.device) -> list[dict]:
     results = []
 
     try:
-        from algaie.models.mera_scorer import MERAEquityScorer
-        from algaie.models.train_mera import generate_synthetic_equity_data
+        from algae.models.mera_scorer import MERAEquityScorer
+        from algae.models.train_mera import generate_synthetic_equity_data
         from math import erf, sqrt
 
         # Load model
@@ -197,8 +197,8 @@ def _run_vrp_inference(device: torch.device) -> list[dict]:
     results = []
 
     try:
-        from algaie.models.st_transformer import SpatialTemporalTransformer
-        from algaie.models.train_vrp import generate_synthetic_iv_sequences
+        from algae.models.st_transformer import SpatialTemporalTransformer
+        from algae.models.train_vrp import generate_synthetic_iv_sequences
 
         # Load model
         model_path = Path("backend/artifacts/models/vrp/st_transformer_pretrained.pt")

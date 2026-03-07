@@ -42,6 +42,36 @@ class KronosFoundationAdapter:
         self.api_key = api_key
         self.context_length = context_length
 
+    def _inter_period_redundancy_filter(
+        self,
+        data: np.ndarray,
+        energy_threshold: float = 0.95,
+    ) -> np.ndarray:
+        """Remove inter-period redundancy via truncated SVD reconstruction.
+
+        Denoises the input matrix by retaining only the top-k singular
+        components that capture ``energy_threshold`` of the total variance.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Shape ``(T, n_features)`` — raw time-series data.
+        energy_threshold : float
+            Fraction of total singular value energy to retain.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``(T, n_features)`` — denoised data.
+        """
+        U, S, Vh = np.linalg.svd(data, full_matrices=False)
+        total_energy = np.sum(S ** 2)
+        cumulative = np.cumsum(S ** 2) / total_energy
+        k = int(np.searchsorted(cumulative, energy_threshold) + 1)
+        k = min(k, len(S))
+        reconstructed = U[:, :k] @ np.diag(S[:k]) @ Vh[:k, :]
+        return reconstructed
+
 
 
     # ------------------------------------------------------------------

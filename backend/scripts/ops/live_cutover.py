@@ -130,10 +130,18 @@ def preflight():
     except ImportError:
         _check("CUDA", False, "torch not importable")
 
-    # 6. Broker connectivity
-    # NOTE: Actual broker ping requires IBKR TWS/Gateway running.
-    # This is a placeholder check.
-    _check("Broker connectivity", True, "→ manual verification required")
+    # 6. Broker connectivity — actual TCP probe to IBKR TWS/Gateway
+    try:
+        import socket
+        broker_host = "127.0.0.1"
+        broker_port = 7497  # TWS default (paper: 7497, live: 7496)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5.0)
+        sock.connect((broker_host, broker_port))
+        sock.close()
+        all_ok &= _check("Broker connectivity", True, f"→ {broker_host}:{broker_port} reachable")
+    except (socket.timeout, ConnectionRefusedError, OSError) as exc:
+        all_ok &= _check("Broker connectivity", False, f"→ {exc} (is TWS/Gateway running?)")
 
     logger.info("")
     logger.info("═" * 60)

@@ -86,25 +86,25 @@ class TestWassersteinRegimeCluster:
 
 
 class TestMERAEquityScorer:
-    @pytest.mark.xfail(strict=False, reason="PRE-EXISTING: MERA/Kronos architecture test")
     def test_forward_shape(self):
         from backend.app.sleeves.equity_mera.mera_scorer import MERAEquityScorer
 
         scorer = MERAEquityScorer(realtime_dim=32, historical_dim=64, n_experts=4, top_k=2)
         rt = torch.randn(8, 32)
         hist = torch.randn(8, 64)
-        scores, grip = scorer(rt, hist)
+        market = torch.randn(8, 16)  # market_dim=16 (default)
+        scores, grip = scorer(rt, hist, market)
         assert scores.shape == (8, 1)
         assert grip.shape == ()
 
-    @pytest.mark.xfail(strict=False, reason="PRE-EXISTING: MERA architecture test")
     def test_grip_loss_nonnegative(self):
         from backend.app.sleeves.equity_mera.mera_scorer import SMoEGateNet
 
         gate = SMoEGateNet(input_dim=16, n_experts=4, top_k=2, output_dim=8)
         x = torch.randn(16, 16)
-        _, gate_probs = gate(x)
-        loss = SMoEGateNet.grip_load_balancing_loss(gate_probs)
+        market = torch.randn(16, 16)  # market_dim=16 (default)
+        _, gate_probs = gate(x, market)
+        loss = SMoEGateNet.standard_routing_loss(gate_probs)
         assert loss.item() >= 0.0
 
 
@@ -168,7 +168,6 @@ class TestTD3:
 
 
 class TestKronosAdapter:
-    @pytest.mark.xfail(strict=False, reason="PRE-EXISTING: Kronos adapter test")
     def test_svd_filter_preserves_shape(self):
         from backend.app.sleeves.futures_kronos.kronos_adapter import KronosFoundationAdapter
 
