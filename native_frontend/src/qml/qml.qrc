@@ -1,5 +1,27 @@
 <RCC>
     <qresource prefix="/">
         <file alias="qml/main.qml">main.qml</file>
+        <file alias="qml/views/CommandCenterTab.qml">views/CommandCenterTab.qml</file>
+        <file alias="qml/views/SignalsTab.qml">views/SignalsTab.qml</file>
+        <file alias="qml/views/RiskTab.qml">views/RiskTab.qml</file>
+        <file alias="qml/views/PortfolioTab.qml">views/PortfolioTab.qml</file>
+        <file alias="qml/views/LabTab.qml">views/LabTab.qml</file>
+        <file alias="qml/views/JobsTab.qml">views/JobsTab.qml</file>
+        <file alias="qml/views/SettingsTab.qml">views/SettingsTab.qml</file>
+
+        <file alias="qml/components/Theme.qml">components/Theme.qml</file>
+        <file alias="qml/components/StatusBadge.qml">components/StatusBadge.qml</file>
+        <file alias="qml/components/DataAgeChip.qml">components/DataAgeChip.qml</file>
+        <file alias="qml/components/MetricCard.qml">components/MetricCard.qml</file>
+        <file alias="qml/components/PanelScaffold.qml">components/PanelScaffold.qml</file>
+        <file alias="qml/components/AlertRail.qml">components/AlertRail.qml</file>
+        <file alias="qml/components/SleeveStatusRow.qml">components/SleeveStatusRow.qml</file>
+        <file alias="qml/components/GuardrailMatrix.qml">components/GuardrailMatrix.qml</file>
+        <file alias="qml/components/ActionQueuePanel.qml">components/ActionQueuePanel.qml</file>
+        <file alias="qml/components/PositionsTable.qml">components/PositionsTable.qml</file>
+        <file alias="qml/components/DetailDrawer.qml">components/DetailDrawer.qml</file>
+        <file alias="qml/components/OperatorTable.qml">components/OperatorTable.qml</file>
+        <file alias="qml/components/SeverityBanner.qml">components/SeverityBanner.qml</file>
+        <file alias="qml/components/SectionHeader.qml">components/SectionHeader.qml</file>
     </qresource>
 </RCC>

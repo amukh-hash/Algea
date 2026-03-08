@@ -25,6 +25,8 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <QDateTime>
+#include <algorithm>
 
 namespace algae::engine {
 
@@ -50,6 +52,7 @@ struct ApplicationState {
     bool broker_connected = false;
     bool system_paused = false;
     bool data_loss = false;
+    bool backend_reachable = true;
 
     // Risk
     double stat_arb_correlation = 0.0;
@@ -78,6 +81,19 @@ struct ApplicationState {
     QString current_session = "closed";
     QString execution_mode = "paper";
     QString vol_regime_override;
+
+    // Data freshness
+    qint64 control_last_update_ms = 0;
+    qint64 portfolio_last_update_ms = 0;
+    qint64 jobs_last_update_ms = 0;
+
+    // Jobs dashboard
+    int job_total = 0;
+    int job_running = 0;
+    int job_failed = 0;
+
+    QString data_freshness = "disconnected";
+    QVariantList guardrails;
 };
 
 /// Singleton global state store — all telemetry, control, and portfolio
@@ -123,6 +139,18 @@ class GlobalStore : public QObject {
     Q_PROPERTY(int pendingPromotions READ pendingPromotions NOTIFY healthStatusChanged)
     Q_PROPERTY(int promotedModels READ promotedModels NOTIFY healthStatusChanged)
 
+    Q_PROPERTY(QString dataFreshness READ dataFreshness NOTIFY healthStatusChanged)
+    Q_PROPERTY(bool backendReachable READ backendReachable NOTIFY healthStatusChanged)
+    Q_PROPERTY(qint64 controlLastUpdateMs READ controlLastUpdateMs NOTIFY healthStatusChanged)
+    Q_PROPERTY(qint64 portfolioLastUpdateMs READ portfolioLastUpdateMs NOTIFY healthStatusChanged)
+    Q_PROPERTY(qint64 jobsLastUpdateMs READ jobsLastUpdateMs NOTIFY healthStatusChanged)
+
+    // ── Operations ───────────────────────────────────────────────
+    Q_PROPERTY(int jobTotal READ jobTotal NOTIFY healthStatusChanged)
+    Q_PROPERTY(int jobRunning READ jobRunning NOTIFY healthStatusChanged)
+    Q_PROPERTY(int jobFailed READ jobFailed NOTIFY healthStatusChanged)
+    Q_PROPERTY(QVariantList guardrails READ guardrails NOTIFY healthStatusChanged)
+
 public:
     static GlobalStore* instance() {
         static GlobalStore store;
@@ -154,6 +182,15 @@ public:
     int      shadowRuns()       const { return m_ui_snapshot->shadow_runs; }
     int      pendingPromotions()const { return m_ui_snapshot->pending_promotions; }
     int      promotedModels()   const { return m_ui_snapshot->promoted_models; }
+    QString  dataFreshness()     const { return m_ui_snapshot->data_freshness; }
+    bool     backendReachable()  const { return m_ui_snapshot->backend_reachable; }
+    qint64   controlLastUpdateMs() const { return m_ui_snapshot->control_last_update_ms; }
+    qint64   portfolioLastUpdateMs() const { return m_ui_snapshot->portfolio_last_update_ms; }
+    qint64   jobsLastUpdateMs() const { return m_ui_snapshot->jobs_last_update_ms; }
+    int      jobTotal()         const { return m_ui_snapshot->job_total; }
+    int      jobRunning()       const { return m_ui_snapshot->job_running; }
+    int      jobFailed()        const { return m_ui_snapshot->job_failed; }
+    QVariantList guardrails()    const { return m_ui_snapshot->guardrails; }
 
     /// Set ArrowBuilderWorker for grid data routing
     void setArrowWorker(algae::models::ArrowBuilderWorker* w) { m_arrow_worker = w; }
@@ -245,7 +282,8 @@ public:
                 m_prev_snapshot->shadow_runs != m_ui_snapshot->shadow_runs ||
                 m_prev_snapshot->pending_promotions != m_ui_snapshot->pending_promotions ||
                 m_prev_snapshot->promoted_models != m_ui_snapshot->promoted_models ||
-                m_prev_snapshot->last_sequence_id != m_ui_snapshot->last_sequence_id;
+                m_prev_snapshot->last_sequence_id != m_ui_snapshot->last_sequence_id ||
+                m_prev_snapshot->guardrails != m_ui_snapshot->guardrails;
 
             if (portfolioDirty) Q_EMIT portfolioValueChanged();
             if (healthDirty)    Q_EMIT healthStatusChanged();
@@ -299,6 +337,105 @@ public:
     Q_INVOKABLE void setVolRegimeOverride(const QString& regime) {
         commitStateMutation([regime](ApplicationState& s) { s.vol_regime_override = regime; });
         Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void setJobStats(int total, int running, int failed) {
+        commitStateMutation([=](ApplicationState& s) {
+            s.job_total = total;
+            s.job_running = running;
+            s.job_failed = failed;
+            s.jobs_last_update_ms = QDateTime::currentMSecsSinceEpoch();
+        });
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void markControlStateUpdated() {
+        commitStateMutation([](ApplicationState& s) {
+            s.backend_reachable = true;
+            s.control_last_update_ms = QDateTime::currentMSecsSinceEpoch();
+        });
+        updateFreshness();
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void markPortfolioUpdated() {
+        commitStateMutation([](ApplicationState& s) {
+            s.backend_reachable = true;
+            s.portfolio_last_update_ms = QDateTime::currentMSecsSinceEpoch();
+        });
+        updateFreshness();
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void markJobsUpdated() {
+        commitStateMutation([](ApplicationState& s) {
+            s.backend_reachable = true;
+            s.jobs_last_update_ms = QDateTime::currentMSecsSinceEpoch();
+        });
+        updateFreshness();
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void markBackendDisconnected() {
+        commitStateMutation([](ApplicationState& s) {
+            s.backend_reachable = false;
+            s.data_freshness = "disconnected";
+        });
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void markDataDegraded() {
+        commitStateMutation([](ApplicationState& s) {
+            if (s.backend_reachable) {
+                s.data_freshness = "degraded";
+            }
+        });
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE void updateFreshness() {
+        const auto now = QDateTime::currentMSecsSinceEpoch();
+        commitStateMutation([now](ApplicationState& s) {
+            if (!s.backend_reachable) {
+                s.data_freshness = "disconnected";
+                return;
+            }
+            // Critical domains for operator truth are control + portfolio.
+            if (s.control_last_update_ms == 0 || s.portfolio_last_update_ms == 0) {
+                s.data_freshness = "degraded";
+                return;
+            }
+
+            const qint64 controlAge = now - s.control_last_update_ms;
+            const qint64 portfolioAge = now - s.portfolio_last_update_ms;
+            const qint64 jobsAge = s.jobs_last_update_ms > 0 ? now - s.jobs_last_update_ms : 9'999'999;
+            const qint64 worstCriticalAge = std::max(controlAge, portfolioAge);
+
+            if (worstCriticalAge <= 35'000 && jobsAge <= 90'000) {
+                s.data_freshness = "fresh";
+            } else if (worstCriticalAge <= 90'000) {
+                s.data_freshness = "stale";
+            } else {
+                s.data_freshness = "degraded";
+            }
+        });
+        Q_EMIT healthStatusChanged();
+    }
+
+
+    Q_INVOKABLE void setGuardrails(const QVariantList& rows) {
+        commitStateMutation([rows](ApplicationState& s) { s.guardrails = rows; });
+        Q_EMIT healthStatusChanged();
+    }
+
+    Q_INVOKABLE QVariantMap guardrailById(const QString& id) const {
+        for (const auto& item : m_ui_snapshot->guardrails) {
+            const auto row = item.toMap();
+            if (row.value("id").toString() == id) {
+                return row;
+            }
+        }
+        return {};
     }
 
     /// Set data loss flag (called by UiSynchronizer when backpressure triggers)

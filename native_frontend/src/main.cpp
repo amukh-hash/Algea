@@ -57,6 +57,7 @@ void fileMessageHandler(QtMsgType type, const QMessageLogContext &ctx, const QSt
 #include "engine/AlertDag.h"
 #include "engine/StateReconciler.h"
 #include "models/ArrowTableModel.h"
+#include "models/JobTableModel.h"
 #include "network/RestClient.h"
 #include "hardware/KillSwitch.h"
 #include "hardware/KillSwitchBridge.h"
@@ -233,6 +234,9 @@ int main(int argc, char *argv[])
     auto* store = algae::engine::GlobalStore::instance();
     auto* alertDag = new algae::engine::AlertDag(&app);
     auto* reconciler = new algae::engine::StateReconciler(&app);
+    reconciler->setFlushCallback([store](const algae::engine::IngestMessage& msg) {
+        store->routePayload(msg);
+    });
 
     // ZMQ Receiver (pinned to CPU core 2)
     auto receiver = std::make_unique<algae::engine::ZmqReceiver>(
@@ -243,7 +247,7 @@ int main(int argc, char *argv[])
 
     // UI Synchronizer (60 Hz frame-paced drain with Protobuf Arena)
     auto* synchronizer = new algae::engine::UiSynchronizer(
-        receiver.get(), store, &app
+        receiver.get(), store, reconciler, &app
     );
 
     // Connect data loss signal to store
@@ -264,11 +268,20 @@ int main(int argc, char *argv[])
         "http://127.0.0.1:8000", &app
     );
 
+    // Typed Operations model (must exist before signal lambdas capture it)
+    auto* jobsModel = new algae::models::JobTableModel(&app);
+
     // Connect RestClient::controlStateReceived → GlobalStore silent updates
     QObject::connect(restClient, &algae::network::RestClient::controlStateReceived,
-                     store, [store](const std::string& jsonStr) {
+                     store, [store, reconciler](const std::string& jsonStr) {
         QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(jsonStr));
-        if (!doc.isObject()) return;
+        if (!doc.isObject()) {
+            qWarning() << "controlStateReceived: malformed JSON payload";
+            store->markDataDegraded();
+            return;
+        }
+        store->markControlStateUpdated();
+        reconciler->onBootstrapComplete(doc);
         auto obj = doc.object();
 
         // execution_mode: "noop" | "paper" | "ibkr"
@@ -282,6 +295,142 @@ int main(int argc, char *argv[])
         // vol_regime_override: string | null
         if (obj.contains("vol_regime_override"))
             store->setVolRegimeOverride(obj["vol_regime_override"].toString());
+
+        if (!obj.contains("execution_mode") && !obj.contains("paused") && !obj.contains("vol_regime_override")) {
+            qWarning() << "controlStateReceived: payload missing expected control fields";
+            store->markDataDegraded();
+        }
+    });
+
+    QObject::connect(restClient, &algae::network::RestClient::jobGraphReceived,
+                     store, [store, jobsModel](const std::string& jsonStr) {
+        QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(jsonStr));
+        if (!doc.isObject()) {
+            qWarning() << "jobGraphReceived: malformed JSON payload";
+            store->markDataDegraded();
+            return;
+        }
+        const auto jobsVal = doc.object().value("jobs");
+        if (!jobsVal.isArray()) {
+            qWarning() << "jobGraphReceived: missing jobs array";
+            store->markDataDegraded();
+            return;
+        }
+        auto jobs = jobsVal.toArray();
+        int running = 0;
+        int failed = 0;
+        QVector<algae::models::JobRow> rows;
+        rows.reserve(jobs.size());
+        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+
+        for (const auto& item : jobs) {
+            if (!item.isObject()) {
+                continue;
+            }
+            const auto obj = item.toObject();
+            const auto status = obj.value("last_status").toString("unknown");
+            if (status == "running") ++running;
+            if (status == "failed") ++failed;
+
+            const auto deps = obj.value("deps").toArray();
+            const auto sessionsArray = obj.value("sessions").toArray();
+            QStringList sessions;
+            for (const auto& session : sessionsArray) {
+                sessions << session.toString();
+            }
+
+            qint64 freshnessMs = 0;
+            const auto lastStarted = obj.value("last_started").toString();
+            if (!lastStarted.isEmpty()) {
+                const auto dt = QDateTime::fromString(lastStarted, Qt::ISODate);
+                if (dt.isValid()) {
+                    freshnessMs = dt.msecsTo(QDateTime::currentDateTimeUtc());
+                    if (freshnessMs < 0) freshnessMs = 0;
+                }
+            }
+
+            algae::models::JobRow row;
+            row.name = obj.value("name").toString("(unnamed)");
+            row.status = status;
+            row.lastRun = lastStarted;
+            row.durationSeconds = obj.value("last_duration_s").toDouble(0.0);
+            row.sessions = sessions.join(", ");
+            row.dependencyCount = deps.size();
+            row.errorSummary = obj.value("last_error").toString();
+            row.freshnessMs = freshnessMs > 0 ? freshnessMs : nowMs - store->jobsLastUpdateMs();
+            rows.push_back(row);
+        }
+
+        jobsModel->setRows(rows);
+        store->setJobStats(jobs.size(), running, failed);
+        store->markJobsUpdated();
+    });
+
+    QObject::connect(restClient, &algae::network::RestClient::brokerStatusReceived,
+                     store, [store](const std::string& jsonStr) {
+        QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(jsonStr));
+        if (!doc.isObject()) {
+            qWarning() << "brokerStatusReceived: malformed JSON payload";
+            store->markDataDegraded();
+            return;
+        }
+
+        auto obj = doc.object();
+        if (!obj.contains("connected")) {
+            qWarning() << "brokerStatusReceived: missing connected field";
+            store->markDataDegraded();
+            return;
+        }
+        store->setBrokerConnected(obj.value("connected").toBool());
+    });
+
+    QObject::connect(restClient, &algae::network::RestClient::guardrailStatusReceived,
+                     store, [store](const std::string& jsonStr) {
+        QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(jsonStr));
+        if (!doc.isObject()) {
+            qWarning() << "guardrailStatusReceived: malformed JSON payload";
+            store->markDataDegraded();
+            return;
+        }
+        const auto obj = doc.object();
+        if (obj.value("schema_version").toString() != "guardrails_status.v1" || !obj.value("guardrails").isArray()) {
+            qWarning() << "guardrailStatusReceived: invalid guardrail contract";
+            store->markDataDegraded();
+            return;
+        }
+
+        QVariantList rows;
+        const auto guardrails = obj.value("guardrails").toArray();
+        rows.reserve(guardrails.size());
+        for (const auto& item : guardrails) {
+            if (!item.isObject()) {
+                continue;
+            }
+            const auto g = item.toObject();
+            QVariantMap row;
+            row["id"] = g.value("id").toString();
+            row["label"] = g.value("label").toString();
+            row["status"] = g.value("status").toString("unknown");
+            row["value"] = g.value("value").toVariant();
+            row["threshold"] = g.value("threshold").toVariant();
+            row["comparator"] = g.value("comparator").toString();
+            row["breach"] = g.value("breach").toBool(false);
+            row["updated_at"] = g.value("updated_at").toString();
+            row["source_job"] = g.value("source_job").toString();
+            row["reason"] = g.value("reason").toVariant();
+            rows.push_back(row);
+        }
+        if (rows.size() < 5) {
+            qWarning() << "guardrailStatusReceived: incomplete guardrail list";
+            store->markDataDegraded();
+        }
+        store->setGuardrails(rows);
+    });
+
+    QObject::connect(restClient, &algae::network::RestClient::networkError,
+                     store, [store](const QString& endpoint, const QString& msg) {
+        qWarning() << "REST network error on" << endpoint << ":" << msg;
+        store->markBackendDisconnected();
     });
 
     // Periodic C++ REST poll for control state + portfolio (30s)
@@ -289,13 +438,25 @@ int main(int argc, char *argv[])
     QObject::connect(restPollTimer, &QTimer::timeout, restClient, [restClient]() {
         restClient->getControlState();
         restClient->getPortfolioSummary();
+        restClient->getJobGraph();
+        restClient->getBrokerStatus();
+        restClient->getGuardrailStatus();
     });
     restPollTimer->start(30000);
     // Fire immediately on startup
     QTimer::singleShot(2000, restClient, [restClient]() {
         restClient->getControlState();
         restClient->getPortfolioSummary();
+        restClient->getJobGraph();
+        restClient->getBrokerStatus();
+        restClient->getGuardrailStatus();
     });
+
+    auto* freshnessTimer = new QTimer(&app);
+    QObject::connect(freshnessTimer, &QTimer::timeout, store, [store]() {
+        store->updateFreshness();
+    });
+    freshnessTimer->start(5000);
 
     // ── Data Models ────────────────────────────────────────────────
     auto* executionGrid = new algae::models::ArrowTableModel(&app);
@@ -305,7 +466,12 @@ int main(int argc, char *argv[])
     QObject::connect(restClient, &algae::network::RestClient::portfolioSummaryReceived,
                      positionsGrid, [positionsGrid, store](const std::string& jsonStr) {
         QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(jsonStr));
-        if (!doc.isObject()) return;
+        if (!doc.isObject()) {
+            qWarning() << "portfolioSummaryReceived: malformed JSON payload";
+            store->markDataDegraded();
+            return;
+        }
+        store->markPortfolioUpdated();
         auto obj = doc.object();
 
         // Update aggregate portfolio values in GlobalStore
@@ -394,10 +560,12 @@ int main(int argc, char *argv[])
     ctx->setContextProperty("RestClient", restClient);
     ctx->setContextProperty("ExecutionGrid", executionGrid);
     ctx->setContextProperty("PositionsGrid", positionsGrid);
+    ctx->setContextProperty("JobsModel", jobsModel);
     ctx->setContextProperty("WorkspaceManager", &workspaceManager);
     ctx->setContextProperty("StateReconciler", reconciler);
     ctx->setContextProperty("FidoGateway", fidoGateway);
     ctx->setContextProperty("KillSwitch", killSwitchBridge);
+    ctx->setContextProperty("BuildEnvironment", algae::config::BuildEnvironment::instance());
 
 #ifdef Algae_ENV_SIM
     ctx->setContextProperty("isSimulation", true);

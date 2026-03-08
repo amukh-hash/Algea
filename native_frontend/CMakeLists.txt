@@ -95,6 +95,7 @@ set(ENGINE_SOURCES
 set(MODEL_SOURCES
     src/models/ArrowTableModel.cpp
     src/models/ArrowBuilderWorker.cpp
+    src/models/JobTableModel.cpp
 )
 
 set(RENDERING_SOURCES

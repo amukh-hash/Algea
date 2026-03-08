@@ -91,6 +91,8 @@ void UiSynchronizer::drainQueue() {
         ++processed_this_frame;
     }
 
+    m_store->commitFrameUpdates();
+
     if (processed_this_frame > 0) {
         Q_EMIT frameDrained(processed_this_frame);
     }
