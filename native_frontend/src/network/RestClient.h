@@ -37,6 +37,9 @@ public:
     Q_INVOKABLE void getPortfolioSummary();
     Q_INVOKABLE void getRiskChecks();
     Q_INVOKABLE void getControlState();
+    Q_INVOKABLE void getJobGraph();
+    Q_INVOKABLE void getBrokerStatus();
+    Q_INVOKABLE void getGuardrailStatus();
 
 Q_SIGNALS:
     // We Q_EMIT pointers to avoid deep copying large protobufs, or refs based on usage. 
@@ -47,6 +50,9 @@ Q_SIGNALS:
     void portfolioSummaryReceived(const std::string& debug_str);
     void riskChecksReceived(const std::string& debug_str);
     void controlStateReceived(const std::string& debug_str);
+    void jobGraphReceived(const std::string& debug_str);
+    void brokerStatusReceived(const std::string& debug_str);
+    void guardrailStatusReceived(const std::string& debug_str);
     void networkError(const QString& endpoint, const QString& errorMessage);
 
 private:

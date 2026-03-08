@@ -58,6 +58,51 @@ void RestClient::getRiskChecks() {
     });
 }
 
+
+void RestClient::getJobGraph() {
+    QNetworkRequest req(QUrl(m_base_url + "/api/control/job-graph"));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    auto* reply = m_nam->get(req);
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT networkError("/api/control/job-graph", reply->errorString());
+            return;
+        }
+        Q_EMIT jobGraphReceived(reply->readAll().toStdString());
+    });
+}
+
+void RestClient::getBrokerStatus() {
+    QNetworkRequest req(QUrl(m_base_url + "/api/control/broker-status"));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    auto* reply = m_nam->get(req);
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT networkError("/api/control/broker-status", reply->errorString());
+            return;
+        }
+        Q_EMIT brokerStatusReceived(reply->readAll().toStdString());
+    });
+}
+
+void RestClient::getGuardrailStatus() {
+    QNetworkRequest req(QUrl(m_base_url + "/api/control/guardrails/status"));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    auto* reply = m_nam->get(req);
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT networkError("/api/control/guardrails/status", reply->errorString());
+            return;
+        }
+        Q_EMIT guardrailStatusReceived(reply->readAll().toStdString());
+    });
+}
 void RestClient::getControlState() {
     QNetworkRequest req(QUrl(m_base_url + "/api/control/state"));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");

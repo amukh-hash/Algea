@@ -33,6 +33,44 @@ _ARTIFACT_ROOT = Path("backend/artifacts/orchestrator")
 _DB_PATH = Path("backend/artifacts/orchestrator_state/state.sqlite3")
 _TIMEOUT_S = 5.0
 
+_GUARDRAIL_DEFS: tuple[dict[str, Any], ...] = (
+    {
+        "id": "ece_tracker",
+        "label": "ECE Tracker",
+        "metric_candidates": ("ece", "ece_score", "calibration_ece"),
+        "limit_candidates": ("ece_max", "max_ece", "ece"),
+        "comparator": "<=",
+    },
+    {
+        "id": "mmd_liveguard",
+        "label": "MMD LiveGuard",
+        "metric_candidates": ("mmd", "mmd_score", "distribution_drift_mmd"),
+        "limit_candidates": ("mmd_max", "max_mmd", "mmd"),
+        "comparator": "<=",
+    },
+    {
+        "id": "max_drawdown",
+        "label": "Max Drawdown",
+        "metric_candidates": ("max_drawdown", "drawdown", "intraday_drawdown"),
+        "limit_candidates": ("max_drawdown", "max_intraday_drawdown", "drawdown_limit"),
+        "comparator": "<=",
+    },
+    {
+        "id": "gap_risk_filter",
+        "label": "Gap Risk Filter",
+        "metric_candidates": ("gap_risk", "overnight_gap_risk"),
+        "limit_candidates": ("gap_risk_max", "max_gap_risk"),
+        "comparator": "<=",
+    },
+    {
+        "id": "slippage_monitor",
+        "label": "Slippage Monitor",
+        "metric_candidates": ("slippage_bps", "avg_slippage_bps"),
+        "limit_candidates": ("max_slippage_bps", "slippage_bps_max"),
+        "comparator": "<=",
+    },
+)
+
 
 def _provider():
     return get_control_state_provider(_DB_PATH)
@@ -51,6 +89,94 @@ def _require_auth() -> None:
     # lightweight guard for current router call style:
     # callers in tests can disable via AUTH_REQUIRED=0.
     raise HTTPException(status_code=401, detail="auth_required")
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        out = float(value)
+        if out != out or out in (float("inf"), float("-inf")):
+            return None
+        return out
+    except (TypeError, ValueError):
+        return None
+
+
+def _find_metric(data: dict[str, Any], candidates: tuple[str, ...]) -> float | None:
+    for key in candidates:
+        val = _safe_float(data.get(key))
+        if val is not None:
+            return val
+    return None
+
+
+def _load_latest_risk_payload() -> tuple[str, dict[str, Any] | None]:
+    day_candidates = [date.today().isoformat()]
+    if _ARTIFACT_ROOT.exists():
+        for child in sorted(_ARTIFACT_ROOT.iterdir(), reverse=True):
+            if child.is_dir() and child.name not in day_candidates:
+                day_candidates.append(child.name)
+
+    for day in day_candidates:
+        day_root = _ARTIFACT_ROOT / day
+        for candidate in (
+            day_root / "risk_checks.json",
+            day_root / "reports" / "risk_checks.json",
+            day_root / "risk" / "risk_checks.json",
+        ):
+            if not candidate.exists():
+                continue
+            try:
+                raw = json.loads(candidate.read_text(encoding="utf-8"))
+            except Exception as exc:
+                logger.warning("guardrails_status: failed to parse %s: %s", candidate, exc)
+                return day, None
+
+            if isinstance(raw, dict) and "risk_checks" in raw and isinstance(raw["risk_checks"], dict):
+                return day, raw["risk_checks"]
+            if isinstance(raw, dict):
+                return day, raw
+            return day, None
+    return day_candidates[0], None
+
+
+def _guardrail_row(defn: dict[str, Any], payload: dict[str, Any], checked_at: str, violations_blob: str) -> dict[str, Any]:
+    metrics = payload.get("metrics") if isinstance(payload.get("metrics"), dict) else {}
+    limits = payload.get("limits") if isinstance(payload.get("limits"), dict) else {}
+
+    value = _find_metric(metrics, defn["metric_candidates"])
+    threshold = _find_metric(limits, defn["limit_candidates"])
+
+    marker = defn["id"].replace("_", "")
+    has_violation = marker in violations_blob
+
+    breach = has_violation
+    if value is not None and threshold is not None and defn["comparator"] == "<=":
+        breach = breach or value > threshold
+
+    if breach:
+        status = "breached"
+        reason = "limit_breached"
+    elif value is not None or threshold is not None:
+        status = "armed"
+        reason = None
+    else:
+        status = "unknown"
+        reason = "unwired"
+
+    return {
+        "id": defn["id"],
+        "label": defn["label"],
+        "status": status,
+        "value": value,
+        "threshold": threshold,
+        "comparator": defn["comparator"],
+        "breach": breach,
+        "updated_at": checked_at,
+        "source_job": "risk_checks_global",
+        "reason": reason,
+    }
 
 
 # ── Request models ───────────────────────────────────────────────────
@@ -96,6 +222,60 @@ def get_state() -> dict[str, Any]:
     snap = _provider().snapshot(consumer="control_api")
     bridge_control_snapshot(snap)
     return snap
+
+
+@router.get("/guardrails/status")
+def get_guardrails_status() -> dict[str, Any]:
+    """Return deterministic guardrail status contract for operator UI."""
+    asof, payload = _load_latest_risk_payload()
+    now = datetime.now(timezone.utc)
+    asof_ts = now.isoformat()
+
+    if payload is None:
+        return {
+            "asof": asof_ts,
+            "schema_version": "guardrails_status.v1",
+            "freshness_ms": 0,
+            "backend_reachable": False,
+            "guardrails": [
+                {
+                    "id": d["id"],
+                    "label": d["label"],
+                    "status": "unknown",
+                    "value": None,
+                    "threshold": None,
+                    "comparator": d["comparator"],
+                    "breach": False,
+                    "updated_at": None,
+                    "source_job": "risk_checks_global",
+                    "reason": "unwired",
+                }
+                for d in _GUARDRAIL_DEFS
+            ],
+            "source_asof": asof,
+        }
+
+    checked_at = payload.get("checked_at") if isinstance(payload.get("checked_at"), str) else asof_ts
+
+    freshness_ms = 0
+    try:
+        dt = datetime.fromisoformat(checked_at.replace("Z", "+00:00"))
+        freshness_ms = max(0, int((now - dt).total_seconds() * 1000))
+    except Exception:
+        checked_at = asof_ts
+
+    violations = payload.get("violations") if isinstance(payload.get("violations"), list) else []
+    violations_blob = json.dumps(violations).lower()
+    rows = [_guardrail_row(d, payload, checked_at, violations_blob) for d in _GUARDRAIL_DEFS]
+
+    return {
+        "asof": asof_ts,
+        "schema_version": "guardrails_status.v1",
+        "freshness_ms": freshness_ms,
+        "backend_reachable": True,
+        "guardrails": rows,
+        "source_asof": asof,
+    }
 
 
 @router.put("/pause")

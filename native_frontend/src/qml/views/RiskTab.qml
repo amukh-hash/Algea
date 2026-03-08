@@ -1,81 +1,129 @@
 import QtQuick 6.8
 import QtQuick.Controls 6.8
 import QtQuick.Layouts 6.8
+import "../components"
 
 Rectangle {
-    color: GlobalStore.statArbCorrelation > 2.0 ? "#200000" : "#0F111A"
-    Behavior on color { ColorAnimation { duration: 300 } }
+    color: "#090C14"
+
     ColumnLayout {
-        anchors.fill: parent; anchors.margins: 16; spacing: 12
-        Label { text: "RISK & SAFEGUARDS"; color: "#64748B"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
-        RowLayout { Layout.fillWidth: true; spacing: 12
-            Rectangle { Layout.fillWidth: true; height: 100; radius: 8; color: GlobalStore.statArbCorrelation > 2.0 ? "#3B0000" : "#141622"; border.color: GlobalStore.statArbCorrelation > 2.0 ? "#EF4444" : "#2A2D3E"; border.width: 1
-                ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
-                    Label { text: "STATARB CORRELATION"; color: "#64748B"; font.pixelSize: 10; font.letterSpacing: 1 }
-                    Label { text: GlobalStore.statArbCorrelation.toFixed(4); color: GlobalStore.statArbCorrelation > 2.0 ? "#EF4444" : "#E2E8F0"; font.pixelSize: 22; font.bold: true; font.family: "Consolas" }
-                    Label { text: "Threshold: < 2.0"; color: "#64748B"; font.pixelSize: 9 }
-                }
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 10
+
+        SectionHeader { title: "Risk & Guardrails"; subtitle: "Live bindings only. Unknown/unwired states are explicit." }
+
+        SeverityBanner {
+            tone: GlobalStore.backendReachable ? "warn" : "danger"
+            message: GlobalStore.dataFreshness === "fresh" ? "" : (GlobalStore.backendReachable ? "Risk data stale/degraded" : "Risk data disconnected")
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            MetricCard {
+                Layout.fillWidth: true
+                height: 88
+                title: "StatArb Correlation"
+                value: GlobalStore.statArbCorrelation.toFixed(4)
+                subtitle: "Threshold <= 2.0"
+                valueColor: GlobalStore.statArbCorrelation > 2.0 ? "#EF4444" : "#22C55E"
             }
-            Rectangle { Layout.fillWidth: true; height: 100; radius: 8; color: "#141622"; border.color: "#2A2D3E"; border.width: 1
-                ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
-                    Label { text: "VOL REGIME"; color: "#64748B"; font.pixelSize: 10; font.letterSpacing: 1 }
-                    Label { text: GlobalStore.volRegimeOverride || "Normal"; color: "#E2E8F0"; font.pixelSize: 22; font.bold: true }
-                    Label { text: "Auto-detected"; color: "#64748B"; font.pixelSize: 9 }
-                }
+            MetricCard {
+                Layout.fillWidth: true
+                height: 88
+                title: "Vol Regime"
+                value: GlobalStore.volRegimeOverride.length > 0 ? GlobalStore.volRegimeOverride : "UNAVAILABLE"
+                subtitle: GlobalStore.volRegimeOverride.length > 0 ? "Control state" : "No backend vol-regime feed"
+                valueColor: GlobalStore.volRegimeOverride.length > 0 ? "#E8EDF8" : "#F59E0B"
             }
-            Rectangle { Layout.fillWidth: true; height: 100; radius: 8; color: AlertEngine.activeAlertCount > 0 ? "#3B0000" : "#141622"; border.color: AlertEngine.activeAlertCount > 0 ? "#EF4444" : "#2A2D3E"; border.width: 1
-                ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 6
-                    Label { text: "ACTIVE ALERTS"; color: "#64748B"; font.pixelSize: 10; font.letterSpacing: 1 }
-                    Label { text: AlertEngine.activeAlertCount.toString(); color: AlertEngine.activeAlertCount > 0 ? "#EF4444" : "#22C55E"; font.pixelSize: 22; font.bold: true }
-                    Label { text: "Threshold: 0"; color: "#64748B"; font.pixelSize: 9 }
-                }
+            MetricCard {
+                Layout.fillWidth: true
+                height: 88
+                title: "Active Alerts"
+                value: AlertEngine.activeAlertCount.toString()
+                subtitle: "Alert DAG"
+                valueColor: AlertEngine.activeAlertCount > 0 ? "#EF4444" : "#22C55E"
             }
         }
-        // OOB Kill Switch — Per-Sleeve Interactive Toggles
-        Rectangle { Layout.fillWidth: true; height: 200; radius: 8; color: "#141622"; border.color: "#2A2D3E"; border.width: 1
-            ColumnLayout { anchors.fill: parent; anchors.margins: 16; spacing: 8
-                Label { text: "OOB KILL SWITCH — SHARED MEMORY CONTROL PLANE"; color: "#EF4444"; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
-                Label { text: "Writes atomically to AlgaeControlPlane SHM. Bypasses TCP/REST — sub-microsecond latency."; color: "#64748B"; font.pixelSize: 10 }
-                Repeater { model: ["0|Kronos (PatchTST)|kronos", "1|CO→OC Reversal|cooc", "2|StatArb Pairs|statarb", "3|TFT Forecaster|tft"]
-                    Rectangle { Layout.fillWidth: true; height: 36; radius: 4; color: "#1A1D2E"
-                        RowLayout { anchors.fill: parent; anchors.margins: 8; spacing: 12
-                            Rectangle { width: 8; height: 8; radius: 4; color: killSw.checked ? "#22C55E" : "#EF4444" }
-                            Label { text: modelData.split("|")[1]; color: "#E2E8F0"; font.pixelSize: 12; Layout.fillWidth: true }
-                            Label { text: killSw.checked ? "ARMED" : "HALTED"; color: killSw.checked ? "#22C55E" : "#EF4444"; font.pixelSize: 9; font.bold: true }
-                            Switch { id: killSw; checked: true; palette.highlight: "#22C55E" }
-                            MouseArea {
-                                anchors.fill: killSw
-                                onClicked: {
-                                    var sleeveId = parseInt(modelData.split("|")[0])
-                                    if (killSw.checked) {
-                                        KillSwitch.haltSleeve(sleeveId, "Manual PM Override via Tab 3")
-                                        killSw.checked = false
-                                    } else {
-                                        KillSwitch.resumeSleeve(sleeveId)
-                                        killSw.checked = true
-                                    }
-                                }
-                            }
+
+        OperatorTable {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            title: "Guardrail Matrix"
+            subtitle: "Source: /api/control/guardrails/status (breached/unknown rows emphasized)"
+            modelData: ListModel {
+                id: guardrailModel
+            }
+            columns: [
+                {"title": "Guardrail", "role": "label", "width": 180},
+                {"title": "Status", "role": "status", "width": 95},
+                {"title": "Value", "role": "valueText", "width": 90},
+                {"title": "Threshold", "role": "thresholdText", "width": 90},
+                {"title": "Reason", "role": "reasonText", "width": 140},
+                {"title": "Source", "role": "source_job", "width": 130}
+            ]
+            emptyText: "Guardrail contract unavailable"
+        }
+
+        PanelScaffold {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 200
+            title: "Kill Switch"
+            subtitle: "Authoritative shared-memory state"
+
+            Repeater {
+                model: ["core", "selector", "vrp"]
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 36
+                    radius: 5
+                    color: "#121C2F"
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        Label { text: modelData.toUpperCase(); color: "#E2E8F0"; Layout.preferredWidth: 90 }
+                        StatusBadge {
+                            text: KillSwitch.isSleeveHalted(modelData) ? "HALTED" : "RUNNING"
+                            tone: KillSwitch.isSleeveHalted(modelData) ? "danger" : "ok"
+                        }
+                        Item { Layout.fillWidth: true }
+                        Button {
+                            text: KillSwitch.isSleeveHalted(modelData) ? "Resume" : "Halt"
+                            onClicked: KillSwitch.toggleSleeve(modelData, !KillSwitch.isSleeveHalted(modelData))
                         }
                     }
                 }
             }
         }
-        // Circuit Breakers
-        Rectangle { Layout.fillWidth: true; Layout.fillHeight: true; radius: 8; color: "#141622"; border.color: "#2A2D3E"; border.width: 1
-            ColumnLayout { anchors.fill: parent; anchors.margins: 16; spacing: 8
-                Label { text: "CIRCUIT BREAKERS"; color: "#64748B"; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 2 }
-                Repeater { model: ["ECE Tracker — Expected Calibration Error halt|Armed", "MMD LiveGuard — Covariate shift detector|Armed", "Max Drawdown — 2% intraday limit|Armed", "Gap Risk Filter — Overnight VIX protection|Active", "Slippage Monitor — Fill quality tracking|Monitoring"]
-                    Rectangle { Layout.fillWidth: true; height: 38; radius: 4; color: "#1A1D2E"
-                        RowLayout { anchors.fill: parent; anchors.margins: 10; spacing: 12
-                            Rectangle { width: 8; height: 8; radius: 4; color: modelData.split("|")[1] === "Armed" ? "#22C55E" : modelData.split("|")[1] === "Active" ? "#06B6D4" : "#F59E0B" }
-                            Label { text: modelData.split("|")[0]; color: "#E2E8F0"; font.pixelSize: 11; Layout.fillWidth: true }
-                            Label { text: modelData.split("|")[1]; color: modelData.split("|")[1] === "Armed" ? "#22C55E" : "#F59E0B"; font.pixelSize: 9; font.bold: true }
-                        }
-                    }
-                }
-                Item { Layout.fillHeight: true }
-            }
+    }
+
+    function formatNumber(v) {
+        if (v === undefined || v === null || v === "") return "—";
+        const n = Number(v);
+        if (isNaN(n)) return "—";
+        return n.toFixed(4);
+    }
+
+    function reloadGuardrails() {
+        guardrailModel.clear();
+        const rows = GlobalStore.guardrails || [];
+        for (let i = 0; i < rows.length; ++i) {
+            const r = rows[i];
+            guardrailModel.append({
+                "label": r.label || r.id || "unknown",
+                "status": (r.status || "unknown").toUpperCase(),
+                "valueText": formatNumber(r.value),
+                "thresholdText": formatNumber(r.threshold),
+                "reasonText": r.reason ? String(r.reason) : "—",
+                "source_job": r.source_job || "—"
+            });
         }
+    }
+
+    Component.onCompleted: reloadGuardrails()
+    Connections {
+        target: GlobalStore
+        function onHealthStatusChanged() { reloadGuardrails(); }
     }
 }
