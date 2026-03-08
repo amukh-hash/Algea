@@ -48,6 +48,15 @@ class OrchestratorConfig:
     vrp_model_alias: str = field(default_factory=lambda: os.getenv("VRP_MODEL_ALIAS", "prod"))
     enable_statarb_sleeve: bool = field(default_factory=lambda: os.getenv("ENABLE_STATARB_SLEEVE", "0") == "1")
     itransformer_model_alias: str = field(default_factory=lambda: os.getenv("ITRANSFORMER_MODEL_ALIAS", "prod"))
+    # ── Intent Supremacy Feature Flags ────────────────────────────────────
+    # These flags control the phased migration to the canonical sleeve output
+    # and unified risk/planning pipeline. All default OFF.
+    FF_CANONICAL_SLEEVE_OUTPUTS: bool = field(default_factory=lambda: os.getenv("FF_CANONICAL_SLEEVE_OUTPUTS", "0") == "1")
+    FF_CANONICAL_RISK_ENGINE: bool = field(default_factory=lambda: os.getenv("FF_CANONICAL_RISK_ENGINE", "0") == "1")
+    FF_CANONICAL_PLANNER: bool = field(default_factory=lambda: os.getenv("FF_CANONICAL_PLANNER", "0") == "1")
+    FF_WRITE_COMPAT_TARGETS: bool = field(default_factory=lambda: os.getenv("FF_WRITE_COMPAT_TARGETS", "1") == "1")
+    FF_STRICT_CORE_CONFIG: bool = field(default_factory=lambda: os.getenv("FF_STRICT_CORE_CONFIG", "1") == "1")
+    FF_STRICT_STATARB_DECOMPOSITION: bool = field(default_factory=lambda: os.getenv("FF_STRICT_STATARB_DECOMPOSITION", "1") == "1")
     session_windows: dict[str, SessionWindow] = field(
         default_factory=lambda: {
             "PREMARKET": SessionWindow("07:00", "09:25"),

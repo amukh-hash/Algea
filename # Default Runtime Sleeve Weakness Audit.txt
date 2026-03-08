@@ -1,0 +1,731 @@
+# Default Runtime Sleeve Weakness Audit (Proof-First)
+
+## 1. Executive summary
+
+### Sleeve set and default activation status
+
+- `core` (`handle_signals_generate_core`) is active on the default job graph during `PREMARKET` and always emits artifacts unless the handler throws. It emits both `targets/core_targets.json` and `intents/core_intents.json`. Default path is active.  
+- `vrp` (`handle_signals_generate_vrp`) is active on the default job graph during `PREMARKET`, but its **model-backed** path is feature-gated by `enable_vol_surface_vrp` / `ENABLE_VOL_SURFACE_VRP`; default is off, so the default branch is the legacy bridge (`scripts.run_three_sleeves_ibkr.run_vrp`).  
+- `selector` (`handle_signals_generate_selector`) is active on the default job graph during `PREMARKET` and `INTRADAY`, but SMoE mode is feature-gated by `enable_smoe_selector` / `ENABLE_SMOE_SELECTOR`; default is off, so the default branch is legacy `_load_selector_signals`.  
+- `futures_overnight` (`handle_signals_generate_futures_overnight`) is in default jobs but hard-disabled unless `enable_chronos2_sleeve` / `ENABLE_CHRONOS2_SLEEVE` is true (default false).  
+- `statarb` (`handle_signals_generate_statarb`) is in default jobs but hard-disabled unless `enable_statarb_sleeve` / `ENABLE_STATARB_SLEEVE` is true (default false).
+
+### Canonical vs translated vs rollback posture
+
+- Runtime always executes the intent aggregation barrier (`collect_and_validate_intents`), but order planning/routing still defaults to legacy target-based behavior because canonical cutover requires both `FF_INTENT_CANONICAL_TRANSLATOR` and `FF_INTENT_CANONICAL_PLANNER`, both defaulting false in `_canonical_flags`.  
+- Therefore, in default configuration, sleeves influence routing through `*_targets.json`; canonical intent translation/parity artifacts are compatibility mode unless explicitly enabled.
+
+### Major weakness themes across sleeves (code-grounded)
+
+1. **Feature-gated “real” sleeves are off by default**, leaving legacy or simplified branches as the real production baseline (`vrp`, `selector`, `futures_overnight`, `statarb`).  
+2. **Synthetic inputs inside active handlers** (hardcoded arrays for SMoE/Chronos2 path, static tenor IV dict in VRP path) reduce confidence that runtime behavior reflects market data quality.  
+3. **Output-contract mismatch risk**: statarb default handler emits pair-centric rows lacking `symbol` / `target_weight`, which translation explicitly treats as untranslatable in canonical mode.  
+4. **Dual risk/planning planes** coexist: intent barrier risk gateway validates ingested intents, while `risk_checks_global` separately validates target-derived exposures; default routing depends on the latter, not the barrier.  
+5. **Testing skew**: many helper-level and model-endpoint tests exist, but fewer tests prove fully realistic end-to-end sleeve behavior with live data dependencies.
+
+### High-level ranking (from implementation evidence, not PnL claims)
+
+- **Strategy maturity**: `selector (legacy path)` ≈ `vrp (legacy bridge)` > `core` > `futures_overnight` > `statarb (default v3 handler)`.
+- **Execution readiness (default config)**: `core` > `selector (legacy)` > `vrp (legacy)` >> `futures_overnight`/`statarb` (disabled by default).
+- **Architectural cleanliness**: `futures_overnight strategy class` > `selector sleeve class` > `vrp sleeve class` > `core handler` > `statarb v3 handler`.
+- **Portfolio usefulness in default runtime**: `core + selector + vrp` form effective active set; `futures_overnight` and `statarb` contribute nothing unless flags are toggled.
+
+---
+
+## 2. Proof baseline
+
+### 2.1 Proven default runtime path
+
+1. Entrypoint script is `backend/scripts/orchestrate.py`: parses CLI, builds broker (`stub` default CLI choice, or `ibkr`), constructs `Orchestrator`, and calls `Orchestrator.run_once`.  
+2. `Orchestrator.__init__` sets `self.jobs = jobs or default_jobs()` and creates state/control/lock subsystems.  
+3. `Orchestrator.run_once`:
+   - normalizes mode aliases (`live` -> `ibkr`),
+   - filters jobs via `filtered_jobs(...)`,
+   - executes jobs in dependency order,
+   - then always runs `collect_and_validate_intents(...)` intent barrier,
+   - writes tick artifact and model version metadata.
+
+### 2.2 Where sleeves enter job graph
+
+`default_jobs()` defines sleeve jobs and dependencies:
+
+- `signals_generate_core` depends on `concept_drift_check`
+- `signals_generate_vrp` depends on `concept_drift_check`
+- `signals_generate_selector` depends on `concept_drift_check`
+- `signals_generate_futures_overnight` depends on `concept_drift_check`
+- `signals_generate_statarb` depends on `concept_drift_check`
+
+All five are upstream of `ece_calibration_check` -> `risk_checks_global` -> `order_build_and_route`.
+
+### 2.3 How sleeve outputs reach risk, planning, broker execution, and intent barrier
+
+- Sleeve handlers write `signals/*.json` and `targets/*.json`; `core` also writes `intents/core_intents.json`.  
+- `risk_checks_global` loads required target artifacts (`_load_targets_required`), computes exposure and violations, and optionally translates targets to intents if canonical flags are on.  
+- `handle_order_build_and_route` loads risk report + targets (or translated intents under canonical), computes position deltas, writes `orders/orders.json`, and routes via `ctx["broker"].place_orders(...)` unless `dry_run`.  
+- Separately, `collect_and_validate_intents` scans `intents/` and `targets/*_intents.json`, validates via `validate_and_store_intents` in `risk_gateway`, and stores into `order_intents`.
+
+### 2.4 Where portfolio aggregation actually happens
+
+There are two aggregations:
+
+1. **Legacy/default planning aggregation**: `handle_order_build_and_route` builds `combined[symbol]` by summing `target_weight` across sleeves (plus allocator scaling if configured). This directly drives order sizing and routing in default mode.  
+2. **Intent barrier aggregation**: `collect_and_validate_intents` aggregates canonical `TargetIntent` rows and submits to risk gateway DB persistence. This is safety/intent state but not the default planner source unless canonical cutover is enabled.
+
+---
+
+## 3. Per-sleeve deep audit
+
+## 3.1 Core sleeve
+
+### A. Sleeve identity
+
+- Handler: `backend/app/orchestrator/job_defs.py::handle_signals_generate_core`
+- Related files:
+  - config loader bridge: `backend/scripts/paper/run_paper_cycle_ibkr.py::_load_config`
+  - intent schema usage: `backend/app/core/schemas.py::TargetIntent` (via payload structure)
+- Relevant tests:
+  - orchestration/path tests: `backend/tests/test_orchestrator.py`
+  - canonical/rollback interaction tests: `backend/tests/test_pr6_canonical_cutover.py`
+
+### B. Strategy thesis
+
+- Conceptually emits a CO->OC reversal futures intent (commented as such).
+- In code, implementation is mostly configuration-driven intent emission with no in-handler market feature computation.
+- Thesis-to-code match: **partial** (execution artifact exists, but signal computation is not present in this handler).
+
+### C. Actual runtime behavior
+
+- Invoked by job `signals_generate_core` in `PREMARKET`.
+- Active default branch: always this handler.
+- Feature-flag branch: none.
+- Fallback branch: on exception and if `_allow_stub_signals(ctx)` permits, emits generic stub artifacts.
+- Writes:
+  - `signals/core_signals.json`
+  - `targets/core_targets.json`
+  - `intents/core_intents.json`
+- Emits native intents: **yes** (`core_intents.json`).
+- Emits `ml_risk`: **no**.
+
+### D. Data and feature quality review
+
+- Inputs are mostly static/config:
+  - `cooc_reversal_futures.yaml` target fields (`target_weight`, `symbol`, `multiplier`) via external loader.
+- No direct market data read in this handler.
+- Data dependency is brittle to config availability; missing config logs warning and falls back to `{}` (leading to default `target_weight=0.0`, `symbol='ES'`, `multiplier=50.0`).
+
+### E. Model / logic quality review
+
+- No model inference call here despite comment context; logic is intent-emitter style.
+- Sizing is direct from config/default, not computed from observed edge.
+- Assumptions hardcoded (`execution_phase='futures_open'`, `asset_class='FUTURE'`, `dte=-1`).
+- Production readiness: operationally routable but strategy logic appears externally delegated or thin.
+
+### F. Output shape and execution readiness
+
+- Outputs are planner-compatible in legacy target path (`symbol`, `target_weight`) and canonical intent path (`core_intents`).
+- Naturally canonical-compatible relative to other sleeves.
+- Fully routable on default planner because target artifact shape is valid.
+
+### G. Risk and safety behavior
+
+- Local fail-closed: exceptions re-raised unless stub signals allowed.
+- Downstream safety:
+  - intent barrier risk gateway enforces exposure cap and DTE-0 logic on intents,
+  - global target risk checks run later and can still fail independently.
+- Silent degradation risk: config loader failure can degrade to near-flat/placeholder intent without hard failure.
+
+### H. Testing quality
+
+- Coverage mainly at runtime-path level (orchestrator/cutover tests).
+- Tests confirm participation and planner interaction, not true strategy-signal validity.
+- Missing direct tests for config-missing behavior producing default intent values.
+
+### I. Specific weaknesses
+
+1. Strategy weaknesses
+- Sleeve does not calculate core alpha inside handler; strategy edge generation is opaque here.
+
+2. Implementation weaknesses
+- Broad try/except with optional stub fallback can mask root-cause failures in permissive modes.
+
+3. Data/feature weaknesses
+- Config defaults can silently create weak/flat exposure.
+
+4. Execution/routing weaknesses
+- Dual-path (native intent + legacy targets) can create conceptual drift in troubleshooting.
+
+5. Testing blind spots
+- No dedicated unit validating core intent payload semantics against external config variants.
+
+6. Architectural weaknesses
+- Core is partly canonical-native while peer sleeves remain target-first, creating uneven migration state.
+
+### J. Performance interpretation
+
+- Likely stable operationally (simple deterministic output path).
+- Alpha behavior likely narrow/externally determined.
+- Reliability high for artifact emission; strategy adaptiveness low inside this code path.
+
+### K. Verdict for this sleeve
+
+- Strongest: canonical-intent readiness and deterministic artifacts.
+- Weakest: strategy logic thin in-handler and heavily config-dependent.
+- Maturity: **partially ready (execution), limited strategy transparency**.
+
+---
+
+## 3.2 VRP sleeve
+
+### A. Sleeve identity
+
+- Handler: `handle_signals_generate_vrp` in `job_defs.py`.
+- Strategy/helper files:
+  - `backend/app/strategies/vrp/vrp_sleeve.py::VRPSleeve.generate_targets`
+  - `backend/app/strategies/vrp/vrp_features.py::build_vrp_history`
+  - `backend/app/strategies/vrp/vrp_decision.py::choose_tenor`
+  - `backend/app/strategies/vrp/vrp_risk.py::build_vrp_ml_risk`
+- Legacy bridge:
+  - `scripts.run_three_sleeves_ibkr.run_vrp`
+- Relevant tests (sample):
+  - `test_vrp_sleeve_uses_vol_forecast.py`
+  - `test_vrp_fail_closed_on_missing_forecast.py`
+  - `test_vrp_fail_closed_on_grid_forecast_missing.py`
+  - RL overlay tests (`test_vrp_rl_overlay_*`, fail-closed tests)
+
+### B. Strategy thesis
+
+- Designed to monetize IV-RV edge by tenor, with uncertainty/drift gates and optional RL overlay sizing/veto.
+- Code in `VRPSleeve` matches this thesis in model-backed path.
+- Default orchestrator branch, however, is legacy script bridge unless vol-surface feature flag is enabled.
+
+### C. Actual runtime behavior
+
+- Invoked by `signals_generate_vrp` in `PREMARKET`.
+- Active default branch: legacy `run_vrp` branch (`_vol_surface_vrp_enabled` defaults false).
+- Feature-flagged branch: model-backed `VRPSleeve` path when enabled.
+- Legacy/fallback details:
+  - legacy branch tries constructing `IBKRLiveBroker` even in paper mode (maps `paper` -> `ibkr` string for bridge mode), with skip behavior if broker init fails.
+- Writes `vrp_signals.json` and `vrp_targets.json` in both branches.
+- Emits native intents: no.
+- Emits `ml_risk`: yes in model-backed branch; legacy branch stores raw `vrp_result` payload instead.
+
+### D. Data and feature quality review
+
+- Model-backed branch currently seeds IV/features with hardcoded dicts (`iv_atm` and `feats` constants in handler), not fetched market surfaces.
+- `build_vrp_history` duplicates the same feature dict `lookback` times, syntheticizing temporal history.
+- Legacy branch data quality depends on external script behavior, not explicit in orchestrator code.
+
+### E. Model / logic quality review
+
+- `VRPSleeve` has coherent fail-closed checks:
+  - halt if forecast missing,
+  - drift threshold halt,
+  - uncertainty/edge gates via `choose_tenor`,
+  - optional RL overlay with projection and veto.
+- Sizing logic remains simple (`base_size = clamp(edge, 0.01..0.03)`).
+- Surface dynamics mode exists but requires `grid_history` and halts if missing.
+- Strong branch complexity due to dual orchestrator paths + optional RL + optional grid dynamics.
+
+### F. Output shape and execution readiness
+
+- Target rows include `symbol` and `target_weight`; planner-compatible.
+- Canonical compatibility relies on translation (no native intents emitted).
+- Fully routable in legacy planner path if targets non-empty.
+
+### G. Risk and safety behavior
+
+- Local risk gates robust in model-backed class.
+- Global risk applies through `risk_checks_global` (target exposures) and possibly intent barrier only if intents exist.
+- Silent degradation risk in legacy branch: broker construction failure yields `status: skipped` result embedded in artifacts, potentially without hard run failure.
+
+### H. Testing quality
+
+- Good helper-level and branch-level tests around fail-closed behavior and RL overlay.
+- Coverage proves API-level behavior more than real market-data-driven end-to-end quality.
+- Limited orchestrator-level tests proving default legacy bridge correctness under realistic broker conditions.
+
+### I. Specific weaknesses
+
+1. Strategy weaknesses
+- In orchestrator model-backed path, feature inputs are synthetic constants.
+
+2. Implementation weaknesses
+- Default branch bypasses `VRPSleeve` entirely unless flag enabled.
+
+3. Data/feature weaknesses
+- Temporal history construction is repeated snapshots, not real rolling data.
+
+4. Execution/routing weaknesses
+- Legacy bridge broker dependency can skip behavior and still emit “ok” envelope artifacts.
+
+5. Testing blind spots
+- Sparse tests for legacy `run_vrp` bridge behavior and its failure semantics.
+
+6. Architectural weaknesses
+- High divergence between feature-flagged modern path and default legacy path.
+
+### J. Performance interpretation
+
+- Model-backed logic could be disciplined if real features fed.
+- Default runtime likely less predictable due to external legacy bridge and unclear internal invariants.
+- Portfolio contribution likely directional and concentrated on one underlying in shown path.
+
+### K. Verdict for this sleeve
+
+- Strongest: explicit gating and structured `ml_risk` in modern class.
+- Weakest: default path is not the modern class; synthetic features in modern handler branch.
+- Maturity: **partially mature logic, default runtime integration remains legacy-leaning**.
+
+---
+
+## 3.3 Selector sleeve
+
+### A. Sleeve identity
+
+- Handler: `handle_signals_generate_selector`.
+- Strategy/helper files:
+  - `backend/app/strategies/selector/selector_sleeve.py::SelectorSleeve.generate_targets`
+  - `portfolio_constructor.py`, `optimizer.py`, `constraints.py`
+- Legacy bridge:
+  - `scripts.run_three_sleeves_ibkr._load_selector_signals`
+- Relevant tests:
+  - `test_selector_sleeve_smoe_integration.py`
+  - `test_selector_fail_closed_on_inference.py`
+  - `test_selector_portfolio_constraints.py`
+  - determinism tests
+
+### B. Strategy thesis
+
+- Concept: cross-sectional ranking (SMoE) -> long/short normalized basket -> per-symbol caps.
+- Code matches this in SMoE path.
+- Default runtime uses legacy loader path by default (flag off).
+
+### C. Actual runtime behavior
+
+- Invoked by `signals_generate_selector` (premarket + intraday).
+- Active default branch: legacy `_load_selector_signals` branch.
+- Feature-flagged branch: SMoE `SelectorSleeve`.
+- Fallback branch: generic stub only when allowed and exception occurs.
+- Writes signals + targets artifacts.
+- Emits native intents: no.
+- Emits `ml_risk`: only SMoE path.
+
+### D. Data and feature quality review
+
+- SMoE branch uses hardcoded symbol list and synthetic feature matrix in handler (`0.01*(i+1)` etc.) plus synthetic market context inputs.
+- Portfolio constructor applies hysteresis buffer based on in-memory holdings, but orchestrator creates fresh sleeve instance each run, so cross-tick persistence is limited unless caller preserves object lifecycle.
+- Legacy branch depends on DataFrame output from external script loader.
+
+### E. Model / logic quality review
+
+- `SelectorSleeve` fail-closes on missing inference and on latency >500ms.
+- Constructor logic is simple and deterministic:
+  - top/bottom selection via rank,
+  - equal-weight L/S,
+  - hard cap clipping.
+- Assumptions are simplistic (fixed gross target 1.0, static top_n heuristic), but coherent.
+
+### F. Output shape and execution readiness
+
+- Target schema is planner-friendly (`symbol`, `target_weight`).
+- Requires translation for canonical planner mode.
+- Legacy path includes gross scaling (`selector_target_gross`, default 1.0) to stay under global caps.
+- Fully routable in default path.
+
+### G. Risk and safety behavior
+
+- Local fail-closed in SMoE path; legacy branch catches exceptions and may stub (depending on mode/env).
+- Global risk checks consume selector targets and apply exposure limits.
+- Silent degradation risk in default legacy branch if external signal loader quality deteriorates.
+
+### H. Testing quality
+
+- Reasonable helper and integration tests for SMoE path and constraints.
+- Limited evidence of tests validating real legacy loader semantics end-to-end in orchestrator default mode.
+
+### I. Specific weaknesses
+
+1. Strategy weaknesses
+- Core weighting scheme is coarse equal-weight top/bottom.
+
+2. Implementation weaknesses
+- Default branch bypasses SMoE branch by default.
+
+3. Data/feature weaknesses
+- SMoE handler branch uses synthetic features instead of robust feature store pull.
+
+4. Execution/routing weaknesses
+- Cross-run hysteresis effect is likely weaker in orchestrator usage due to new sleeve instance construction per invocation.
+
+5. Testing blind spots
+- Default legacy bridge path appears less directly tested than model path.
+
+6. Architectural weaknesses
+- Split between modern model path and legacy loader introduces operational ambiguity.
+
+### J. Performance interpretation
+
+- Likely produces disciplined but coarse L/S exposures.
+- Performance sensitivity likely high to upstream ranking quality and turnover effects.
+- Operational reliability good for artifact output; alpha sophistication moderate.
+
+### K. Verdict for this sleeve
+
+- Strongest: clean target construction primitives and deterministic behavior.
+- Weakest: default runtime still on legacy bridge; model branch fed synthetic features in handler.
+- Maturity: **moderately mature, with integration split**.
+
+---
+
+## 3.4 Futures overnight sleeve
+
+### A. Sleeve identity
+
+- Handler: `handle_signals_generate_futures_overnight`.
+- Strategy/helper files:
+  - `backend/app/strategies/futures_overnight/sleeve.py::FuturesOvernightSleeve.generate_targets`
+  - `features.py::build_series_features`
+  - `decision.py::should_trade`
+  - `risk.py::sleeve_risk_payload`
+- Relevant tests:
+  - `test_futures_overnight_sleeve_decision.py`
+  - orchestrator enablement test: `test_orchestrator_with_chronos2_sleeve.py`
+
+### B. Strategy thesis
+
+- Uses Chronos2 forecast median path and uncertainty gate to decide directional ES target.
+- Code aligns with thesis in class implementation.
+
+### C. Actual runtime behavior
+
+- Job exists in default graph but returns early “disabled” unless `_chronos2_enabled(ctx)` is true.
+- Feature-flagged active branch builds inference client, calls sleeve with fixed price list `[100.0, 100.5, 101.0, 100.8, 101.3]`.
+- Writes `futures_overnight_signals.json` and `futures_overnight_targets.json`.
+- Emits native intents: no.
+- Emits `ml_risk`: yes.
+- Fail-closed: if decision status != ok, handler raises runtime error.
+
+### D. Data and feature quality review
+
+- Handler feeds synthetic fixed price sequence, not live series.
+- `build_series_features` is pass-through slice only; no richer features.
+- Uncertainty threshold default in `should_trade` is very high (`max_iqr=100.0`), making uncertainty gate permissive.
+
+### E. Model / logic quality review
+
+- Minimal but coherent.
+- Uses assertion `assert resp is not None`; assertion behavior may be unsafe under optimized Python runs if asserts disabled.
+- Position sizing fixed at `0.02 * direction`, no volatility scaling.
+
+### F. Output shape and execution readiness
+
+- Outputs routable target rows.
+- Canonical requires translation.
+- Disabled by default means no default planner contribution.
+
+### G. Risk and safety behavior
+
+- Good explicit fail-closed in handler on halted decision.
+- Global risk checks include this sleeve only when enabled (required target presence list expands conditionally).
+- Because disabled by default, operational risk in default path is low but also no contribution.
+
+### H. Testing quality
+
+- Determinism and enablement tests exist.
+- Limited tests of real data ingestion path (none shown in handler since inputs are hardcoded).
+
+### I. Specific weaknesses
+
+1. Strategy weaknesses
+- Direction-only, fixed-size output is simplistic.
+
+2. Implementation weaknesses
+- Hardcoded price series in orchestrator handler undermines market realism.
+
+3. Data/feature weaknesses
+- Feature builder is minimal slice, not robust feature engineering.
+
+4. Execution/routing weaknesses
+- Inactive by default; production readiness in default runtime unproven.
+
+5. Testing blind spots
+- No clear tests for realistic price-history sourcing in orchestrator path.
+
+6. Architectural weaknesses
+- Feature-flag-only presence keeps it peripheral despite job graph inclusion.
+
+### J. Performance interpretation
+
+- Likely stable mechanically but low adaptability.
+- Contribution likely narrow and sensitive to forecast noise.
+
+### K. Verdict for this sleeve
+
+- Strongest: explicit fail-closed and clean class design.
+- Weakest: synthetic runtime inputs and disabled default posture.
+- Maturity: **structurally immature for default live portfolio role**.
+
+---
+
+## 3.5 StatArb sleeve
+
+### A. Sleeve identity
+
+- Default handler: `handle_signals_generate_statarb` in `job_defs.py` (v3-specific path).
+- Supporting files:
+  - feature builder: `backend/app/orchestrator/statarb_v3_builder.py`
+  - ensemble: `backend/app/ml_platform/models/statarb/ensemble.py`
+  - neutralizer: `backend/app/strategies/statarb/beta_neutral.py`
+- Alternate/non-default sleeve class:
+  - `backend/app/strategies/statarb/sleeve.py::StatArbSleeve`
+- Relevant tests:
+  - `test_orchestrator_with_statarb_sleeve.py`
+  - `test_statarb_sleeve_integration.py` (targets non-default class)
+
+### B. Strategy thesis
+
+- Intended thesis: pair-level mean reversion with ML confirmation + beta neutralization.
+- Default handler code reflects pair z-score + predicted delta gate and per-asset alpha decomposition.
+- But emitted target artifact is pair-centric rows (not per-symbol weights), creating downstream contract tension.
+
+### C. Actual runtime behavior
+
+- Disabled by default unless `_statarb_enabled(ctx)`.
+- Enabled path:
+  1. Build live tensor via yfinance-based builder.
+  2. Predict pair deltas via iTransformer ensemble.
+  3. Confirm/veto each pair by sign consistency rule.
+  4. Aggregate asset alphas and beta-neutralize.
+  5. Write signals/targets.
+- On builder failure: emits empty/stub artifacts and returns ok.
+- Emits native intents: no.
+- Emits `ml_risk`: not in target artifact (stores metadata fields like `ensemble_loaded`, `confirmed_pairs`, `beta_neutral_weights` in signals).
+
+### D. Data and feature quality review
+
+- Live data dependency relies on yfinance download at runtime (20d, 60m), which is operationally brittle and external-network dependent.
+- Builder falls back to zero tensor on failures/insufficient bars.
+- Handler pair gating thresholds are hardcoded (`z` > 1 or < -1 and delta sign checks).
+
+### E. Model / logic quality review
+
+- Ensemble loader can silently operate with fewer than 5 folds; if none load, `predict` returns `None` and handler sets zeros.
+- Beta neutralizer uses scipy optimizer when available, else naive fallback.
+- Branch complexity high with multiple implicit fallbacks returning non-failing status.
+
+### F. Output shape and execution readiness
+
+- Critical mismatch: target rows built as `{pair, z_score, pred_delta, direction}` rather than `{symbol, target_weight}`.
+- Legacy planner ignores rows lacking `symbol`/`target_weight` during combine step.
+- Canonical translator explicitly raises `UNTRANSLATABLE_TARGET` for statarb rows missing symbol/weight.
+- Net result: **partially or non-routable under canonical; effectively non-contributing in legacy aggregate despite emitted artifacts**.
+
+### G. Risk and safety behavior
+
+- Local safety mixed:
+  - builder failure returns stub/flat artifacts without failing job,
+  - ensemble missing models becomes zero predictions rather than hard fail.
+- Global risk may not “see” meaningful statarb exposure because target rows are non-standard.
+- High silent-degradation probability.
+
+### H. Testing quality
+
+- `test_statarb_sleeve_integration.py` covers alternate `StatArbSleeve` class, not the default orchestrator statarb v3 handler.
+- Enablement test confirms job runs with flag, but not execution usefulness of emitted target shape.
+- Coverage mismatch between production-critical handler and tested class path.
+
+### I. Specific weaknesses
+
+1. Strategy weaknesses
+- Pair logic may be coherent, but output contract prevents robust portfolio integration.
+
+2. Implementation weaknesses
+- Default handler and tested class diverge significantly.
+
+3. Data/feature weaknesses
+- Runtime yfinance dependence and zero-tensor fallback reduce confidence.
+
+4. Execution/routing weaknesses
+- Target schema mismatch can block canonical translation and neutralize routing contribution.
+
+5. Testing blind spots
+- Insufficient tests asserting that handler outputs are actually consumable by planners.
+
+6. Architectural weaknesses
+- Dual statarb implementations (default handler v3 vs `StatArbSleeve` class) with inconsistent contracts.
+
+### J. Performance interpretation
+
+- Likely fragile operationally due to data/model load dependencies.
+- Even if alpha exists, portfolio contribution may be muted by contract incompatibilities.
+- Reliability for actual routed impact appears low.
+
+### K. Verdict for this sleeve
+
+- Strongest: richer conceptual pipeline (feature builder + ensemble + beta neutralization).
+- Weakest: output compatibility and fallback-heavy behavior.
+- Maturity: **structurally immature for canonical/default execution contribution**.
+
+---
+
+## 4. Cross-sleeve comparison
+
+| sleeve | active by default? | feature-gated? | native intent capable? | output shape quality | canonical planner readiness | branch complexity | data quality confidence | strategy sophistication | runtime reliability | testing confidence | portfolio role |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| core | Yes | No | Yes | High (symbol+weight + intent) | High | Low-Med | Medium (config-driven) | Low-Med | High | Medium | Baseline futures sleeve |
+| vrp | Yes | Model path gated (`ENABLE_VOL_SURFACE_VRP`) | No | High (target rows) | Medium (needs translation) | High | Low-Med (synthetic in modern handler; legacy bridge default) | Medium | Medium | Medium | Vol-premium sleeve in active set |
+| selector | Yes | SMoE path gated (`ENABLE_SMOE_SELECTOR`) | No | High (target rows) | Medium (needs translation) | High | Low-Med (synthetic in SMoE handler; legacy default) | Medium | Medium-High | Medium | Equity L/S cross-sectional sleeve |
+| futures_overnight | No (disabled default) | Yes (`ENABLE_CHRONOS2_SLEEVE`) | No | High (target rows) | Medium (needs translation) | Low | Low (hardcoded prices in handler) | Low-Med | Medium | Low-Med | Optional directional futures add-on |
+| statarb | No (disabled default) | Yes (`ENABLE_STATARB_SLEEVE`) | No | **Low for planning** (pair rows, not symbol weights) | Low | Very High | Low (yfinance + fallbacks) | Medium conceptually | Low-Med | Low | Currently weak/diagnostic in portfolio flow |
+
+### Prose comparison
+
+- **Strongest operational sleeves in default runtime**: `core`, `selector (legacy branch)`, `vrp (legacy branch)` because they are actually active and produce routable target contracts.
+- **Weakest sleeve in execution integration**: `statarb` due to output-shape incompatibility and fallback-heavy runtime.
+- **Cleanest architecture**: `futures_overnight` class and `selector` strategy helpers are concise and coherent, though not necessarily fed high-quality runtime data.
+- **Most promising but underbuilt**: `vrp` and `selector` model-backed branches; they have coherent gating/`ml_risk` design but are not default-active and use synthetic handler inputs.
+- **Largest portfolio construction complication**: coexistence of mixed contract paradigms (native intents for core, translated targets for others, pair-only statarb output).
+
+---
+
+## 5. Portfolio-level analysis
+
+### How sleeves combine in planner
+
+- `handle_order_build_and_route` merges sleeve outputs by symbol into a single `combined` target map, scales by allocator outputs when enabled, computes target-vs-current delta notionals, rounds to quantities, then routes through broker adapter.
+- In default (non-canonical) mode, only target artifacts matter for this merge.
+
+### Diversification and overlap
+
+- Default active set (`core`, `vrp`, `selector`) provides some strategy heterogeneity (futures core + vol/equity sleeves), but code-level exposure shaping is mostly additive and simplistic.
+- `futures_overnight`/`statarb` provide no diversification by default because disabled.
+
+### Dominance and immaturity effects
+
+- Sleeve dominance can occur structurally from raw target magnitudes before global order caps reject/trim via sanity gates.
+- Statarb appears too immature contract-wise for clean inclusion under canonical translation.
+- Futures overnight appears more like optional research-to-production bridge than default production contributor.
+
+### Output consistency and allocator scaling
+
+- Output consistency is uneven:
+  - most sleeves: `symbol` + `target_weight`
+  - core: also native intents
+  - statarb: pair-level rows in default handler
+- Allocator scaling in risk/planner exists but relies on `ml_risk` proxies that may be sparse or synthetic depending on sleeve branch.
+
+### Canonical cutover uniformity
+
+- Cutover is uneven:
+  - core has native intents,
+  - non-core mostly translation-dependent,
+  - statarb may fail translation.
+- This creates non-uniform behavior under same global flags.
+
+### Portfolio-level strengths
+
+A. Existing orchestrator graph enforces dependency ordering, global risk checks, and order sanity gates.
+
+### Portfolio-level weaknesses
+
+B. Default-active sleeves still depend on legacy bridges and synthetic inputs in modern branches.
+
+### Portfolio-level architectural risks
+
+C. Dual-plane architecture (intent barrier vs target planner) can obscure source-of-truth during incidents.
+
+### Portfolio-level execution risks
+
+D. Data availability fallback behavior (price fallback, statarb builder fallback) can silently alter portfolio intent.
+
+### Portfolio-level testing blind spots
+
+E. End-to-end tests proving realistic market-data-to-order behavior across all active branches remain limited.
+
+---
+
+## 6. Test and evidence appendix
+
+### Core
+
+- Relevant tests: `test_orchestrator.py`, `test_pr6_canonical_cutover.py`.
+- Proves: core job wiring and canonical-vs-rollback planner behavior.
+- Does not prove: quality of core alpha/signal generation logic.
+
+### VRP
+
+- Relevant tests: `test_vrp_sleeve_uses_vol_forecast.py`, `test_vrp_fail_closed_on_missing_forecast.py`, `test_vrp_fail_closed_on_grid_forecast_missing.py`, RL overlay tests.
+- Proves: fail-closed and decision logic in `VRPSleeve` class branches.
+- Does not prove: default legacy bridge behavior under realistic orchestrator runtime and broker edge conditions.
+
+### Selector
+
+- Relevant tests: `test_selector_sleeve_smoe_integration.py`, `test_selector_fail_closed_on_inference.py`, portfolio constraint/determinism tests.
+- Proves: SMoE class integration and deterministic constructor behavior.
+- Does not prove: default `_load_selector_signals` bridge data quality and robustness in production-like runs.
+
+### Futures overnight
+
+- Relevant tests: `test_futures_overnight_sleeve_decision.py`, `test_orchestrator_with_chronos2_sleeve.py`.
+- Proves: deterministic class output and flagged orchestrator invocation.
+- Does not prove: realistic market time-series ingestion in orchestrator handler path (which currently supplies fixed values).
+
+### Statarb
+
+- Relevant tests: `test_statarb_sleeve_integration.py`, `test_orchestrator_with_statarb_sleeve.py`.
+- Proves: alternate `StatArbSleeve` class can return targets; orchestrator job can run when enabled.
+- Does not prove: default `handle_signals_generate_statarb` output is planner-consumable and economically routed.
+
+### Production-critical weakly tested branches (from structural inspection)
+
+- Default legacy bridges (`run_vrp`, `_load_selector_signals`) appear less directly unit-tested than model classes.
+- Default statarb v3 handler (builder+ensemble+pair-target emission) appears under-tested relative to complexity.
+- Canonical translation failure path for statarb untranslatable rows is covered by code guard but should be treated as high-criticality behavior in runtime reviews.
+
+---
+
+## 7. Final ranking and review summary
+
+### 7.1 Ranking by strategy quality
+
+1. Selector (modern class path)
+2. VRP (modern class path)
+3. Core
+4. StatArb (conceptual pipeline)
+5. Futures overnight
+
+### 7.2 Ranking by implementation quality
+
+1. Futures overnight class
+2. Selector class/helpers
+3. VRP class
+4. Core handler
+5. Default statarb v3 handler
+
+### 7.3 Ranking by execution readiness (default runtime)
+
+1. Core
+2. Selector (legacy default path)
+3. VRP (legacy default path)
+4. Futures overnight (disabled default)
+5. Statarb (disabled + contract mismatch risk)
+
+### 7.4 Ranking by portfolio usefulness (default runtime)
+
+1. Selector
+2. Core
+3. VRP
+4. Futures overnight
+5. Statarb
+
+### 7.5 Ranking by risk of hidden failure
+
+1. Statarb (high hidden-failure risk)
+2. VRP (legacy-bridge + branch complexity)
+3. Selector (legacy-bridge + branch split)
+4. Core (config silent-degradation risk)
+5. Futures overnight (mostly disabled by default)
+
+### Final summary paragraph
+
+The strongest sleeves in the **actual default active runtime** are `core`, `selector` (legacy loader path), and `vrp` (legacy bridge path) because they are the sleeves that consistently participate in planning/routing with valid symbol-weight targets. The weakest sleeve is `statarb`, where the default handler’s pair-centric output contract conflicts with canonical translation and reduces reliable planner contribution. `VRP` and `selector` are the most salvageable from a strategy-architecture standpoint because their modern class implementations are structured and risk-gated, but the runtime defaults still lean on compatibility branches. The current highest portfolio instability risk is architectural rather than model-specific: split source-of-truth paths (intent barrier vs target planner), feature-flag divergence, and uneven contract maturity across sleeves.

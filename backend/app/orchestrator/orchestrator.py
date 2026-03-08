@@ -20,6 +20,12 @@ from .control_state_provider import get_control_state_provider
 from .tick_context import TickContext
 from .model_versions import record_model_versions
 from .intent_aggregator import collect_and_validate_intents
+from .snapshot_providers import (
+    BrokerMarketDataProvider,
+    BrokerPortfolioStateProvider,
+    freeze_control_snapshot,
+)
+from backend.app.contracts.providers import MarketDataSnapshot, PortfolioStateSnapshot
 from backend.app.core.runtime_mode import normalize_mode_alias
 from backend.app.version import APP_DISPLAY, with_app_metadata
 
@@ -67,6 +73,9 @@ class Orchestrator:
         self.broker = broker or PaperBrokerStub()
         self.runner = runner or JobRunner()
         self.locks = LockManager(self.config.db_path)
+        # ── Canonical snapshot providers (Phase 2) ────────────────────
+        self._market_data_provider = BrokerMarketDataProvider(self.broker)
+        self._portfolio_state_provider = BrokerPortfolioStateProvider(self.broker)
         self._telemetry_bridge: Any = None
         if telemetry:
             try:
@@ -84,12 +93,27 @@ class Orchestrator:
         (root / "orders").mkdir(parents=True, exist_ok=True)
         return root
 
-    def _write_heartbeat(self, day_root: Path, now: datetime, session: Session, state: str) -> None:
+    def _write_heartbeat(
+        self,
+        day_root: Path,
+        now: datetime,
+        session: Session,
+        state: str,
+        *,
+        run_id: str = "",
+        control_snapshot_id: str = "",
+        market_snapshot_id: str = "",
+        portfolio_snapshot_id: str = "",
+    ) -> None:
         payload = {
             "timestamp": now.isoformat(),
             "session": session.value,
             "state": state,
             "mode": self.config.mode,
+            "run_id": run_id,
+            "control_snapshot_id": control_snapshot_id,
+            "market_snapshot_id": market_snapshot_id,
+            "portfolio_snapshot_id": portfolio_snapshot_id,
         }
         (day_root / "heartbeat.json").write_text(json.dumps(with_app_metadata(payload), indent=2), encoding="utf-8")
 
@@ -101,7 +125,26 @@ class Orchestrator:
         session = forced_session or self.calendar.current_session(now)
         run_id = str(uuid.uuid4())
         control_snapshot = self.control_provider.snapshot(consumer="orchestrator", tick_id=run_id)
-        self._write_heartbeat(day_root, now, session, "tick_start")
+
+        # ── Freeze canonical snapshots (Phase 2) ──────────────────────
+        typed_control = freeze_control_snapshot(control_snapshot, asof_date)
+        typed_market: MarketDataSnapshot | None = None
+        typed_portfolio: PortfolioStateSnapshot | None = None
+        if self.config.FF_CANONICAL_SLEEVE_OUTPUTS:
+            typed_market = self._market_data_provider.freeze_snapshot(asof_date, session.value)
+            typed_portfolio = self._portfolio_state_provider.freeze_snapshot(asof_date)
+
+        _ctrl_sid = typed_control.snapshot_id
+        _mkt_sid = typed_market.snapshot_id if typed_market else ""
+        _pf_sid = typed_portfolio.snapshot_id if typed_portfolio else ""
+
+        self._write_heartbeat(
+            day_root, now, session, "tick_start",
+            run_id=run_id,
+            control_snapshot_id=_ctrl_sid,
+            market_snapshot_id=_mkt_sid,
+            portfolio_snapshot_id=_pf_sid,
+        )
 
         if bool(control_snapshot.get("paused", False)):
             return TickResult("paused", asof_date.isoformat(), session.value, [], [], [])
@@ -180,6 +223,10 @@ class Orchestrator:
                         "control_snapshot": control_snapshot,
                         "control_snapshot_id": control_snapshot.get("snapshot_id"),
                         "tick_context": tick_context,
+                        # ── Canonical snapshots (Phase 2) ─────────
+                        "typed_control_snapshot": typed_control,
+                        "typed_market_snapshot": typed_market,
+                        "typed_portfolio_snapshot": typed_portfolio,
                     },
                     day_root / "jobs",
                 )

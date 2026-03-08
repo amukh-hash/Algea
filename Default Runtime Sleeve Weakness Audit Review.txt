@@ -1,0 +1,523 @@
+# Default Runtime Sleeve Weakness Audit Review
+
+This is a strong audit. It gives enough to do a real sleeve-by-sleeve review.
+
+My read is that the biggest issue is not that the sleeves are “bad” in the abstract. It is that **strategy quality, runtime quality, and portfolio usefulness are not aligned evenly across the sleeve set**. Some sleeves have decent strategy logic but weak production integration. Others are cleanly integrated but strategically thin.
+
+Here is the detailed analysis.
+
+# Overall diagnosis
+
+The sleeve stack splits into three groups.
+
+The first group is **operationally real in the default runtime**:
+
+* `core`
+* `selector`
+* `vrp`
+
+The second group is **architecturally present but not default-contributing**:
+
+* `futures_overnight`
+* `statarb`
+
+The third distinction is about maturity:
+
+* **Core** is the cleanest runtime participant.
+* **Selector** is probably the best-balanced sleeve overall.
+* **VRP** is strategically rich but operationally split.
+* **Futures Overnight** is coherent but underbuilt.
+* **StatArb** is the least execution-ready by a wide margin.
+
+The codebase is still carrying two truths at once:
+
+* a **legacy target-based planner**
+* a **canonical intent-based architecture**
+
+That uneven migration matters a lot for sleeve quality, because sleeves are not all equally far along in that transition.
+
+---
+
+# 1. Core sleeve
+
+## What it really is
+
+The audit is right: `core` is not really acting like a rich signal-generation sleeve in the handler. It is acting like a **configuration-backed futures exposure emitter**.
+
+The main runtime behavior is:
+
+* load config values
+* construct a single futures-style intent row
+* write `core_intents.json`
+* also write `core_signals.json` and `core_targets.json`
+
+So this is closer to a **base-position sleeve** than a dynamic alpha engine.
+
+## Strategy review
+
+Its conceptual thesis may be “CO→OC reversal futures,” but the handler does not show real reversal computation. That means one of two things is true:
+
+* either the true strategy logic lives elsewhere and this handler is just packaging it,
+* or the current runtime has reduced the sleeve to a static or semi-static position declaration.
+
+Either way, the **runtime-exposed strategy** is thin.
+
+## Specific weaknesses
+
+The biggest weakness is **strategy opacity**. You have a sleeve name that implies a real futures strategy, but the active runtime path mostly emits a configured target. That makes it hard to evaluate:
+
+* whether the alpha is real,
+* whether it adapts to market regime,
+* whether it has any forecasting logic at all in this path.
+
+The second weakness is **silent degradation**. If config loading fails, the sleeve can degrade into default values like:
+
+* `target_weight = 0.0`
+* `symbol = ES`
+* `multiplier = 50.0`
+
+That may not crash the runtime, but it can quietly turn the sleeve into a flat or placeholder participant.
+
+The third weakness is **migration asymmetry**. Core is ahead of the others because it emits native intents, but that also makes debugging cross-sleeve behavior harder because it is not participating in exactly the same contract path as the other sleeves.
+
+## Performance interpretation
+
+Operational performance: very good.
+Strategy performance: hard to judge because the active runtime logic is too thin.
+
+This sleeve is likely:
+
+* stable
+* predictable
+* low-noise
+* easy to route
+
+But it may also be:
+
+* low-adaptiveness
+* low-alpha if the config is static
+* dependent on external logic not visible in the handler
+
+## Portfolio role
+
+It looks like a **base futures anchor sleeve**. That can be useful. But it should be understood as a foundational exposure sleeve, not necessarily one of the system’s most sophisticated alpha sources.
+
+## Verdict
+
+Core is **execution-mature but strategy-underexposed**. It is one of the strongest sleeves operationally and one of the weakest sleeves in visible signal-generation sophistication.
+
+---
+
+# 2. VRP sleeve
+
+## What it really is
+
+VRP is the most obviously “financially sophisticated” sleeve in the set. The model-backed path has a coherent thesis:
+
+* estimate future realized volatility
+* compare to current implied volatility
+* identify edge by tenor
+* size exposure
+* optionally adjust or veto via RL overlay
+
+That is real strategy logic.
+
+The problem is that **the default runtime does not use that path by default**. It uses the legacy `run_vrp` bridge unless the feature flag is turned on.
+
+## Strategy review
+
+The modern VRP sleeve logic is the strongest economically:
+
+* it has a real market thesis,
+* real gating,
+* explicit drift awareness,
+* optional RL overlay,
+* and structured `ml_risk` output.
+
+That is better than “score and weight” logic in pure strategy sophistication.
+
+But the active-runtime weakness is serious: the default branch is still a legacy script bridge. So the sleeve’s best strategy implementation is not its default operational reality.
+
+## Specific weaknesses
+
+The biggest weakness is **branch divergence**. There are effectively two VRP sleeves:
+
+* the modern model-backed one,
+* the legacy script-driven one.
+
+That creates ambiguity in what “VRP performance” even means. You cannot discuss the sleeve cleanly unless you first specify which branch is active.
+
+The second weakness is **synthetic feature quality** in the modern handler path. The audit notes hardcoded tenor IV dictionaries and repeated synthetic history construction. That is not convincing as production-grade feature plumbing.
+
+The third weakness is **legacy bridge opacity**. In the default path, behavior depends on what `run_vrp(...)` does and what it returns as `orders`. That means the orchestrator wrapper is not the true owner of the sleeve’s logic.
+
+The fourth weakness is **broker-coupled legacy behavior**. A sleeve handler that tries to build an `IBKRLiveBroker` internally is a code smell. It blurs inference and execution boundaries.
+
+## Performance interpretation
+
+There are really two performance interpretations.
+
+If the modern path is used with real features, VRP could be one of the most valuable sleeves in the system because:
+
+* the thesis is strong,
+* the gating is disciplined,
+* the signal is economically meaningful.
+
+If the legacy path is what actually runs by default, performance becomes much harder to reason about because:
+
+* strategy ownership is external,
+* broker assumptions creep in,
+* output semantics are branch-dependent,
+* and testing is less direct.
+
+So VRP is potentially high upside, but operationally ambiguous.
+
+## Portfolio role
+
+VRP looks like a **specialized convexity/volatility sleeve** that should diversify a plain equity/futures directional portfolio.
+
+That is good in theory. But because the runtime path is still split, it is less cleanly governed than it should be.
+
+## Verdict
+
+VRP is **strategically strong, operationally split, and not yet cleanly unified**. It is one of the most promising sleeves, but also one of the hardest to trust uniformly across environments.
+
+---
+
+# 3. Selector sleeve
+
+## What it really is
+
+Selector is a **cross-sectional equity ranking sleeve**. It turns ranked symbols into long/short target weights.
+
+That is a very natural fit for the orchestrator because the planner wants symbol-level targets, and selector produces exactly that.
+
+## Strategy review
+
+Selector’s modern branch is not as conceptually rich as VRP, but it is clearer and more practical:
+
+* get scores
+* build portfolio
+* apply constraints
+* emit symbol weights
+
+That is straightforward and highly usable.
+
+The default path is again legacy by default, which is not ideal, but the legacy logic itself is simpler and more planner-compatible than VRP’s legacy branch.
+
+## Specific weaknesses
+
+The biggest weakness is again **default-path split**. The SMoE path may be the intended modern version, but the default path is still `_load_selector_signals`.
+
+The second weakness is **synthetic features** in the newer branch. If the SMoE path uses hardcoded or toy features in the handler, then the modern branch is not yet as trustworthy as it looks on paper.
+
+The third weakness is **coarse portfolio construction**. The audit is right that the weighting logic appears relatively simple:
+
+* top/bottom selection
+* equal-ish weighting
+* gross scaling
+* caps
+
+That is fine, but not especially sophisticated.
+
+The fourth weakness is **possibly weak persistence of turnover control/hysteresis**. If the sleeve instance is re-created every run, any stateful smoothing mechanism may not persist in the way the code seems to imply.
+
+## Performance interpretation
+
+Selector is likely the best all-around sleeve in practice because:
+
+* it is naturally routable,
+* its outputs match planner needs,
+* its role in the portfolio is easy to understand,
+* and even the legacy path likely produces clean symbol-weight rows.
+
+Its alpha may be more ordinary than VRP’s, but its integration quality is better.
+
+So it probably has:
+
+* decent operational stability,
+* decent portfolio usefulness,
+* moderate strategy sophistication,
+* cleaner risk/planning fit.
+
+## Portfolio role
+
+This looks like the sleeve most likely to act as the **main equity cross-sectional alpha engine**.
+
+If I had to trust one sleeve as the portfolio’s cleanest stock-selection component from these docs, it would be Selector.
+
+## Verdict
+
+Selector is **the best-balanced sleeve**. It may not be the most advanced conceptually, but it combines practical output shape, portfolio usefulness, and architectural fit better than the others.
+
+---
+
+# 4. Futures Overnight sleeve
+
+## What it really is
+
+This is a **small directional futures forecast sleeve**, gated by forecast quality and uncertainty.
+
+The strategy is simple:
+
+* forecast the next move,
+* check if confidence is sufficient,
+* if so, take a modest directional position,
+* otherwise do nothing.
+
+## Strategy review
+
+This sleeve is coherent, but narrow.
+
+It is not trying to be a rich, multi-layer strategy. It is more like:
+
+* one signal,
+* one instrument,
+* one direction,
+* one small fixed size.
+
+That is completely valid, but it means the sleeve is more of an overlay than a major portfolio pillar.
+
+## Specific weaknesses
+
+The biggest weakness is **production realism of inputs**. The audit flags hardcoded price arrays in the orchestrator path. That is a major issue if true in active use. A predictive sleeve is only as meaningful as its data feed.
+
+The second weakness is **minimal feature engineering**. If the feature builder is just a thin pass-through slice, then this is not yet a deeply engineered signal path.
+
+The third weakness is **very simple sizing**. Fixed `±0.02` target weight is easy to reason about, but not especially adaptive.
+
+The fourth weakness is **disabled-by-default status**. That means the sleeve is not really battle-tested in the standard runtime.
+
+## Performance interpretation
+
+This sleeve likely has:
+
+* low complexity,
+* good safety behavior,
+* modest signal expression,
+* narrow contribution.
+
+That can actually be a positive if the goal is a disciplined overlay. But it also means it is unlikely to be a major alpha driver unless the underlying forecast is unusually strong.
+
+## Portfolio role
+
+This is best thought of as an **optional directional add-on**, not a core sleeve.
+
+## Verdict
+
+Futures Overnight is **cleaner than it is powerful**. It looks safety-first and understandable, but not deeply developed in the active runtime path.
+
+---
+
+# 5. StatArb sleeve
+
+## What it really is
+
+StatArb is a pair-mean-reversion sleeve with:
+
+* live feature tensor building,
+* ensemble-predicted deltas,
+* z-score confirmation,
+* beta-neutralization.
+
+On paper, that is sophisticated.
+
+In practice, the default handler is not well matched to the rest of the system.
+
+## Strategy review
+
+This is the sleeve with the biggest gap between **research concept** and **execution contract**.
+
+The conceptual strategy is good:
+
+* detect pair dislocations,
+* confirm with learned prediction,
+* translate to asset-level alphas,
+* beta-neutralize.
+
+But the emitted artifacts are still pair-centric in a way that breaks clean planner integration.
+
+That means the strategy is not fully expressed in the portfolio the way it is modeled in the sleeve.
+
+## Specific weaknesses
+
+The biggest weakness is **output-contract incompatibility**. The planner wants symbol-level weights or canonical intents. StatArb emits pair-level diagnostics.
+
+That creates downstream consequences:
+
+* translation can reject it,
+* canonical planner explicitly blocks it,
+* rollback planner may effectively ignore much of it because it lacks the expected fields.
+
+The second weakness is **silent degradation**. Builder failure may emit empty or stub-like artifacts and still return success. Ensemble load failure can degrade to zero deltas rather than hard fail. That makes it hard to know whether the sleeve is truly contributing or just “running.”
+
+The third weakness is **runtime data brittleness**. Relying on yfinance at runtime for live feature building is not robust for a production-critical sleeve.
+
+The fourth weakness is **test-path mismatch**. The more heavily tested `StatArbSleeve` class is not the same as the default orchestrator handler path. That means tests may be proving a nearby cousin, not the actual production path.
+
+## Performance interpretation
+
+This sleeve may be strategically interesting in research terms, but in the orchestrator it is likely:
+
+* fragile,
+* often degraded,
+* often blocked,
+* or not cleanly routable.
+
+That makes its **actual realized portfolio contribution much lower than its conceptual sophistication suggests**.
+
+## Portfolio role
+
+Right now, this looks more like a **research sleeve or diagnostic sleeve** than a dependable production sleeve.
+
+## Verdict
+
+StatArb is **the most strategically ambitious sleeve and the least execution-mature sleeve**. It is the one I would worry about most in terms of hidden failure, ambiguous contribution, and portfolio integration risk.
+
+---
+
+# Portfolio-level sleeve analysis
+
+## What the portfolio really is by default
+
+In default runtime terms, the live sleeve set is basically:
+
+* Core
+* Selector
+* VRP
+
+That is the real active portfolio.
+
+Futures Overnight and StatArb are optional and not default-active.
+
+So the practical portfolio is:
+
+* one futures base sleeve,
+* one equity selection sleeve,
+* one volatility sleeve.
+
+That is not a bad mix. It gives some diversity across:
+
+* instrument type,
+* strategy style,
+* risk source.
+
+## Portfolio strengths
+
+The strongest portfolio-level feature is that the active sleeves are not all copies of each other.
+
+You have:
+
+* futures exposure,
+* equity cross-sectional exposure,
+* volatility exposure.
+
+That is better than having three correlated equity ranking sleeves.
+
+The second strength is that the planner can actually consume Core, Selector, and VRP cleanly enough in default mode.
+
+## Portfolio weaknesses
+
+The biggest weakness is **uneven maturity**.
+
+Core is partially canonical.
+Selector and VRP are still target-first and legacy-default.
+StatArb is structurally awkward.
+Futures Overnight is peripheral and synthetic-input-heavy.
+
+So the portfolio is diversified in concept, but not evenly mature in implementation.
+
+The second weakness is **split source-of-truth behavior**:
+
+* intent barrier exists,
+* target planner exists,
+* some sleeves emit native intents,
+* some rely on translation,
+* some don’t fit translation well.
+
+That makes debugging portfolio behavior harder.
+
+The third weakness is **legacy-default drift**. The most interesting modern branches are not the default branches for VRP and Selector. So the portfolio you may think you have is not always the portfolio the runtime is actually running.
+
+## Portfolio risk ranking
+
+Biggest portfolio instability risks:
+
+1. **StatArb contract mismatch**
+2. **VRP branch ambiguity**
+3. **Selector legacy-vs-modern split**
+4. **Core silent config degradation**
+5. **Futures Overnight synthetic data path**
+
+## Best portfolio contributors right now
+
+From a practical orchestrator perspective:
+
+1. Selector
+2. Core
+3. VRP
+
+From a pure strategy-upside perspective:
+
+1. VRP
+2. Selector
+3. StatArb conceptually, but not operationally
+
+---
+
+# My refined sleeve rankings
+
+## By strategy sophistication
+
+1. VRP
+2. StatArb conceptually
+3. Selector
+4. Futures Overnight
+5. Core
+
+## By actual execution readiness
+
+1. Core
+2. Selector
+3. VRP
+4. Futures Overnight
+5. StatArb
+
+## By architectural cleanliness
+
+1. Core
+2. Futures Overnight class
+3. Selector
+4. VRP
+5. StatArb
+
+## By portfolio usefulness in current default runtime
+
+1. Selector
+2. Core
+3. VRP
+4. Futures Overnight
+5. StatArb
+
+## By hidden-failure risk
+
+1. StatArb
+2. VRP
+3. Selector
+4. Core
+5. Futures Overnight
+
+---
+
+# Final conclusion
+
+The audit supports a very clear conclusion:
+
+* **Core** is your clean operational anchor, but it is not where the most interesting alpha logic lives.
+* **Selector** is the best-balanced sleeve overall and likely the most reliable portfolio workhorse.
+* **VRP** may be your best strategy intellectually, but it still suffers from branch split and legacy-default issues.
+* **Futures Overnight** is a controlled experimental overlay, not yet a major portfolio engine.
+* **StatArb** is not ready to be treated as a first-class production sleeve in the current architecture.
+
+The biggest portfolio problem is not “bad ideas.” It is **uneven sleeve maturity and uneven contract integration**.
+

@@ -19,6 +19,27 @@ from backend.app.contracts.validators import (
 from backend.app.core.runtime_mode import normalize_mode_alias
 from backend.app.core.schemas import TargetIntent
 from .intent_translation import translate_targets_to_intents
+from .sleeve_decision_helpers import (
+    build_trace,
+    build_intent,
+    build_decision,
+    write_sleeve_decision,
+    write_compat_artifacts,
+    get_snapshot_ids,
+    legacy_rows_to_intents,
+)
+from backend.app.contracts.canonical import (
+    AssetClass as CanonicalAssetClass,
+    ExecutionPhase as CanonicalExecutionPhase,
+    SleeveStatus,
+)
+from .canonical_intent_collator import (
+    collate_sleeve_decisions,
+    write_canonical_intents,
+    intents_to_combined_weights,
+    intents_to_per_sleeve_metrics,
+    validate_canonical_intents_freshness,
+)
 try:
     from scipy.stats import wasserstein_distance
 except ImportError:
@@ -41,6 +62,15 @@ def _chronos2_enabled(ctx: dict[str, Any]) -> bool:
         return bool(getattr(cfg, "enable_chronos2_sleeve"))
     import os
     return os.getenv("ENABLE_CHRONOS2_SLEEVE", "0") == "1"
+
+
+def _canonical_sleeve_outputs_enabled(ctx: dict[str, Any]) -> bool:
+    """Check whether FF_CANONICAL_SLEEVE_OUTPUTS is on."""
+    cfg = ctx.get("config")
+    if cfg is not None and hasattr(cfg, "FF_CANONICAL_SLEEVE_OUTPUTS"):
+        return bool(getattr(cfg, "FF_CANONICAL_SLEEVE_OUTPUTS"))
+    import os
+    return os.getenv("FF_CANONICAL_SLEEVE_OUTPUTS", "0") == "1"
 
 
 def _smoe_selector_enabled(ctx: dict[str, Any]) -> bool:
@@ -417,7 +447,11 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
     serializes ``TargetIntent`` JSON to ``intents/core_intents.json``.
     Execution is decoupled — routed later by ``route_phase_orders``
     via the phase-aware cron infrastructure.
+
+    When ``FF_CANONICAL_SLEEVE_OUTPUTS`` is on, emits a canonical
+    ``SleeveDecision`` and derives compat artifacts.
     """
+    started_at = datetime.now(timezone.utc)
     try:
         import sys
         from pathlib import Path as _P
@@ -439,16 +473,72 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
             logger.warning("Core sleeve config unavailable: %s — using stub", exc)
             sleeve_cfg = {}
 
-        # Emit TargetIntent JSON to disk (F1: no self-execution)
-        p = _paths(ctx)
-        intents_dir = p["root"] / "intents"
-        intents_dir.mkdir(parents=True, exist_ok=True)
-
         # Determine target weight from config or default
         target_weight = float(sleeve_cfg.get("target_weight", 0.0))
         symbol = sleeve_cfg.get("symbol", "ES")
         multiplier = float(sleeve_cfg.get("multiplier", 50.0))
 
+        p = _paths(ctx)
+        run_id = str(ctx.get("tick_id", ""))
+
+        # ── Canonical path (Phase 3) ──────────────────────────────────
+        if _canonical_sleeve_outputs_enabled(ctx):
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            trace = build_trace(
+                run_id=run_id, sleeve="core",
+                control_snapshot_id=ctrl_sid,
+                market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                source_artifact="cooc_reversal_futures.yaml",
+                config_version=config_path,
+            )
+
+            if target_weight == 0.0 and sleeve_cfg:
+                # Explicit zero in valid config = intentional no-trade
+                decision = build_decision(
+                    sleeve="core", run_id=run_id, asof_date=asof,
+                    status=SleeveStatus.HALTED, reason="target_weight=0.0 from config (intentional)",
+                    control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                    portfolio_snapshot_id=pf_sid,
+                    started_at=started_at, generated_by="handle_signals_generate_core",
+                )
+            elif not sleeve_cfg:
+                # Missing or empty config = fail-closed
+                decision = build_decision(
+                    sleeve="core", run_id=run_id, asof_date=asof,
+                    status=SleeveStatus.FAILED, reason="missing or empty config",
+                    control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                    portfolio_snapshot_id=pf_sid,
+                    started_at=started_at, generated_by="handle_signals_generate_core",
+                )
+            else:
+                intent = build_intent(
+                    run_id=run_id, asof_date=asof, sleeve="core",
+                    symbol=symbol, asset_class=CanonicalAssetClass.FUTURE,
+                    target_weight=target_weight,
+                    execution_phase=CanonicalExecutionPhase.FUTURES_OPEN,
+                    multiplier=multiplier, trace=trace,
+                    metadata={"dte": -1},
+                )
+                decision = build_decision(
+                    sleeve="core", run_id=run_id, asof_date=asof,
+                    status=SleeveStatus.OK, intents=(intent,),
+                    control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                    portfolio_snapshot_id=pf_sid,
+                    started_at=started_at, generated_by="handle_signals_generate_core",
+                )
+
+            day_root = Path(str(ctx["artifact_root"]))
+            art = write_sleeve_decision(decision, day_root)
+            art.update(write_compat_artifacts(decision, day_root))
+
+            return {
+                "status": "ok",
+                "artifacts": art,
+                "metrics": {"source": "canonical", "target_weight": target_weight, "symbol": symbol},
+            }
+
+        # ── Legacy path ───────────────────────────────────────────────
         # Core sleeve intent: futures position with phase-aware routing
         intents = [{
             "asof_date": _asof(ctx),
@@ -461,6 +551,8 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
             "dte": -1,
         }]
 
+        intents_dir = p["root"] / "intents"
+        intents_dir.mkdir(parents=True, exist_ok=True)
         intent_path = intents_dir / "core_intents.json"
         intent_path.write_text(json.dumps(intents, indent=2), encoding="utf-8")
 
@@ -496,6 +588,20 @@ def handle_signals_generate_core(ctx: dict[str, Any]) -> dict[str, Any]:
         }
     except Exception as exc:
         logger.exception("Core signal handler failed: %s", exc)
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            decision = build_decision(
+                sleeve="core", run_id=run_id,
+                asof_date=_date.fromisoformat(_asof(ctx)) if 'asof' not in dir() else asof,
+                status=SleeveStatus.FAILED, reason=str(exc),
+                control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                started_at=started_at, generated_by="handle_signals_generate_core",
+            )
+            day_root = Path(str(ctx["artifact_root"]))
+            write_sleeve_decision(decision, day_root)
+            return {"status": "ok", "artifacts": {}, "metrics": {"source": "canonical_failed"}}
         if _allow_stub_signals(ctx):
             return _generic_signal_handler(ctx, "core", ["SPY", "QQQ", "IWM"])
         raise
@@ -620,6 +726,63 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
             "is_stub": False,
         })
         vrp_targets = vrp_result.get("orders", [])
+
+        # ── Canonical wrapper for legacy VRP (Phase 3.5) ──────────────
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            trace = build_trace(
+                run_id=run_id, sleeve="vrp",
+                control_snapshot_id=ctrl_sid,
+                market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                source_artifact="legacy_run_vrp",
+            )
+            intents = legacy_rows_to_intents(
+                vrp_targets, run_id=run_id, asof_date=asof,
+                sleeve="vrp", trace=trace,
+            )
+            if vrp_result.get("status") == "skipped":
+                decision = build_decision(
+                    sleeve="vrp", run_id=run_id, asof_date=asof,
+                    status=SleeveStatus.HALTED,
+                    reason=vrp_result.get("reason", "skipped"),
+                    diagnostics={"source_branch": "legacy_vrp_bridge", "vrp_status": "skipped"},
+                    control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                    portfolio_snapshot_id=pf_sid,
+                    generated_by="handle_signals_generate_vrp",
+                )
+            else:
+                decision = build_decision(
+                    sleeve="vrp", run_id=run_id, asof_date=asof,
+                    status=SleeveStatus.OK if intents else SleeveStatus.HALTED,
+                    intents=intents,
+                    reason=None if intents else "legacy_vrp produced no tradeable targets",
+                    diagnostics={"source_branch": "legacy_vrp_bridge", "n_raw_targets": len(vrp_targets)},
+                    control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                    portfolio_snapshot_id=pf_sid,
+                    generated_by="handle_signals_generate_vrp",
+                )
+            day_root = Path(str(ctx["artifact_root"]))
+            art = write_sleeve_decision(decision, day_root)
+            art.update(write_compat_artifacts(decision, day_root))
+            return {
+                "status": "ok",
+                "artifacts": art,
+                "metrics": {"source": "canonical_legacy_vrp_bridge", "mode": effective_vrp_mode},
+            }
+
+        p = _paths(ctx)
+        sig_path = p["signals"] / "vrp_signals.json"
+        tgt_path = p["targets"] / "vrp_targets.json"
+        _write_json(sig_path, {
+            "schema_version": "signals.v1",
+            "status": "ok", "asof_date": _asof(ctx), "session": _session(ctx),
+            "sleeve": "vrp", "source": "run_vrp",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "vrp_result": vrp_result,
+            "is_stub": False,
+        })
         _write_json(tgt_path, {
             "schema_version": "targets.v1",
             "status": "ok", "asof_date": _asof(ctx), "sleeve": "vrp",
@@ -634,6 +797,21 @@ def handle_signals_generate_vrp(ctx: dict[str, Any]) -> dict[str, Any]:
         }
     except Exception as exc:
         logger.exception("VRP signal handler failed: %s", exc)
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            decision = build_decision(
+                sleeve="vrp", run_id=run_id,
+                asof_date=date.fromisoformat(_asof(ctx)),
+                status=SleeveStatus.FAILED, reason=str(exc),
+                diagnostics={"source_branch": "legacy_vrp_bridge"},
+                control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                generated_by="handle_signals_generate_vrp",
+            )
+            day_root = Path(str(ctx["artifact_root"]))
+            write_sleeve_decision(decision, day_root)
+            return {"status": "ok", "artifacts": {}, "metrics": {"source": "canonical_vrp_failed"}}
         if _allow_stub_signals(ctx):
             return _generic_signal_handler(ctx, "vrp", ["SPY", "TLT"])
         raise
@@ -772,6 +950,41 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
                         target["target_weight"] = round(float(target["target_weight"]) * scale, 6)
 
         p = _paths(ctx)
+
+        # ── Canonical wrapper for legacy selector (Phase 3.5) ─────────
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            trace = build_trace(
+                run_id=run_id, sleeve="selector",
+                control_snapshot_id=ctrl_sid,
+                market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                source_artifact="legacy_load_selector_signals",
+            )
+            intents = legacy_rows_to_intents(
+                targets, run_id=run_id, asof_date=asof,
+                sleeve="selector", trace=trace,
+            )
+            decision = build_decision(
+                sleeve="selector", run_id=run_id, asof_date=asof,
+                status=SleeveStatus.OK if intents else SleeveStatus.HALTED,
+                intents=intents,
+                reason=None if intents else "legacy_selector produced no tradeable targets",
+                diagnostics={"source_branch": "legacy_selector_loader", "n_raw_targets": len(targets), "run_type": run_type},
+                control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                generated_by="handle_signals_generate_selector",
+            )
+            day_root = Path(str(ctx["artifact_root"]))
+            art = write_sleeve_decision(decision, day_root)
+            art.update(write_compat_artifacts(decision, day_root))
+            return {
+                "status": "ok",
+                "artifacts": art,
+                "metrics": {"n_symbols": len(intents), "run_type": run_type, "source": "canonical_legacy_selector_bridge"},
+            }
+
         sig_path = p["signals"] / "selector_signals.json"
         tgt_path = p["targets"] / "selector_targets.json"
         _write_json(sig_path, {
@@ -796,6 +1009,21 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
         }
     except Exception as exc:
         logger.exception("Selector signal handler failed: %s", exc)
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            decision = build_decision(
+                sleeve="selector", run_id=run_id,
+                asof_date=date.fromisoformat(_asof(ctx)),
+                status=SleeveStatus.FAILED, reason=str(exc),
+                diagnostics={"source_branch": "legacy_selector_loader"},
+                control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                generated_by="handle_signals_generate_selector",
+            )
+            day_root = Path(str(ctx["artifact_root"]))
+            write_sleeve_decision(decision, day_root)
+            return {"status": "ok", "artifacts": {}, "metrics": {"source": "canonical_selector_failed"}}
         if _allow_stub_signals(ctx):
             return _generic_signal_handler(ctx, "selector", ["AAPL", "MSFT", "NVDA"], run_type=run_type)
         raise
@@ -805,6 +1033,21 @@ def handle_signals_generate_selector(ctx: dict[str, Any]) -> dict[str, Any]:
 
 def handle_signals_generate_futures_overnight(ctx: dict[str, Any]) -> dict[str, Any]:
     if not _chronos2_enabled(ctx):
+        # ── Canonical disabled output ─────────────────────────────────
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            from datetime import date as _date
+            asof = _date.fromisoformat(_asof(ctx))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            decision = build_decision(
+                sleeve="futures_overnight", run_id=run_id, asof_date=asof,
+                status=SleeveStatus.DISABLED, reason="chronos2 sleeve disabled",
+                control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                generated_by="handle_signals_generate_futures_overnight",
+            )
+            day_root = Path(str(ctx["artifact_root"]))
+            write_sleeve_decision(decision, day_root)
         return {"status": "ok", "summary": "chronos2 sleeve disabled", "artifacts": {}}
 
     from backend.app.ml_platform.inference_gateway.server import InferenceGatewayServer
@@ -858,6 +1101,21 @@ def handle_signals_generate_futures_overnight(ctx: dict[str, Any]) -> dict[str, 
 
 def handle_signals_generate_statarb(ctx: dict[str, Any]) -> dict[str, Any]:
     if not _statarb_enabled(ctx):
+        # ── Canonical disabled output ─────────────────────────────────
+        if _canonical_sleeve_outputs_enabled(ctx):
+            run_id = str(ctx.get("tick_id", ""))
+            from datetime import date as _date
+            asof = _date.fromisoformat(_asof(ctx))
+            ctrl_sid, mkt_sid, pf_sid = get_snapshot_ids(ctx)
+            decision = build_decision(
+                sleeve="statarb", run_id=run_id, asof_date=asof,
+                status=SleeveStatus.DISABLED, reason="statarb disabled",
+                control_snapshot_id=ctrl_sid, market_snapshot_id=mkt_sid,
+                portfolio_snapshot_id=pf_sid,
+                generated_by="handle_signals_generate_statarb",
+            )
+            day_root = Path(str(ctx["artifact_root"]))
+            write_sleeve_decision(decision, day_root)
         return {"status": "ok", "summary": "statarb disabled", "artifacts": {}}
 
     import os
@@ -1046,183 +1304,247 @@ def handle_risk_checks_global(ctx: dict[str, Any]) -> dict[str, Any]:
     per_sleeve: dict[str, dict[str, Any]] = {}
     nan_or_inf = False
 
-    if missing:
-        violations.append(
-            {
-                "code": "MISSING_TARGETS",
-                "message": "One or more sleeve target artifacts are missing",
-                "details": {"missing_sleeves": missing},
-            }
-        )
+    # ── Canonical risk branch (Phase 4) ─────────────────────────────
+    if _flag_enabled(ctx, "FF_CANONICAL_RISK_ENGINE", False):
+        run_id = str(ctx.get("tick_id", ""))
+        expected_sleeves = ["core", "vrp", "selector"]
+        if _chronos2_enabled(ctx):
+            expected_sleeves.append("futures_overnight")
+        if _statarb_enabled(ctx):
+            expected_sleeves.append("statarb")
 
-    allocator_payload: dict[str, Any]
-    if _allocator_enabled(ctx, cfg):
-        from backend.app.allocator.sleeve_allocator import allocate_sleeve_gross
-
-        sleeve_metrics: dict[str, dict[str, float]] = {}
-        for sleeve, tpath in target_paths.items():
-            ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
-            expected_return_proxy = float(
-                ml_risk.get(
-                    "expected_return_proxy",
-                    ml_risk.get("edge_mean", ml_risk.get("top_bottom_spread", 0.0)),
-                )
-            )
-            uncertainty = float(ml_risk.get("uncertainty", ml_risk.get("router_entropy_mean", 0.0)))
-            drift = float(ml_risk.get("drift_score", 0.0))
-            drawdown = float(ml_risk.get("drawdown", 0.0))
-            recent_pnl = float(ml_risk.get("recent_pnl", 0.0))
-            sleeve_metrics[sleeve] = {
-                "expected_return_proxy": expected_return_proxy,
-                "uncertainty": uncertainty,
-                "drift": drift,
-                "drawdown": drawdown,
-                "recent_pnl": recent_pnl,
-            }
-
-        constraints = {
-            "total_gross_cap": float(limits["max_gross"]),
-            "sleeve_min": _cfg_float(cfg, "allocator_sleeve_min", 0.0),
-            "sleeve_max": _cfg_float(cfg, "allocator_sleeve_max", 0.7),
-            "max_turnover": _cfg_float(cfg, "allocator_max_turnover", 0.25),
-        }
-        outputs = allocate_sleeve_gross(sleeve_metrics, **constraints)
-        allocator_payload = {
-            "enabled": True,
-            "status": "ok",
-            "inputs": sleeve_metrics,
-            "outputs": outputs,
-            "constraints": constraints,
-            "reasons": [],
-        }
-    else:
-        allocator_payload = {
-            "enabled": False,
-            "status": "disabled",
-            "inputs": {},
-            "outputs": {},
-            "constraints": {},
-            "reasons": [],
-        }
-
-    allocator_scales = {str(k): float(v) for k, v in (allocator_payload.get("outputs", {}) or {}).items()}
-
-    input_family = "targets_legacy"
-    input_refs: dict[str, Any] = {
-        "target_paths": {k: str(v) for k, v in target_paths.items()},
-        "source_target_counts": {k: len((_read_json(v).get("targets", []) if v.exists() else [])) for k, v in target_paths.items()},
-    }
-    translation_failures: list[dict[str, Any]] = []
-
-    if canonical_cutover:
         try:
-            translation = translate_targets_to_intents(
-                artifact_root=p["root"],
-                asof_date=_asof(ctx),
-                target_paths=target_paths,
-                allocator_scales=allocator_scales,
+            collation = collate_sleeve_decisions(
+                p["root"], expected_sleeves=expected_sleeves,
+                run_id=run_id, asof_date=_asof(ctx), fail_on_missing=True,
             )
-            translated_rows = _load_translated_rows(Path(translation.translated_intents_path))
-            parity = _read_json(Path(translation.parity_report_path))
-            native_present = parity.get("native_intents_present", {}) if isinstance(parity, dict) else {}
-            if any(bool(v) for v in native_present.values()):
-                if all(bool(v) for v in native_present.values()):
-                    input_family = "native_intents"
-                else:
-                    input_family = "mixed_intents"
-            else:
-                input_family = "translated_intents"
-
-            for row in translated_rows:
-                intent = row.get("intent", {}) if isinstance(row, dict) else {}
-                sleeve = str(intent.get("sleeve", "unknown"))
-                symbol = str(intent.get("symbol", "")).strip()
-                w = float(intent.get("target_weight", 0.0))
-                if w != w or w in (float("inf"), float("-inf")):
-                    nan_or_inf = True
-                if sleeve not in per_sleeve:
-                    per_sleeve[sleeve] = {"gross": 0.0, "net": 0.0, "num_symbols": 0, "ml": {}}
-                per_sleeve[sleeve]["gross"] = float(per_sleeve[sleeve]["gross"]) + abs(w)
-                per_sleeve[sleeve]["net"] = float(per_sleeve[sleeve]["net"]) + w
-                if symbol and abs(w) > 0:
-                    per_sleeve[sleeve]["num_symbols"] = int(per_sleeve[sleeve]["num_symbols"]) + 1
-                if symbol:
-                    combined[symbol] = combined.get(symbol, 0.0) + w
-
-            translation_failures = parity.get("translation_failures", []) if isinstance(parity, dict) else []
-            input_refs = {
-                **input_refs,
-                "translated_intents_path": translation.translated_intents_path,
-                "translation_parity_path": translation.parity_report_path,
-                "n_translated_intents": int(translation.n_translated),
-                "native_intents_present": native_present,
-            }
-            if translation_failures:
-                violations.append({
-                    "code": "TRANSLATION_FAILURES",
-                    "message": "one or more translation failures detected",
-                    "details": {"count": len(translation_failures)},
-                })
-        except Exception as exc:
+        except RuntimeError as exc:
             fail_report = {
                 "schema_version": "risk_decision.v1",
-                "decision_id": hashlib.sha1(f"{_asof(ctx)}|{_session(ctx)}|translation_failed".encode("utf-8")).hexdigest()[:16],
+                "decision_id": hashlib.sha1(f"{_asof(ctx)}|collation_failed".encode()).hexdigest()[:16],
                 "status": "failed",
                 "checked_at": checked_at,
                 "asof_date": _asof(ctx),
                 "session": _session(ctx),
                 "policy_version": "risk_decision_policy.v1",
-                "input_contract_family": "mixed_intents",
-                "source_sleeves": sorted(target_paths.keys()),
-                "input_artifact_refs": input_refs,
+                "input_contract_family": "canonical_intents",
+                "source_sleeves": expected_sleeves,
+                "input_artifact_refs": {},
                 "generated_by": "handle_risk_checks_global",
-                "reason": f"TRANSLATION_FAILED: {exc}",
-                "missing_sleeves": missing,
-                "inputs": {"target_paths": {k: str(v) for k, v in target_paths.items()}},
-                "metrics": {
-                    "nan_or_inf": False,
-                    "gross_exposure": 0.0,
-                    "net_exposure": 0.0,
-                    "num_symbols": 0,
-                    "per_sleeve": {},
-                    "translation_failure_count": 1,
-                },
-                "limits": {
-                    "max_gross": float(limits["max_gross"]),
-                    "max_net_abs": float(limits["max_net_abs"]),
-                    "max_symbol_abs_weight": float(limits["max_symbol_abs_weight"]),
-                    "max_symbols": int(limits["max_symbols"]),
-                },
-                "allocator": allocator_payload,
-                "violations": [{"code": "TRANSLATION_FAILED", "message": str(exc), "details": {}}],
+                "reason": str(exc),
+                "missing_sleeves": [],
+                "inputs": {},
+                "metrics": {"nan_or_inf": False, "gross_exposure": 0.0, "net_exposure": 0.0, "num_symbols": 0, "per_sleeve": {}},
+                "limits": {"max_gross": float(limits["max_gross"]), "max_net_abs": float(limits["max_net_abs"]),
+                           "max_symbol_abs_weight": float(limits["max_symbol_abs_weight"]), "max_symbols": int(limits["max_symbols"])},
+                "allocator": {"enabled": False, "status": "disabled", "inputs": {}, "outputs": {}, "constraints": {}, "reasons": []},
+                "violations": [{"code": "COLLATION_FAILED", "message": str(exc), "details": {}}],
                 "flags": flags,
             }
             _write_json(report_path, fail_report)
-            raise RuntimeError(f"risk checks failed: TRANSLATION_FAILED: {exc}")
+            raise RuntimeError(f"risk checks failed: COLLATION_FAILED: {exc}")
+
+        intents_path = write_canonical_intents(collation, p["root"])
+        combined = intents_to_combined_weights(collation["intents"])
+        per_sleeve = intents_to_per_sleeve_metrics(collation["intents"])
+        input_family = "canonical_intents"
+        input_refs = {
+            "canonical_intents_path": str(intents_path),
+            "collation_id": collation["collation_id"],
+            "sleeve_statuses": collation["sleeve_statuses"],
+        }
+
+        # NaN/Inf check on canonical weights
+        for w in combined.values():
+            if w != w or w in (float("inf"), float("-inf")):
+                nan_or_inf = True
+                break
+
+        # Skip allocator / target-file logic in canonical path
+        allocator_payload = {"enabled": False, "status": "bypassed_canonical", "inputs": {}, "outputs": {}, "constraints": {}, "reasons": []}
+
+        # Proceed to limit checks below (shared with legacy path)
+        # (jumps to the "gross/net/symbol limit checks" below)
     else:
-        for sleeve, tpath in target_paths.items():
-            targets = _read_json(tpath).get("targets", []) if tpath.exists() else []
-            sleeve_gross = 0.0
-            sleeve_net = 0.0
-            sleeve_symbols = 0
-            for row in targets:
-                symbol = str(row.get("symbol", "")).strip()
-                w = float(row.get("target_weight", 0.0))
-                if w != w or w in (float("inf"), float("-inf")):
-                    nan_or_inf = True
-                if symbol and abs(w) > 0:
-                    sleeve_symbols += 1
-                sleeve_gross += abs(w)
-                sleeve_net += w
-                if symbol:
-                    combined[symbol] = combined.get(symbol, 0.0) + w
-            ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
-            per_sleeve[sleeve] = {
-                "gross": round(sleeve_gross, 8),
-                "net": round(sleeve_net, 8),
-                "num_symbols": sleeve_symbols,
-                "ml": ml_risk,
+        # ── Legacy risk branch ────────────────────────────────────────
+        if missing:
+            violations.append(
+                {
+                    "code": "MISSING_TARGETS",
+                    "message": "One or more sleeve target artifacts are missing",
+                    "details": {"missing_sleeves": missing},
+                }
+            )
+
+        allocator_payload_inner: dict[str, Any]
+        if _allocator_enabled(ctx, cfg):
+            from backend.app.allocator.sleeve_allocator import allocate_sleeve_gross
+
+            sleeve_metrics: dict[str, dict[str, float]] = {}
+            for sleeve, tpath in target_paths.items():
+                ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
+                expected_return_proxy = float(
+                    ml_risk.get(
+                        "expected_return_proxy",
+                        ml_risk.get("edge_mean", ml_risk.get("top_bottom_spread", 0.0)),
+                    )
+                )
+                uncertainty = float(ml_risk.get("uncertainty", ml_risk.get("router_entropy_mean", 0.0)))
+                drift = float(ml_risk.get("drift_score", 0.0))
+                drawdown = float(ml_risk.get("drawdown", 0.0))
+                recent_pnl = float(ml_risk.get("recent_pnl", 0.0))
+                sleeve_metrics[sleeve] = {
+                    "expected_return_proxy": expected_return_proxy,
+                    "uncertainty": uncertainty,
+                    "drift": drift,
+                    "drawdown": drawdown,
+                    "recent_pnl": recent_pnl,
+                }
+
+            constraints = {
+                "total_gross_cap": float(limits["max_gross"]),
+                "sleeve_min": _cfg_float(cfg, "allocator_sleeve_min", 0.0),
+                "sleeve_max": _cfg_float(cfg, "allocator_sleeve_max", 0.7),
+                "max_turnover": _cfg_float(cfg, "allocator_max_turnover", 0.25),
             }
+            outputs = allocate_sleeve_gross(sleeve_metrics, **constraints)
+            allocator_payload_inner = {
+                "enabled": True,
+                "status": "ok",
+                "inputs": sleeve_metrics,
+                "outputs": outputs,
+                "constraints": constraints,
+                "reasons": [],
+            }
+        else:
+            allocator_payload_inner = {
+                "enabled": False,
+                "status": "disabled",
+                "inputs": {},
+                "outputs": {},
+                "constraints": {},
+                "reasons": [],
+            }
+        allocator_payload = allocator_payload_inner
+
+        allocator_scales = {str(k): float(v) for k, v in (allocator_payload.get("outputs", {}) or {}).items()}
+
+        input_family = "targets_legacy"
+        input_refs: dict[str, Any] = {
+            "target_paths": {k: str(v) for k, v in target_paths.items()},
+            "source_target_counts": {k: len((_read_json(v).get("targets", []) if v.exists() else [])) for k, v in target_paths.items()},
+        }
+        translation_failures: list[dict[str, Any]] = []
+
+        if canonical_cutover:
+            try:
+                translation = translate_targets_to_intents(
+                    artifact_root=p["root"],
+                    asof_date=_asof(ctx),
+                    target_paths=target_paths,
+                    allocator_scales=allocator_scales,
+                )
+                translated_rows = _load_translated_rows(Path(translation.translated_intents_path))
+                parity = _read_json(Path(translation.parity_report_path))
+                native_present = parity.get("native_intents_present", {}) if isinstance(parity, dict) else {}
+                if any(bool(v) for v in native_present.values()):
+                    if all(bool(v) for v in native_present.values()):
+                        input_family = "native_intents"
+                    else:
+                        input_family = "mixed_intents"
+                else:
+                    input_family = "translated_intents"
+
+                for row in translated_rows:
+                    intent = row.get("intent", {}) if isinstance(row, dict) else {}
+                    sleeve = str(intent.get("sleeve", "unknown"))
+                    symbol = str(intent.get("symbol", "")).strip()
+                    w = float(intent.get("target_weight", 0.0))
+                    if w != w or w in (float("inf"), float("-inf")):
+                        nan_or_inf = True
+                    if sleeve not in per_sleeve:
+                        per_sleeve[sleeve] = {"gross": 0.0, "net": 0.0, "num_symbols": 0, "ml": {}}
+                    per_sleeve[sleeve]["gross"] = float(per_sleeve[sleeve]["gross"]) + abs(w)
+                    per_sleeve[sleeve]["net"] = float(per_sleeve[sleeve]["net"]) + w
+                    if symbol and abs(w) > 0:
+                        per_sleeve[sleeve]["num_symbols"] = int(per_sleeve[sleeve]["num_symbols"]) + 1
+                    if symbol:
+                        combined[symbol] = combined.get(symbol, 0.0) + w
+
+                translation_failures = parity.get("translation_failures", []) if isinstance(parity, dict) else []
+                input_refs = {
+                    **input_refs,
+                    "translated_intents_path": translation.translated_intents_path,
+                    "translation_parity_path": translation.parity_report_path,
+                    "n_translated_intents": int(translation.n_translated),
+                    "native_intents_present": native_present,
+                }
+                if translation_failures:
+                    violations.append({
+                        "code": "TRANSLATION_FAILURES",
+                        "message": "one or more translation failures detected",
+                        "details": {"count": len(translation_failures)},
+                    })
+            except Exception as exc:
+                fail_report = {
+                    "schema_version": "risk_decision.v1",
+                    "decision_id": hashlib.sha1(f"{_asof(ctx)}|{_session(ctx)}|translation_failed".encode("utf-8")).hexdigest()[:16],
+                    "status": "failed",
+                    "checked_at": checked_at,
+                    "asof_date": _asof(ctx),
+                    "session": _session(ctx),
+                    "policy_version": "risk_decision_policy.v1",
+                    "input_contract_family": "mixed_intents",
+                    "source_sleeves": sorted(target_paths.keys()),
+                    "input_artifact_refs": input_refs,
+                    "generated_by": "handle_risk_checks_global",
+                    "reason": f"TRANSLATION_FAILED: {exc}",
+                    "missing_sleeves": missing,
+                    "inputs": {"target_paths": {k: str(v) for k, v in target_paths.items()}},
+                    "metrics": {
+                        "nan_or_inf": False,
+                        "gross_exposure": 0.0,
+                        "net_exposure": 0.0,
+                        "num_symbols": 0,
+                        "per_sleeve": {},
+                        "translation_failure_count": 1,
+                    },
+                    "limits": {
+                        "max_gross": float(limits["max_gross"]),
+                        "max_net_abs": float(limits["max_net_abs"]),
+                        "max_symbol_abs_weight": float(limits["max_symbol_abs_weight"]),
+                        "max_symbols": int(limits["max_symbols"]),
+                    },
+                    "allocator": allocator_payload,
+                    "violations": [{"code": "TRANSLATION_FAILED", "message": str(exc), "details": {}}],
+                    "flags": flags,
+                }
+                _write_json(report_path, fail_report)
+                raise RuntimeError(f"risk checks failed: TRANSLATION_FAILED: {exc}")
+        else:
+            for sleeve, tpath in target_paths.items():
+                targets = _read_json(tpath).get("targets", []) if tpath.exists() else []
+                sleeve_gross = 0.0
+                sleeve_net = 0.0
+                sleeve_symbols = 0
+                for row in targets:
+                    symbol = str(row.get("symbol", "")).strip()
+                    w = float(row.get("target_weight", 0.0))
+                    if w != w or w in (float("inf"), float("-inf")):
+                        nan_or_inf = True
+                    if symbol and abs(w) > 0:
+                        sleeve_symbols += 1
+                    sleeve_gross += abs(w)
+                    sleeve_net += w
+                    if symbol:
+                        combined[symbol] = combined.get(symbol, 0.0) + w
+                ml_risk = _read_json(tpath).get("ml_risk", {}) if tpath.exists() else {}
+                per_sleeve[sleeve] = {
+                    "gross": round(sleeve_gross, 8),
+                    "net": round(sleeve_net, 8),
+                    "num_symbols": sleeve_symbols,
+                    "ml": ml_risk,
+                }
 
     for sleeve, stat in per_sleeve.items():
         stat["gross"] = round(float(stat.get("gross", 0.0)), 8)
@@ -1377,7 +1699,45 @@ def handle_order_build_and_route(ctx: dict[str, Any]) -> dict[str, Any]:
     combined: dict[str, float] = {}
     symbol_trace_refs: dict[str, list[dict[str, Any]]] = {}
 
-    if canonical_cutover:
+    if _flag_enabled(ctx, "FF_CANONICAL_PLANNER", False):
+        # ── Canonical planner branch (Phase 4) ───────────────────
+        run_id = str(ctx.get("tick_id", ""))
+        canonical_intents_path = p["root"] / "canonical_intents.json"
+        if not canonical_intents_path.exists():
+            raise RuntimeError(
+                "canonical planner: canonical_intents.json missing. "
+                "Did FF_CANONICAL_RISK_ENGINE run first?"
+            )
+        collation = _read_json(canonical_intents_path)
+
+        # Mod 3+5: validate tick lineage — reject stale artifacts
+        validate_canonical_intents_freshness(
+            collation,
+            expected_run_id=run_id,
+            expected_asof_date=_asof(ctx),
+        )
+
+        risk_collation_id = risk_raw.get("input_artifact_refs", {}).get("collation_id", "")
+        planner_collation_id = collation.get("collation_id", "")
+        if risk_collation_id and planner_collation_id and risk_collation_id != planner_collation_id:
+            raise RuntimeError(
+                f"canonical planner: risk/planner collation_id mismatch: "
+                f"risk={risk_collation_id} planner={planner_collation_id}"
+            )
+
+        canonical_intents = collation.get("intents", [])
+        combined = intents_to_combined_weights(canonical_intents)
+        planning_input_family = "canonical_intents"
+        symbol_trace_refs = {}
+        for i, intent in enumerate(canonical_intents):
+            sym = str(intent.get("symbol", "")).strip()
+            if sym:
+                symbol_trace_refs.setdefault(sym, []).append({
+                    "canonical_intent_ref": f"canonical_intents.json#{i}",
+                    "intent_id": intent.get("intent_id", ""),
+                    "source_sleeve": intent.get("sleeve", "unknown"),
+                })
+    elif canonical_cutover:
         if _statarb_enabled(ctx):
             raise RuntimeError("canonical planner fail-closed: statarb not yet symbol-intent canonical")
         if not bool(flags["FF_INTENT_CANONICAL_TRANSLATOR"]):
